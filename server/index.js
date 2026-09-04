@@ -42,8 +42,20 @@ const httpServer = http.createServer((req, res) => {
   });
 });
 
-/** roomCode -> { conns: [conn1, conn2|null] } */
+/**
+ * roomCode -> {
+ *   conns: [conn1, conn2|null],
+ *   seed,                       // 두 클라이언트가 공유하는 판 시드 (웨이브 구성·증강 후보가 같아진다)
+ *   prepWave,                   // 지금 준비를 맞추고 있는 웨이브 번호
+ *   prep:  [bool, bool],        // 각자 준비 단계에 들어섰는가
+ *   ready: [bool, bool],        // 각자 개시 버튼을 눌렀는가
+ *   prepTimer,                  // 준비시간 마감 타이머
+ * }
+ */
 const rooms = new Map();
+
+/** 양쪽 모두 준비 단계에 들어선 뒤 주어지는 최대 준비시간(초). 클라이언트의 BAL.prepSecs 와 맞춘다. */
+const PREP_SECS = 15;
 
 function makeCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 헷갈리는 글자(0/O, 1/I) 제외
@@ -56,11 +68,45 @@ function makeCode() {
 
 function send(conn, obj) { try { conn.send(JSON.stringify(obj)); } catch (_) {} }
 function otherOf(room, conn) { return room.conns[0] === conn ? room.conns[1] : room.conns[0]; }
+function broadcast(room, obj) { for (const c of room.conns) if (c) send(c, obj); }
+
+function clearPrepTimer(room) {
+  if (room.prepTimer) { clearTimeout(room.prepTimer); room.prepTimer = null; }
+}
+
+/**
+ * 웨이브 개시 신호. 양쪽이 정확히 같은 순간에 웨이브를 시작한다.
+ * 둘 다 준비를 눌렀거나, 준비시간이 다 되면 여기로 온다.
+ */
+function goWave(room) {
+  if (!room.prepWave) return;
+  clearPrepTimer(room);
+  const wave = room.prepWave;
+  room.prepWave = 0;
+  room.prep = [false, false];
+  room.ready = [false, false];
+  broadcast(room, { t: 'waveGo', wave });
+}
+
+/** 둘 다 준비 단계에 들어섰고 둘 다 준비를 눌렀으면 곧바로 개시한다 */
+function maybeGo(room) {
+  if (room.prep[0] && room.prep[1] && room.ready[0] && room.ready[1]) goWave(room);
+}
+
+/**
+ * 준비 상황을 양쪽에 그대로 내려 준다.
+ * "상대가 준비했다"를 개별 알림으로 보내면, 한 쪽이 웨이브를 훨씬 늦게 끝냈을 때
+ * 이미 지나간 알림을 못 받아 상태가 어긋난다. 항상 전체 상태를 보내면 그럴 일이 없다.
+ */
+function pushPrepState(room) {
+  broadcast(room, { t: 'prepState', wave: room.prepWave, prep: room.prep, ready: room.ready });
+}
 
 function leaveRoom(conn) {
   if (!conn._room) return;
   const room = rooms.get(conn._room);
   if (!room) return;
+  clearPrepTimer(room);
   const other = otherOf(room, conn);
   if (other) { send(other, { t: 'oppLeft' }); other._room = null; }
   rooms.delete(conn._room);
@@ -79,7 +125,11 @@ attachWebSocketServer(httpServer, (conn) => {
 
     if (msg.t === 'create') {
       const code = makeCode();
-      rooms.set(code, { conns: [conn, null] });
+      rooms.set(code, {
+        conns: [conn, null],
+        seed: (Math.random() * 1e9) | 0,
+        prepWave: 0, prep: [false, false], ready: [false, false], prepTimer: null,
+      });
       conn._room = code;
       send(conn, { t: 'created', code });
       return;
@@ -94,8 +144,9 @@ attachWebSocketServer(httpServer, (conn) => {
       }
       room.conns[1] = conn;
       conn._room = code;
-      send(room.conns[0], { t: 'start', youAre: 'p1' });
-      send(room.conns[1], { t: 'start', youAre: 'p2' });
+      // 같은 시드를 내려 준다 — 양쪽의 웨이브 구성과 증강 후보가 완전히 같아진다
+      send(room.conns[0], { t: 'start', youAre: 'p1', seed: room.seed });
+      send(room.conns[1], { t: 'start', youAre: 'p2', seed: room.seed });
       return;
     }
 
@@ -103,6 +154,43 @@ attachWebSocketServer(httpServer, (conn) => {
     const room = rooms.get(conn._room);
     if (!room) return;
     const other = otherOf(room, conn);
+    const me = room.conns.indexOf(conn);
+    if (me < 0) return;
+
+    // 판이 끝나면 남아 있는 준비시간 타이머가 뒤늦게 개시 신호를 쏘지 않도록 정리한다
+    if (msg.t === 'won' || msg.t === 'lost') { clearPrepTimer(room); room.prepWave = 0; }
+
+    /* ── 웨이브 동시 개시 ──
+     * 「준비 완료」를 눌러도 상대가 누르기 전에는 시작되지 않는다.
+     * 준비시간 15초는 양쪽이 다 준비 단계에 들어선 뒤에야 흐르기 시작하므로,
+     * 웨이브를 먼저 끝냈다고 해서 혼자 앞서 나갈 수 없다. */
+    if (msg.t === 'prep') {
+      const wave = Number(msg.wave) || 0;
+      if (!wave) return;
+      if (room.prepWave !== wave) {          // 새 라운드 — 이전 상태를 버리고 다시 맞춘다
+        clearPrepTimer(room);
+        room.prepWave = wave;
+        room.prep = [false, false];
+        room.ready = [false, false];
+      }
+      room.prep[me] = true;
+      pushPrepState(room);
+      if (room.prep[0] && room.prep[1] && !room.prepTimer) {
+        room.prepTimer = setTimeout(() => goWave(room), PREP_SECS * 1000);
+        broadcast(room, { t: 'prepSync', wave, secs: PREP_SECS });
+      }
+      maybeGo(room);
+      return;
+    }
+
+    if (msg.t === 'ready') {
+      if (!room.prepWave || Number(msg.wave) !== room.prepWave) return;
+      room.ready[me] = !!msg.ready;
+      pushPrepState(room);
+      maybeGo(room);
+      return;
+    }
+
     if (!other) return;
     const relayType = RELAY[msg.t];
     if (relayType) send(other, Object.assign({}, msg, { t: relayType }));

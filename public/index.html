@@ -49,6 +49,7 @@
     <div class="stat effects">
       <div class="efcol"><i>내효과</i><div class="passiveTags" id="myPassiveTags"></div></div>
       <div class="efcol"><i>상대효과</i><div class="passiveTags" id="foePassiveTags"></div></div>
+      <div class="efcol"><i>내증강</i><div class="passiveTags" id="myAugTags"></div></div>
     </div>
   </div>
 </header>
@@ -82,8 +83,17 @@
         </div>
         <div id="tray"></div>
         <div class="boardctl">
-          <button id="btnGo" class="go">웨이브 1 개시</button>
+          <button id="btnGo" class="go">웨이브 1 준비 완료</button>
           <button id="btnSpeed">속도 ×1</button>
+        </div>
+        <!-- 웨이브는 양쪽이 모두 준비해야(또는 준비시간 15초가 끝나야) 동시에 시작된다 -->
+        <div id="readyBar">
+          <div class="rdy off" id="rdyMe"><i>나</i><b>준비 중</b></div>
+          <div class="rdymid">
+            <span id="rdyTimer">상대를 기다리는 중</span>
+            <span class="rdytrack"><i id="rdyFill"></i></span>
+          </div>
+          <div class="rdy away" id="rdyOpp"><i>상대</i><b>웨이브 진행 중</b></div>
         </div>
       </div>
     </div>
@@ -98,6 +108,10 @@
           <div class="stat"><b id="oppWave">0/12</b><span>웨이브</span></div>
         </div>
         <canvas id="oppCv" width="280" height="280"></canvas>
+        <div class="oppAugBox">
+          <i>상대 증강</i>
+          <div class="passiveTags" id="oppAugTags"></div>
+        </div>
       </div>
     </div>
     <div class="panel">

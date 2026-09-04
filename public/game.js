@@ -183,6 +183,103 @@ const SKILLS = {
   },
 };
 
+/**
+ * 증강(AUGMENT) — 몇 웨이브에 한 번씩 고르는 "판을 뒤집는" 규칙 변경.
+ *
+ * 패시브가 +10% 를 쌓는 미세 조정이라면, 이쪽은 규칙 자체를 바꾼다.
+ * 비공격이던 변리사냥이 최전선에 서고, 공격냥들이 돌덩이가 되고,
+ * 서로 다른 냥이 하나로 합쳐진다 — 매번 다른 판이 되도록 하는 장치다.
+ *
+ * kind  "rule" 지속적으로 규칙을 바꾼다 · "instant" 고를 때 한 번만 적용된다
+ * tag   한눈에 성격을 알리는 딱지
+ * @type {Record<string,{key:string,name:string,icon:string,tag:string,kind:"rule"|"instant",
+ *   desc:string,detail:string}>}
+ */
+const AUGMENTS = {
+  agentWar: {
+    key: "agentWar", name: "변리사 개업", icon: "⚔️", tag: "판갈이", kind: "rule",
+    desc: "변리사냥이 직접 싸운다 · 나머지 냥타워 공격력 −35%",
+    detail: "보좌만 하던 변리사냥이 사무소를 차리고 직접 대리에 나선다. 공격력 32 · 공속 1.1 · 사거리 2.4칸의 " +
+      "장거리 화력이 되면서 기존 보좌 효과도 그대로 유지한다. 대신 다른 냥타워는 대리인에게 일을 맡기고 " +
+      "손을 놓아 공격력이 35% 깎인다 — 판의 축이 통째로 변리사냥으로 옮겨간다.",
+  },
+  fuse: {
+    key: "fuse", name: "합동특허법률사무소", icon: "🧬", tag: "판갈이", kind: "rule",
+    desc: "서로 다른 냥타워를 겹쳐 놓으면 합체냥이 된다",
+    detail: "종류가 다른 냥타워를 드래그해 서로 겹치면 하나로 합쳐진다. 합체냥은 두 냥의 공격력을 더하고, " +
+      "공속·사거리는 둘 중 좋은 쪽을, 방어무시·동시조준 같은 특수능력은 양쪽 모두를 이어받는다. " +
+      "변리사냥을 섞으면 보좌까지 들고 싸운다. 합체냥끼리 다시 합칠 수는 없다.",
+  },
+  mono: {
+    key: "mono", name: "선행기술 총동원", icon: "📚", tag: "특화", kind: "rule",
+    desc: "같은 종류가 3명 이상이면 그 종류 공격력 +50%",
+    detail: "같은 기술 분야를 파고들수록 심사가 날카로워진다. 판 위에 같은 종류의 냥타워가 3명 이상 있으면 " +
+      "그 종류 전체의 공격력이 50% 올라간다. 여러 종류를 조금씩 섞는 것보다 한 종류를 몰아 세우는 게 이득이 된다.",
+  },
+  overwork: {
+    key: "overwork", name: "심사관 과로", icon: "☕", tag: "특화", kind: "rule",
+    desc: "전체 공속 +65% · 공격력 −20%",
+    detail: "밀린 심사를 밤새 처리한다. 모든 냥타워의 공격 속도가 65% 올라가는 대신 한 방의 무게는 20% 줄어든다. " +
+      "잡몹 물량에는 확실히 강해지지만, 방어가 두꺼운 적에게는 오히려 손해다 (방어력은 명중마다 깎이기 때문).",
+  },
+  longspec: {
+    key: "longspec", name: "명세서 보정", icon: "📏", tag: "보정", kind: "rule",
+    desc: "모든 냥타워 사거리 +40%",
+    detail: "청구범위를 넓게 다시 쓴다. 모든 냥타워의 사거리가 40% 늘어나 나선 통로의 안쪽 줄까지 사격이 닿는다. " +
+      "같은 배치로도 실제 사격 시간이 크게 늘어난다.",
+  },
+  isr: {
+    key: "isr", name: "국제조사보고서", icon: "🌍", tag: "보정", kind: "rule",
+    desc: "모든 냥타워 방어무시 +40%p",
+    detail: "국제조사기관의 보고서로 상대 권리의 약점을 짚는다. 모든 냥타워가 적의 방어력을 40%p 더 무시한다. " +
+      "무효심판 청구인(방어 8)·특허괴물(방어 13)처럼 단단한 적에게 특히 크게 들어간다.",
+  },
+  auraWide: {
+    key: "auraWide", name: "심사 병합", icon: "🔮", tag: "판갈이", kind: "rule",
+    desc: "변리사냥 보좌가 반경 2칸으로 · 화력 +55% 공속 +35%",
+    detail: "관련 출원을 묶어 한 심사관이 몰아 본다. 변리사냥의 보좌가 맞닿은 터를 넘어 반경 2칸(대각선 포함)까지 " +
+      "퍼져 통로 건너 안쪽·바깥쪽 줄의 냥타워에도 닿고, 배율도 화력 +55% · 공속 +35% 로 커진다. " +
+      "변리사냥 한 명이 판 절반을 먹여 살리게 된다.",
+  },
+  golden: {
+    key: "golden", name: "직권보정", icon: "✨", tag: "변수", kind: "rule",
+    desc: "웨이브마다 무작위 냥타워 1명이 공격력 3배",
+    detail: "심사관이 직권으로 손을 대 한 건을 단숨에 통과시킨다. 웨이브가 개시될 때마다 공격형 냥타워 중 " +
+      "하나가 무작위로 뽑혀 그 웨이브 동안 공격력이 3배가 된다 (판에서 금빛으로 빛난다). 누가 뽑힐지는 매번 다르다.",
+  },
+  cheap: {
+    key: "cheap", name: "선사용권", icon: "💰", tag: "경제", kind: "rule",
+    desc: "임용 비용 40% 인하 · 즉시 특허료 +120",
+    detail: "출원 전부터 쓰고 있었으니 값을 깎아 준다. 이후 모든 냥타워의 임용 비용이 40% 싸지고, " +
+      "고르는 즉시 특허료 120을 받는다. 물량으로 판을 채우는 쪽으로 방향을 잡을 때 고른다.",
+  },
+  fortify: {
+    key: "fortify", name: "등록료 납부", icon: "🏛️", tag: "방어", kind: "instant",
+    desc: "등록원부 최대 내구 +30 · 즉시 30 회복",
+    detail: "등록료를 미리 납부해 권리를 두껍게 만든다. 등록원부의 최대 내구가 30 늘고 그만큼 즉시 채워진다. " +
+      "돌파를 몇 번 허용해도 버틸 수 있게 되고, 상대의 무효심판(−10)도 한 번 더 견딘다.",
+  },
+  burst: {
+    key: "burst", name: "우선권 주장", icon: "⏱️", tag: "변수", kind: "rule",
+    desc: "웨이브 개시 후 8초 동안 전체 공속 2배",
+    detail: "우선일을 앞당겨 심사를 먼저 받는다. 웨이브가 시작되고 8초 동안 모든 냥타워의 공격 속도가 두 배가 된다. " +
+      "선두 무리를 초반에 지워버리는 용도라, 물량이 앞에서 몰려오는 웨이브에서 값이 크다.",
+  },
+  divisional: {
+    key: "divisional", name: "분할출원", icon: "🧾", tag: "즉시", kind: "instant",
+    desc: "가장 비싼 냥타워 1명을 그 자리에서 복제",
+    detail: "하나의 출원을 둘로 쪼갠다. 판 위에서 가장 비싼 냥타워와 똑같은 냥타워가 공짜로 하나 더 생긴다 " +
+      "(빈 터가 없으면 대기열로 들어간다). 이미 국제출원냥·변리사냥을 세워 둔 판일수록 이득이 크다.",
+  },
+};
+
+/**
+ * 증강을 고르는 웨이브. 이 웨이브를 클리어하면 패시브 대신 증강 선택이 뜬다.
+ * 2~3 웨이브 간격 — 판이 늘어지기 전에 규칙이 한 번씩 뒤집히도록 잡았다.
+ * 증강 12종을 3장씩 4번 나눠 주므로, 한 판에서 같은 증강이 두 번 나오지 않는다.
+ */
+const AUGMENT_WAVES = [2, 4, 7, 10];
+
 /** 밸런스 상수. 시뮬레이터가 이 객체를 통째로 덮어써서 스윕할 수 있다. */
 const BAL = {
   cellSize: 80, cellGap: 4,
@@ -194,9 +291,12 @@ const BAL = {
   voidWaves: 3,              // 무효화 지속 웨이브 (상향 — 돌파당 손실이 더 오래 간다)
   spawnGap: 0.52, spawnGapBoss: 2.0,   // 더 촘촘하게 몰아친다
   waveCount: 12,
+  prepSecs: 15,              // 양쪽 모두 준비 단계에 들어선 뒤 주어지는 최대 준비시간(초)
+  choiceSecs: 15,            // 패시브·증강 선택 제한시간(초). 넘기면 첫 번째가 자동으로 선택된다
+  burstSecs: 8,              // 「우선권 주장」 증강의 지속시간(초)
 };
 
-return { BAL, CATS, ENEMIES, PASSIVES, PASSIVE_BY_KEY, SKILLS, WAVES };
+return { AUGMENTS, AUGMENT_WAVES, BAL, CATS, ENEMIES, PASSIVES, PASSIVE_BY_KEY, SKILLS, WAVES };
 })();
 __mods["core/maps.js"] = (function(){
 // @ts-check
@@ -686,12 +786,58 @@ __mods["core/stats.js"] = (function(){
 const {CATS, BAL} = __req("core/data.js");
 const {cats, adjCellsLR} = __req("core/board.js");
 
+/**
+ * 「심사 병합」 증강용 넓은 보좌 범위 — 조각을 둘러싼 반경 r칸(대각선 포함).
+ * 기본 보좌(adjCellsLR)는 변을 맞댄 터만 잡기 때문에, 나선 통로 하나를 사이에 둔
+ * 안쪽/바깥쪽 줄에는 닿지 않는다. 반경 2면 통로를 건너 옆 줄까지 보좌가 퍼진다.
+ */
+function adjCellsWide(b, piece, r) {
+  const s = new Set();
+  for (let y = piece.y - r; y <= piece.y + piece.h - 1 + r; y++) {
+    if (y < 0 || y >= b.rows) continue;
+    for (let x = piece.x - r; x <= piece.x + piece.w - 1 + r; x++) {
+      if (x < 0 || x >= b.cols) continue;
+      if (x >= piece.x && x < piece.x + piece.w && y >= piece.y && y < piece.y + piece.h) continue;
+      s.add(`${x},${y}`);
+    }
+  }
+  return s;
+}
+/** 이 냥타워의 실제 보좌 범위 (증강 반영). 판 위 강조 표시도 같은 함수를 쓴다. */
+const auraCells = (b, piece) =>
+  (b.augSet && b.augSet.has("auraWide")) ? adjCellsWide(b, piece, 2) : adjCellsLR(b, piece);
+
 /** 조각이 차지한 칸들 ("x,y" 문자열) */
 function pieceCells(p) {
   const out = [];
   for (let dy = 0; dy < p.h; dy++)
     for (let dx = 0; dx < p.w; dx++) out.push(`${p.x + dx},${p.y + dy}`);
   return out;
+}
+
+/**
+ * 조각의 "기본 정의". 합체냥(p.fuse)이면 두 종류를 합쳐 만든 가상의 정의를 돌려준다.
+ *
+ * 합치는 규칙: 공격력은 더하고, 공속·사거리는 좋은 쪽을, 특수능력(방어무시·동시조준·둔화·보좌)은
+ * 양쪽 중 센 쪽을 그대로 이어받는다. 변리사냥(사거리 0)이 섞이면 상대 쪽 사거리를 쓰게 되므로
+ * 보좌를 들고 직접 싸우는 냥이 된다.
+ * @param {{key:string, fuse?:string|null}} p
+ */
+function baseOf(p) {
+  const A = CATS[p.key];
+  if (!p.fuse || !CATS[p.fuse]) return A;
+  const Z = CATS[p.fuse];
+  const mx = (k, d) => Math.max(A[k] || d, Z[k] || d);
+  return {
+    name: `${A.name}×${Z.name}`, kind: "atk", tag: "합체",
+    row: A.row, arow: A.arow, filter: A.filter, icon: A.icon,
+    dmg: A.dmg + Z.dmg,
+    rate: mx("rate", 0), range: mx("range", 0),
+    pierce: mx("pierce", 0), targets: mx("targets", 1),
+    critC: mx("critC", 0), critM: mx("critM", 1), slow: mx("slow", 0),
+    auraDmg: mx("auraDmg", 0), auraRate: mx("auraRate", 0),
+    cost: A.cost + Z.cost, desc: "두 냥타워를 하나로 합친 합체냥.",
+  };
 }
 
 /**
@@ -714,31 +860,60 @@ function computeStats(b) {
   const bonus = b.bonus || { dmg: 0, rate: 0, range: 0 };
   const bMul = (k) => Math.max(0.2, 1 + bonus[k]);
   const ATTACK_RATE_MULT = 2.2;   // 공속 상향 — 균형을 위해 WAVES 스폰 수도 함께 늘렸다
+  /** 선택한 증강 (Set). 증강이 없으면 아래 분기는 전부 건너뛴다. */
+  const AUG = b.augSet || new Set();
 
-  // 기본 스탯 (+ 패시브로 누적된 자기강화/상대약화 배율)
+  // 「선행기술 총동원」 — 같은 종류를 몇 명이나 세웠는지 미리 센다
+  const sameKind = {};
+  if (AUG.has("mono")) for (const c of live) sameKind[c.key] = (sameKind[c.key] || 0) + 1;
+
+  // 기본 스탯 (+ 증강으로 바뀐 규칙 + 패시브로 누적된 자기강화/상대약화 배율)
   for (const c of live) {
-    const base = CATS[c.key];
+    const base = baseOf(c);
+    let dmg = base.dmg, rate = base.rate, range = base.range;
+    let pierce = base.pierce || 0;
+    let auraDmg = base.auraDmg || 0, auraRate = base.auraRate || 0;
+    const isAide = !!(auraDmg || auraRate);   // 보좌 능력을 가진 냥 (변리사냥 · 변리사냥이 섞인 합체냥)
+
+    // ── 증강: 규칙 자체를 바꾸는 것들 ──
+    if (AUG.has("agentWar")) {
+      // 변리사 개업 — 보좌형이 최전선에 서고, 나머지는 대리인에게 맡긴 채 손을 놓는다
+      if (isAide) { dmg = Math.max(dmg, 32); rate = Math.max(rate, 1.1); range = Math.max(range, 210); }
+      else dmg *= 0.65;
+    }
+    if (AUG.has("overwork")) { rate *= 1.65; dmg *= 0.8; }
+    if (AUG.has("longspec")) range *= 1.4;
+    if (AUG.has("isr")) pierce += 40;
+    if (AUG.has("mono") && sameKind[c.key] >= 3) dmg *= 1.5;
+    const golden = AUG.has("golden") && b.goldenUid === c.uid;
+    if (golden) dmg *= 3;
+    if (AUG.has("auraWide") && isAide) { auraDmg = Math.max(auraDmg, 1.55); auraRate = Math.max(auraRate, 1.35); }
+
     c.st = {
-      dmg: base.dmg * bMul("dmg"), rate: base.rate * ATTACK_RATE_MULT * bMul("rate"), range: base.range * bMul("range"),
-      pierce: Math.min(BAL.pierceCap, base.pierce || 0),
+      dmg: dmg * bMul("dmg"), rate: rate * ATTACK_RATE_MULT * bMul("rate"), range: range * bMul("range"),
+      pierce: Math.min(BAL.pierceCap, pierce),
       targets: base.targets || 1,
       critC: base.critC || 0, critM: base.critM || 1,
       slow: Math.min(BAL.slowCap, base.slow || 0),
+      auraDmg, auraRate,
+      // 실제로 사격을 하는가. 변리사냥은 평소 0이지만 「변리사 개업」을 고르면 이 값이 켜진다.
+      atk: dmg > 0 && rate > 0 && range > 0,
+      golden, fused: !!c.fuse,
       buffDmg: 1, buffRate: 1,
     };
   }
   for (const c of cats(b).filter((c) => c.void)) c.st = null;
 
-  // 인접 보좌 — 변리사냥류(순수 보좌형이든, 조합으로 만들어진 하이브리드든) 실제로 이어진 터 칸에만 배율을 곱한다
+  // 인접 보좌 — 실제로 이어진 터 칸에만 배율을 곱한다.
+  // 「심사 병합」 증강을 고르면 통로를 건너 반경 2칸까지 퍼진다.
   for (const a of live) {
-    const base = CATS[a.key];
-    if (!base.auraDmg && !base.auraRate) continue;
-    const adjSet = adjCellsLR(b, a);
+    if (!a.st.auraDmg && !a.st.auraRate) continue;
+    const adjSet = auraCells(b, a);
     for (const c of live) {
       if (c === a) continue;
       if (pieceCells(c).some((k) => adjSet.has(k))) {
-        c.st.buffDmg *= base.auraDmg;
-        c.st.buffRate *= base.auraRate;
+        c.st.buffDmg *= a.st.auraDmg || 1;
+        c.st.buffRate *= a.st.auraRate || 1;
       }
     }
   }
@@ -754,7 +929,7 @@ function computeStats(b) {
   return { econ, active: new Set(), report };
 }
 
-return { computeStats };
+return { auraCells, baseOf, computeStats };
 })();
 __mods["core/combat.js"] = (function(){
 // @ts-check
@@ -839,9 +1014,13 @@ function voidCats(g, n) {
 function step(g, dt, now) {
   if (!g.lanes.length) return;
 
+  // 「우선권 주장」 증강 — 웨이브 개시 직후 잠깐 동안 전체 공속 2배
+  const burst = (g.augSet && g.augSet.has("burst") && g.waveTime < BAL.burstSecs) ? 2 : 1;
+
   // ── 사격 ──
   for (const c of cats(g)) {
-    if (!c.st || CATS[c.key].kind === "buff") continue;
+    // 실제로 사격하는가는 st.atk 가 정한다 — 「변리사 개업」을 고르면 보좌형도 여기에 들어온다
+    if (!c.st || !c.st.atk) continue;
     c.cd = (c.cd || 0) - dt;
     if (c.cd > 0) continue;
 
@@ -855,7 +1034,7 @@ function step(g, dt, now) {
     if (!inRange.length) continue;
     inRange.sort((a, b) => b.dist - a.dist); // 가장 앞선 적부터
 
-    c.cd = 1 / c.st.rate;
+    c.cd = 1 / (c.st.rate * burst);
     c.atkEnd = now + g.atkTotal;
     const col = c.st.slow ? "#79b7d8" : c.st.critC ? "#c79bff" : "#69b6d6";
     const n = Math.min(c.st.targets, inRange.length);
@@ -931,10 +1110,10 @@ return { castSkill, damage, step };
 __mods["core/game.js"] = (function(){
 // @ts-check
 const {Rng} = __req("core/rng.js");
-const {WAVES, BAL, CATS, SKILLS} = __req("core/data.js");
+const {WAVES, BAL, CATS, SKILLS, AUGMENTS, AUGMENT_WAVES} = __req("core/data.js");
 const {getMap, parseMap} = __req("core/maps.js");
 const B = __req("core/board.js");
-const {computeStats} = __req("core/stats.js");
+const {baseOf, computeStats} = __req("core/stats.js");
 const {step, castSkill} = __req("core/combat.js");
 /** 대기 모션: 핑퐁 루프 */
 const IDLE_ORDER = [0,1,2,3,4,5,4,3,2,1];
@@ -972,6 +1151,10 @@ class Game {
 
   reset() {
     this.rng = new Rng(this.seed);
+    // 웨이브 구성과 증강 후보는 rng 와 따로 굴린다.
+    // 무효화 대상 추첨(rng)은 돌파 시점에만 일어나 양쪽 클라이언트에서 횟수가 어긋나는데,
+    // 같은 난수열을 나눠 쓰면 그 어긋남이 웨이브 구성까지 흔들어 대전이 불공평해지기 때문이다.
+    this.waveRng = new Rng((this.seed ^ 0x85ebca6b) >>> 0);
     this._uid = 0;
     this.atkTotal = ATK_TOTAL;
 
@@ -1000,6 +1183,16 @@ class Game {
     this.myPassives = [];  // 내가 (직접 선택 또는 상대에게서) 받은 효과 로그
     this.foePassives = []; // 내가 상대에게 건 효과 로그
     this.awaitingPassive = false;
+
+    /* ── 증강 ──
+     * 후보 12장을 판 시작 때 한 번 섞어 두고 3장씩 끊어 준다.
+     * 양쪽 플레이어가 같은 시드를 받으므로 후보 목록도 완전히 같고, 이미 고른 것이 후보에서
+     * 빠지는 식(선택 이력에 따라 풀이 달라지는 식)이 아니라서 두 판의 후보가 어긋나지 않는다. */
+    this.augments = [];                  // 고른 순서대로의 증강 키
+    this.augSet = new Set();             // 빠른 조회용 (stats/combat 이 이걸 본다)
+    this.augDeck = new Rng((this.seed ^ 0x9e3779b9) >>> 0).shuffle(Object.keys(AUGMENTS));
+    this.awaitingAugment = false;
+    this.goldenUid = 0;                  // 「직권보정」으로 이번 웨이브 동안 3배가 된 냥타워
 
     /** 액티브 스킬 재사용 대기(초). 웨이브가 끝나면 전부 0으로 돌아간다. */
     this.skillCd = {};
@@ -1069,7 +1262,9 @@ class Game {
   /** 임용 비용. 몇 명을 놓든 정가로 고정된다. @param {string} key */
   catCost(key) {
     // 몇 명을 임용하든 정가. (예전에는 같은 종류를 더 놓을수록 비싸졌지만, 지금은 붙이지 않는다.)
-    return Math.round(CATS[key].cost * (this.bal.catCostMul ?? 1));
+    // 「선사용권」 증강만이 이 가격을 건드린다.
+    const aug = this.augSet.has("cheap") ? 0.6 : 1;
+    return Math.round(CATS[key].cost * (this.bal.catCostMul ?? 1) * aug);
   }
   /** 다음 개방 구역. 없으면 null */
   nextAnnex() { return this.map.annex[this.ext] || null; }
@@ -1104,7 +1299,7 @@ class Game {
   buyCat(key) {
     const c = this.catCost(key);
     if (this.phase !== "prep" || this.gold < c) return null;
-    const p = { kind: "cat", key, x: -1, y: -1, w: 1, h: 1, uid: this.uid(), void: 0 };
+    const p = { kind: "cat", key, fuse: null, x: -1, y: -1, w: 1, h: 1, uid: this.uid(), void: 0 };
     const spot = B.firstLegalSpot(this, p);
     if (spot) { p.x = spot[0]; p.y = spot[1]; this.pieces.push(p); }
     else this.tray.push(p);
@@ -1112,6 +1307,78 @@ class Game {
     this.recompute();
     this.events.push({ t: "buy", what: "cat", key, name: CATS[key].name, cost: c });
     return p;
+  }
+
+  // ── 증강 ──
+  /** 이 웨이브가 증강을 고르는 웨이브인가 (클리어 직후 기준) */
+  isAugmentWave(wave) { return AUGMENT_WAVES.includes(wave); }
+
+  /**
+   * 이번 증강 라운드에 제시할 3장.
+   * 섞어 둔 덱을 3장씩 끊어 주므로 한 판에서 같은 증강이 두 번 나오지 않고,
+   * 시드가 같은 상대에게도 정확히 같은 3장이 나온다.
+   * @returns {{key:string,name:string,icon:string,tag:string,desc:string,detail:string}[]}
+   */
+  augOffer() {
+    const i = AUGMENT_WAVES.indexOf(this.wave);
+    if (i < 0) return [];
+    return this.augDeck.slice(i * 3, i * 3 + 3).map((k) => AUGMENTS[k]).filter(Boolean);
+  }
+
+  /** 고른 증강을 적용한다. 즉시형은 여기서 한 번에 처리한다. @param {string} key */
+  applyAugment(key) {
+    const d = AUGMENTS[key];
+    this.awaitingAugment = false;
+    if (!d || this.augSet.has(key)) return false;
+    this.augments.push(key);
+    this.augSet.add(key);
+
+    if (key === "fortify") {
+      this.maxHp += 30;
+      this.hp = Math.min(this.maxHp, this.hp + 30);
+    }
+    if (key === "cheap") this.gold += 120;
+    if (key === "divisional") this.cloneBestCat();
+
+    this.recompute();
+    this.events.push({ t: "augment", key, name: d.name, icon: d.icon, desc: d.desc });
+    return true;
+  }
+
+  /** 「분할출원」 — 판에서 가장 비싼 냥타워를 하나 복제한다. 빈 터가 없으면 대기열로. */
+  cloneBestCat() {
+    const pool = B.cats(this).filter((c) => !c.void);
+    if (!pool.length) return null;
+    const src = pool.reduce((a, c) => (baseOf(c).cost > baseOf(a).cost ? c : a));
+    const p = { kind: "cat", key: src.key, fuse: src.fuse || null,
+                x: -1, y: -1, w: 1, h: 1, uid: this.uid(), void: 0 };
+    const spot = B.firstLegalSpot(this, p);
+    if (spot) { p.x = spot[0]; p.y = spot[1]; this.pieces.push(p); }
+    else this.tray.push(p);
+    this.events.push({ t: "clone", key: p.key, name: baseOf(p).name, placed: !!spot });
+    return p;
+  }
+
+  // ── 합체 (「합동특허법률사무소」 증강) ──
+  /** src 를 dst 위에 겹쳐 합칠 수 있는가 */
+  canFuse(dst, src) {
+    if (!this.augSet.has("fuse") || this.phase !== "prep") return false;
+    if (!dst || !src || dst === src) return false;
+    if (dst.kind !== "cat" || src.kind !== "cat") return false;
+    if (dst.fuse || src.fuse) return false;      // 합체냥은 다시 합칠 수 없다
+    if (dst.void || src.void) return false;
+    return dst.key !== src.key;                  // 서로 다른 종류끼리만
+  }
+
+  /** src 를 dst 에 합친다. dst 가 합체냥이 되고 src 는 판에서 사라진다. */
+  fuse(dst, src) {
+    if (!this.canFuse(dst, src)) return false;
+    dst.fuse = src.key;
+    this.pieces = this.pieces.filter((p) => p !== src);
+    this.tray = this.tray.filter((p) => p !== src);
+    this.recompute();
+    this.events.push({ t: "fuse", name: baseOf(dst).name, x: dst.x, y: dst.y });
+    return true;
   }
 
   // ── 액티브 스킬 ──
@@ -1173,9 +1440,20 @@ class Game {
 
   // ── 웨이브 ──
   startWave() {
-    if (this.phase !== "prep" || this.awaitingPassive) return false;
+    if (this.phase !== "prep" || this.awaitingPassive || this.awaitingAugment) return false;
     this.recompute();
     if (!this.lanes.length) return false;
+
+    // 「직권보정」 — 이번 웨이브 동안 공격력 3배가 될 냥타워를 뽑는다.
+    // 뽑고 나서 다시 계산해야 그 냥의 st 에 배율이 실린다.
+    if (this.augSet.has("golden")) {
+      const pool = B.cats(this).filter((c) => c.st && c.st.atk);
+      this.goldenUid = pool.length ? pool[this.waveRng.int(pool.length)].uid : 0;
+      this.recompute();
+      const pick = pool.find((c) => c.uid === this.goldenUid);
+      if (pick) this.events.push({ t: "golden", name: baseOf(pick).name, x: pick.x, y: pick.y });
+    }
+
     this.wave++;
     this.phase = "wave";
     this.waveTime = 0;
@@ -1189,14 +1467,14 @@ class Game {
       const n = k === "boss" ? def[k] : Math.max(1, Math.round(def[k] * scale));
       for (let i = 0; i < n; i++) list.push(k);
     }
-    list = this.rng.shuffle(list);
+    list = this.waveRng.shuffle(list);
     list.sort((a, b) => (a === "boss" ? 1 : 0) - (b === "boss" ? 1 : 0));
 
     // 진입구가 여럿이면 돌아가며 분배한다
     const nLanes = this.lanes.length;
-    let at = 0, laneCursor = this.rng.int(nLanes);
+    let at = 0, laneCursor = this.waveRng.int(nLanes);
     for (const t of list) {
-      const lane = t === "boss" ? this.rng.int(nLanes) : (laneCursor++ % nLanes);
+      const lane = t === "boss" ? this.waveRng.int(nLanes) : (laneCursor++ % nLanes);
       this.spawnQueue.push({ t, at, lane });
       at += t === "boss" ? BAL.spawnGapBoss : BAL.spawnGap;
     }
@@ -1224,11 +1502,15 @@ class Game {
     for (const k in this.skillCd) this.skillCd[k] = 0;
     const income = Math.round(this.bal.incomeBase + this.wave * this.bal.incomePerWave);
     this.gold += income;
+    this.goldenUid = 0;        // 「직권보정」의 3배는 그 웨이브 안에서만 산다
     this.recompute();
     this.events.push({ t: "wave_end", wave: this.wave, income, bonus: 0 });
     if (this.wave >= BAL.waveCount) {
       this.phase = "won";
       this.events.push({ t: "over", win: true });
+    } else if (this.isAugmentWave(this.wave)) {
+      // 증강 웨이브에서는 패시브 대신 증강을 고른다 — 두 모달을 연달아 띄우면 대기가 너무 길어진다
+      this.awaitingAugment = true;
     } else {
       this.awaitingPassive = true;
     }
@@ -1308,6 +1590,7 @@ class Game {
       covered: this.coveredPath, gates: this.gates.length,
       cover: this.cover, gold: Math.round(this.gold),
       cats: B.cats(this).length,
+      augments: this.augments.slice(),
       skillUses: { ...this.skillUses },
       skillTotal: Object.values(this.skillUses).reduce((a, b) => a + b, 0),
       reg: this.reg,
@@ -1342,9 +1625,10 @@ return { onSpriteReady, sprite };
 __mods["web/main.js"] = (function(){
 // @ts-check
 const {Game, frameOf} = __req("core/game.js");
-const {CATS, ENEMIES, BAL, PASSIVES, PASSIVE_BY_KEY, SKILLS} = __req("core/data.js");
+const {CATS, ENEMIES, BAL, PASSIVES, PASSIVE_BY_KEY, SKILLS, AUGMENTS, AUGMENT_WAVES} = __req("core/data.js");
 const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
+const {auraCells, baseOf} = __req("core/stats.js");
 const {sprite, onSpriteReady} = __req("web/sprite.js");
 const $ = (s) => /** @type {HTMLElement} */ (document.querySelector(s));
 const CS = BAL.cellSize, GAP = BAL.cellGap;
@@ -1366,6 +1650,19 @@ const catCanvas = new Map();
 let ws = null, youAre = null;
 let oppSnapshot = null;   // 상대에게서 마지막으로 받은 보드 스냅샷
 let lastStateSentAt = 0;
+let matchSeed = 0;        // 서버가 정해 준 판 시드 — 양쪽이 같은 웨이브·같은 증강 후보를 받는다
+
+/* ── 웨이브 동시 개시 ──
+ * 예전에는 「웨이브 개시」를 누르는 즉시 내 판에서만 웨이브가 굴러가서, 먼저 누르고 먼저 끝내는 쪽이
+ * 계속 앞서 나가는 구조였다. 이제 개시 버튼은 "준비 완료" 신호일 뿐이고, 실제 개시는 서버가
+ * 양쪽에게 동시에 알린다 — 둘 다 준비되면 바로, 아니면 준비시간 15초가 끝나는 순간에.
+ */
+let iReady = false;        // 내가 준비를 눌렀는가
+let oppReady = false;      // 상대가 준비를 눌렀는가
+let oppInPrep = false;     // 상대도 준비 단계에 들어섰는가 (아직 웨이브를 돌고 있으면 false)
+let prepEndsAt = 0;        // 준비시간 마감 시각(performance.now 기준). 0이면 아직 카운트다운 전
+let prepSentWave = 0;      // "준비 단계에 들어섰다"를 서버에 알린 웨이브 번호 (중복 전송 방지)
+let oppAugs = [];          // 상대가 고른 증강 키 목록 (스냅샷에서 받아온다)
 
 function connectWS() {
   // HTTPS 로 서비스되면 반드시 wss:// 로 붙어야 한다.
@@ -1391,12 +1688,33 @@ function onServerMessage(msg) {
       break;
     case "start":
       youAre = msg.youAre;
+      matchSeed = msg.seed || 0;
       beginBattle();
       break;
     case "oppState":
       oppSnapshot = msg.snap;
       $("#oppHp").textContent = `${Math.max(0, Math.ceil(msg.snap.hp))}/${msg.snap.maxHp}`;
       $("#oppWave").textContent = `${msg.snap.wave}/${BAL.waveCount}`;
+      syncOppAugs(msg.snap.augs || []);
+      break;
+
+    /* ── 동시 개시 ── */
+    case "prepState": {      // 서버가 보내 주는 양쪽의 준비 상황 (항상 전체 상태)
+      if (!game || msg.wave !== game.wave + 1) break;
+      const me = youAre === "p1" ? 0 : 1;
+      const was = oppReady;
+      iReady = !!msg.ready[me];
+      oppReady = !!msg.ready[1 - me];
+      oppInPrep = !!msg.prep[1 - me];
+      if (oppReady !== was) log(oppReady ? "상대가 <b>준비 완료</b>했습니다." : "상대가 준비를 취소했습니다.");
+      break;
+    }
+    case "prepSync":         // 양쪽 다 준비 단계 — 여기서부터 15초를 잰다
+      oppInPrep = true;
+      prepEndsAt = performance.now() + (msg.secs || BAL.prepSecs) * 1000;
+      break;
+    case "waveGo":           // 서버의 개시 신호 — 양쪽이 같은 순간에 웨이브를 시작한다
+      if (game && game.wave + 1 === msg.wave) doStartWave();
       break;
     case "oppPassive": {
       const def = PASSIVE_BY_KEY[msg.key];
@@ -1474,8 +1792,8 @@ function syncBoardCells() {
   const baseFixed = new Set(baseFixedCells());
   const adj = new Set();
   for (const c of B.cats(game)) {
-    if (!CATS[c.key].auraDmg && !CATS[c.key].auraRate) continue;
-    for (const k of B.adjCellsLR(game, c)) adj.add(k);
+    if (!c.st || (!c.st.auraDmg && !c.st.auraRate)) continue;
+    for (const k of auraCells(game, c)) adj.add(k);   // 「심사 병합」 증강이면 범위가 넓어진다
   }
   document.querySelectorAll("#board .cell").forEach((el) => {
     const x = +(/** @type {HTMLElement} */ (el).dataset.x), y = +(/** @type {HTMLElement} */ (el).dataset.y);
@@ -1508,7 +1826,8 @@ function pieceEl(p, onBoard) {
   const el = document.createElement("div");
   // 변리사냥의 보좌를 받고 있으면 배경이 은은하게 반짝인다 (실제로 이어진 터에만 적용됨)
   const buffed = !p.void && p.st && (p.st.buffDmg > 1 || p.st.buffRate > 1);
-  el.className = "piece cat" + (p.void ? " void" : "") + (buffed ? " buffed" : "");
+  el.className = "piece cat" + (p.void ? " void" : "") + (buffed ? " buffed" : "") +
+    (p.fuse ? " fused" : "") + (p.st && p.st.golden ? " golden" : "");
   el.dataset.uid = String(p.uid);
 
   if (onBoard) {
@@ -1524,11 +1843,20 @@ function pieceEl(p, onBoard) {
   catCanvas.set(p.uid, cv);        // 코어 객체를 오염시키지 않는다
   el.appendChild(cv);
 
-  const badge = document.createElement("span");
-  badge.textContent = CATS[p.key].icon;
-  badge.style.cssText = "position:absolute;right:-3px;bottom:-3px;font-size:20px;line-height:1;" +
+  const BADGE = (side) => `position:absolute;${side}:-3px;bottom:-3px;font-size:20px;line-height:1;` +
     "background:#f2ecdb;border:2px solid #2b2418;border-radius:50%;width:26px;height:26px;" +
     "display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5";
+  const badge = document.createElement("span");
+  badge.textContent = CATS[p.key].icon;
+  badge.style.cssText = BADGE("right");
+
+  // 합체냥은 합쳐진 상대 쪽 아이콘을 왼쪽에 하나 더 단다 — 무엇과 무엇이 붙었는지 판에서 바로 보이도록
+  if (p.fuse && CATS[p.fuse]) {
+    const mate = document.createElement("span");
+    mate.textContent = CATS[p.fuse].icon;
+    mate.style.cssText = BADGE("left") + ";border-color:#8f6ad8";
+    el.appendChild(mate);
+  }
   el.appendChild(badge);
 
   el.addEventListener("pointerdown", (e) => startDrag(e, p));
@@ -1564,11 +1892,82 @@ function renderHud() {
   $("#regHead").textContent = String(game.reg);
 
   const prep = game.phase === "prep";
-  btn("#btnGo").disabled = !prep || game.awaitingPassive;
   if (prep) disarmSkill();   // 웨이브가 끝나면 조준 상태는 자동으로 풀린다
+  renderReadyBar();          // 개시 버튼의 상태는 이제 준비 상황이 정한다
   updateSkillBar();
 }
 const btn = (s) => /** @type {HTMLButtonElement} */ ($(s));
+
+/* ═══════ 웨이브 동시 개시 ═══════ */
+/** 지금 준비 버튼을 누를 수 있는 상태인가 (준비 단계 + 고를 것이 남아 있지 않음) */
+const canPrep = () => !!game && game.phase === "prep" && !game.awaitingPassive && !game.awaitingAugment;
+const online = () => !!ws && ws.readyState === 1;
+
+/**
+ * 준비 단계에 들어섰다는 사실을 서버에 한 번만 알린다.
+ * 서버는 양쪽이 다 들어온 순간부터 준비시간을 재기 시작한다 — 상대가 아직 웨이브를 돌고 있으면
+ * 카운트다운도 시작되지 않으므로, 먼저 끝냈다고 해서 앞서 나갈 수가 없다.
+ */
+function syncPrepState() {
+  if (!game) return;
+  const next = game.wave + 1;
+  if (canPrep() && prepSentWave !== next) {
+    prepSentWave = next;
+    // 상대 쪽 상태는 건드리지 않는다 — 서버가 곧바로 prepState 로 전체 상황을 다시 알려준다.
+    // (내가 늦게 들어왔을 때 이미 준비를 마친 상대를 "대기 중"으로 지워버리면 안 된다)
+    iReady = false; prepEndsAt = 0;
+    sendWS({ t: "prep", wave: next });
+  }
+}
+
+/** 개시 버튼 + 준비 표시줄. 매 프레임 불린다. */
+function renderReadyBar() {
+  if (!game) return;
+  const b = btn("#btnGo");
+  const next = game.wave + 1;
+  const bar = $("#readyBar");
+  if (!bar) return;
+
+  if (game.phase === "wave") {
+    b.disabled = true; b.textContent = "심사 중…";
+  } else if (game.awaitingAugment) {
+    b.disabled = true; b.textContent = "증강 선택 중";
+  } else if (game.awaitingPassive) {
+    b.disabled = true; b.textContent = "효과 선택 중";
+  } else if (game.phase === "prep") {
+    b.disabled = false;
+    b.textContent = iReady ? "준비 취소" : `웨이브 ${next} 준비 완료`;
+  } else {
+    b.disabled = true;
+  }
+  b.classList.toggle("waiting", iReady && game.phase === "prep");
+
+  const show = game.phase === "prep";
+  bar.classList.toggle("hidden", !show);
+  if (!show) return;
+
+  const left = prepEndsAt ? Math.max(0, (prepEndsAt - performance.now()) / 1000) : 0;
+  $("#rdyMe").className = "rdy " + (iReady ? "on" : "off");
+  $("#rdyMe").querySelector("b").textContent = iReady ? "준비 완료" : "준비 중";
+  $("#rdyOpp").className = "rdy " + (oppReady ? "on" : oppInPrep ? "off" : "away");
+  $("#rdyOpp").querySelector("b").textContent =
+    oppReady ? "준비 완료" : oppInPrep ? "준비 중" : "웨이브 진행 중";
+
+  const t = $("#rdyTimer");
+  if (!online()) t.textContent = "서버 연결 끊김 — 혼자 진행합니다";
+  else if (!prepEndsAt) t.textContent = "상대가 웨이브를 끝내면 준비시간이 시작됩니다";
+  else t.textContent = `준비시간 ${left.toFixed(1)}초`;
+  /** @type {HTMLElement} */ ($("#rdyFill")).style.width =
+    prepEndsAt ? `${Math.min(100, (left / BAL.prepSecs) * 100)}%` : "0%";
+}
+
+/** 실제 개시. 서버의 waveGo 신호(또는 서버가 없을 때의 직접 개시)로만 들어온다. */
+function doStartWave() {
+  iReady = false; oppReady = false; oppInPrep = false; prepEndsAt = 0;
+  if (!game.startWave()) { log("동선이 막혀 있습니다."); return; }
+  $("#phaseLbl").textContent = `웨이브 ${game.wave} 진행 중`;
+  render();
+}
 
 function renderReport() {
   const cov = Math.round(game.cover * 100);
@@ -1629,11 +2028,11 @@ function draw(now) {
   }
   for (const c of B.cats(game)) {
     if (!c.st) continue;
-    if (CATS[c.key].kind !== "buff") {
+    if (c.st.atk) {   // 「변리사 개업」을 고르면 보좌형에게도 사거리 원이 생긴다
       const [cx, cy] = B.pieceCenter(c);
       g.beginPath(); g.arc(cx, cy, c.st.range, 0, 7);
-      g.fillStyle = "rgba(105,182,214,.07)"; g.fill();
-      g.strokeStyle = "rgba(60,106,138,.32)"; g.lineWidth = 1; g.stroke();
+      g.fillStyle = c.st.golden ? "rgba(205,164,58,.12)" : "rgba(105,182,214,.07)"; g.fill();
+      g.strokeStyle = c.st.golden ? "rgba(205,164,58,.6)" : "rgba(60,106,138,.32)"; g.lineWidth = 1; g.stroke();
     }
     const cc = catCanvas.get(c.uid);
     if (cc && sprite.complete) {
@@ -2134,7 +2533,20 @@ function consumeEvents() {
         break;
       case "wave_end":
         log(`웨이브 ${ev.wave} 방어 완료 · 수입 <b>+${ev.income}</b>`);
-        if (game.awaitingPassive) openPassiveModal();
+        if (game.awaitingAugment) openAugmentModal();
+        else if (game.awaitingPassive) openPassiveModal();
+        break;
+      case "augment":
+        log(`<b style="color:#cda43a">증강 ${ev.icon} ${ev.name}</b> — ${ev.desc}`);
+        break;
+      case "clone":
+        log(`<b>분할출원</b> ${ev.name} 하나가 ${ev.placed ? "판에 추가되었습니다" : "대기열에 놓였습니다"}`);
+        break;
+      case "fuse":
+        log(`<b style="color:#b48cff">합체</b> ${ev.name} 완성`);
+        break;
+      case "golden":
+        log(`<b style="color:#cda43a">직권보정</b> ${ev.name} — 이번 웨이브 동안 공격력 3배`);
         break;
       case "over":
         sendWS({ t: ev.win ? "won" : "lost" });
@@ -2167,6 +2579,8 @@ function loop() {
   stepSkillFx(dt);
 
   consumeEvents();
+  syncPrepState();
+  renderReadyBar();
   draw(now);
   drawOpponent(now);
   maybeSendState(now);
@@ -2178,7 +2592,8 @@ function maybeSendState(now) {
   lastStateSentAt = now;
   const snap = {
     hp: game.hp, maxHp: game.maxHp, wave: game.wave, phase: game.phase,
-    pieces: B.placed(game).filter((p) => !p.void).map((p) => ({ k: p.key, x: p.x, y: p.y })),
+    augs: game.augments,
+    pieces: B.placed(game).filter((p) => !p.void).map((p) => ({ k: p.key, f: p.fuse || null, x: p.x, y: p.y })),
     enemies: game.enemies.map((e) => ({ t: e.t, x: Math.round(e.x), y: Math.round(e.y), hp: e.hp / e.max })),
     cols: game.cols, rows: game.rows, layout: game.map.layout,
   };
@@ -2222,8 +2637,15 @@ function moveDrag(e) {
   dragging.ghost.style.left = (e.clientX - dragging.ox) + "px";
   dragging.ghost.style.top = (e.clientY - dragging.oy) + "px";
   const t = dropTarget(e);
-  document.querySelectorAll(".cell").forEach((c) => c.classList.remove("hint", "bad"));
+  document.querySelectorAll(".cell").forEach((c) => c.classList.remove("hint", "bad", "fusehint"));
   if (t && t.type === "cell") {
+    // 이미 냥타워가 있는 칸이라도, 합체가 가능하면 "겹쳐 놓기"가 정답이므로 따로 표시한다
+    const occupant = B.pieceAt(game, t.x, t.y, dragging.p);
+    if (occupant && game.canFuse(occupant, dragging.p)) {
+      const c = cellEl(t.x, t.y);
+      if (c) c.classList.add("fusehint");
+      return;
+    }
     const ok = B.legal(game, dragging.p, t.x, t.y, dragging.p);
     for (let dy = 0; dy < dragging.p.h; dy++)
       for (let dx = 0; dx < dragging.p.w; dx++) {
@@ -2238,9 +2660,20 @@ function endDrag(e) {
   if (!dragging) return;
   const t = dropTarget(e), p = dragging.p;
   dragging.ghost.remove();
-  document.querySelectorAll(".cell").forEach((c) => c.classList.remove("hint", "bad"));
+  document.querySelectorAll(".cell").forEach((c) => c.classList.remove("hint", "bad", "fusehint"));
 
   if (t && t.type === "cell") {
+    // 「합동특허법률사무소」 증강 — 다른 종류 위에 겹쳐 놓으면 합체냥이 된다
+    const occupant = B.pieceAt(game, t.x, t.y, p);
+    if (occupant && game.canFuse(occupant, p)) {
+      game.fuse(occupant, p);
+      const [cx, cy] = B.pieceCenter(occupant);
+      const bb = $("#board").getBoundingClientRect();
+      stamp(bb.left + cx, bb.top + cy, "合 體", baseOf(occupant).name);
+      dragging = null;
+      render();
+      return;
+    }
     const wasNew = p.x < 0;
     if (game.place(p, t.x, t.y) && wasNew) {
       log(`<b>${CATS[p.key].name} 배치</b> — ${CATS[p.key].desc}`);
@@ -2274,8 +2707,11 @@ function log(html) {
 function showTip(e, p) {
   if (dragging) return;
   const t = $("#tip");
-  const d = CATS[p.key];
-  t.innerHTML = `<b>${d.name}</b> — ${d.tag}<i>${d.desc}</i><i>1칸짜리 벽이기도 하다.</i>
+  const d = baseOf(p);   // 합체냥이면 두 종류를 합친 정의가 나온다
+  const s = p.st;
+  t.innerHTML = `<b>${d.name}</b> — ${d.tag}<i>${d.desc}</i>
+    ${s && s.atk ? `<i>공격력 ${s.dmg.toFixed(1)} · 공속 ${s.rate.toFixed(2)}/s · 사거리 ${(s.range/(CS+GAP)).toFixed(1)}칸</i>` : "<i>1칸짜리 벽이기도 하다.</i>"}
+    ${s && s.golden ? `<i style="color:#cda43a">직권보정 — 이번 웨이브 공격력 3배</i>` : ""}
     ${p.void ? `<i style="color:#e0574d">무효 상태 · ${p.void}웨이브 남음</i>` : ""}`;
   t.style.display = "block";
   t.style.left = Math.min(e.clientX + 14, innerWidth - 244) + "px";
@@ -2284,6 +2720,7 @@ function showTip(e, p) {
 const hideTip = () => { $("#tip").style.display = "none"; };
 
 function endMatch(iWon, reasonText) {
+  clearChoiceTimer();
   const s = game.summary();
   $("#sheet").innerHTML = `<div class="end">
     <h3 style="color:${iWon ? "#cda43a" : "#e0574d"}">${iWon ? "登錄 決定 — 승리" : "拒 絶 決 定 — 패배"}</h3>
@@ -2293,6 +2730,7 @@ function endMatch(iWon, reasonText) {
       <span>최종 동선</span><b>${s.totalPath}칸 (제압 ${s.covered})</b>
       <span>최종 제압률</span><b>${Math.round(s.cover * 100)}%</b>
       <span>배치 심사관</span><b>${s.cats}명</b>
+      <span>증강</span><b>${s.augments.length ? s.augments.map((k) => `${AUGMENTS[k].icon} ${AUGMENTS[k].name}`).join(" · ") : "없음"}</b>
       <span>특허권 행사</span><b>${s.skillTotal}회 (가처분 ${s.skillUses.injunction} · 폐기 ${s.skillUses.scrap})</b></div>
     <button class="go" id="again" style="padding:10px 26px">로비로</button></div>`;
   $("#modal").classList.add("on");
@@ -2486,7 +2924,7 @@ function renderCatRoster() {
         <span class="ic" style="margin:0;font-size:22px">${d.icon}</span>
         <div style="min-width:0">
           <span class="nm" style="display:block">${d.name}</span>
-          <span class="ef" style="color:#8a7c5e;font-family:var(--mono);font-size:9.5px;display:block">${d.tag}${d.kind === "buff" ? " · 비공격" : ""}</span>
+          <span class="ef" style="color:#8a7c5e;font-family:var(--mono);font-size:9.5px;display:block">${d.tag}${d.kind === "buff" && !game.augSet.has("agentWar") ? " · 비공격" : ""}${d.kind === "buff" && game.augSet.has("agentWar") ? " · 전투참전" : ""}</span>
         </div>
         <span class="ef" style="margin-left:auto;color:#3f5a2f;font-weight:700;white-space:nowrap">₩${cost.toLocaleString()}</span>
       </div>
@@ -2514,6 +2952,44 @@ function renderCatRoster() {
   });
 }
 
+/* ═══════ 선택 모달 (패시브 · 증강) ═══════ */
+/**
+ * 선택 제한시간.
+ * 웨이브 개시가 양쪽 합의로 바뀌었으므로, 한 쪽이 모달을 켜 둔 채 자리를 비우면 상대까지 묶인다.
+ * 제한시간이 끝나면 첫 번째 후보가 자동으로 선택된다.
+ */
+let choiceTimer = null;
+function clearChoiceTimer() {
+  if (choiceTimer) { clearInterval(choiceTimer); choiceTimer = null; }
+}
+function startChoiceTimer(onExpire) {
+  clearChoiceTimer();
+  const total = BAL.choiceSecs * 1000;
+  const end = performance.now() + total;
+  const tick = () => {
+    const left = Math.max(0, end - performance.now());
+    const fill = /** @type {HTMLElement} */ ($("#sheet").querySelector(".choicebar i"));
+    const lbl = $("#sheet").querySelector(".choicebar b");
+    if (fill) fill.style.width = `${(left / total) * 100}%`;
+    if (lbl) lbl.textContent = `${(left / 1000).toFixed(1)}초 뒤 자동 선택`;
+    if (left <= 0) { clearChoiceTimer(); onExpire(); }
+  };
+  choiceTimer = setInterval(tick, 100);
+  tick();
+}
+const choiceBarHtml = () =>
+  `<div class="choicebar"><b>${BAL.choiceSecs.toFixed(1)}초 뒤 자동 선택</b><span class="track"><i></i></span></div>`;
+
+/** 선택이 끝났을 때 공통으로 하는 뒷정리 */
+function closeChoiceModal() {
+  clearChoiceTimer();
+  $("#modal").classList.remove("on");
+  $("#phaseLbl").textContent = "준비 단계";
+  renderPassiveTags();
+  renderAugTags();
+  render();
+}
+
 /** 웨이브 클리어 시 뜨는 패시브 선택 모달 */
 function openPassiveModal() {
   $("#sheet").innerHTML = `<h3>웨이브 ${game.wave} 클리어 — 효과를 하나 고르세요</h3>
@@ -2522,21 +2998,73 @@ function openPassiveModal() {
         <span class="nm">${def.name}</span>
         <span class="ef" style="color:${def.side === "self" ? "#3f5a2f" : "#8a2a24"}">${def.desc}</span>
         <span class="fl">${def.detail}</span>
-      </div>`).join("")}</div>`;
+      </div>`).join("")}</div>${choiceBarHtml()}`;
   $("#modal").classList.add("on");
+  const choose = (key) => {
+    const def = PASSIVE_BY_KEY[key];
+    if (!def || !game.awaitingPassive) return;
+    game.applyPassive(def);
+    sendWS({ t: "passive", key: def.key });
+    log(def.side === "self" ? `<b>${def.name}</b> 선택 — ${def.desc}` : `<b>${def.name}</b> 선택 — 상대에게 전달됩니다.`);
+    closeChoiceModal();
+  };
   $("#sheet").querySelectorAll(".pick").forEach((el) => {
-    el.addEventListener("click", () => {
-      const def = PASSIVE_BY_KEY[/** @type {HTMLElement} */ (el).dataset.k];
-      game.applyPassive(def);
-      sendWS({ t: "passive", key: def.key });
-      $("#modal").classList.remove("on");
-      log(def.side === "self" ? `<b>${def.name}</b> 선택 — ${def.desc}` : `<b>${def.name}</b> 선택 — 상대에게 전달됩니다.`);
-      renderPassiveTags();
-      $("#phaseLbl").textContent = "준비 단계";
-      btn("#btnGo").textContent = `웨이브 ${game.wave + 1} 개시`;
-      render();
-    });
+    el.addEventListener("click", () => choose(/** @type {HTMLElement} */ (el).dataset.k));
   });
+  startChoiceTimer(() => choose(PASSIVES[0].key));
+}
+
+/**
+ * 증강 선택 모달 — 2~3 웨이브에 한 번, 패시브 대신 뜬다.
+ * 후보 3장은 시드에서 나오므로 상대에게도 똑같은 3장이 간다.
+ */
+function openAugmentModal() {
+  const offer = game.augOffer();
+  if (!offer.length) { game.awaitingAugment = false; return; }
+  const round = AUGMENT_WAVES.indexOf(game.wave) + 1;
+  $("#sheet").innerHTML = `<h3 class="augtitle">증강 ${round}차 — 판을 뒤집을 하나를 고르세요</h3>
+    <div class="augnote">패시브와 달리 <b>규칙 자체가 바뀝니다</b>. 이번 판에서 같은 증강은 다시 나오지 않고,
+      상대에게도 같은 3장이 갔습니다.</div>
+    <div class="picks augpicks">${offer.map((d) => `
+      <div class="pick aug" data-k="${d.key}">
+        <span class="ic">${d.icon}</span>
+        <span class="nm">${d.name}</span>
+        <span class="augtag">${d.tag}</span>
+        <span class="ef">${d.desc}</span>
+        <span class="fl">${d.detail}</span>
+      </div>`).join("")}</div>${choiceBarHtml()}`;
+  $("#modal").classList.add("on");
+  const choose = (key) => {
+    if (!game.awaitingAugment) return;
+    game.applyAugment(key);     // 실패하더라도(있을 수 없지만) 모달은 반드시 닫는다 — 상대가 묶이면 안 된다
+    closeChoiceModal();
+  };
+  $("#sheet").querySelectorAll(".pick").forEach((el) => {
+    el.addEventListener("click", () => choose(/** @type {HTMLElement} */ (el).dataset.k));
+  });
+  startChoiceTimer(() => choose(offer[0].key));
+}
+
+/** 내가 고른 증강 · 상대가 고른 증강을 태그로 보여준다 */
+function renderAugTags() {
+  const mine = game.augments.map((k) => AUGMENTS[k])
+    .map((d) => `<span class="aug"><b>${d.icon} ${d.name}</b><i>${d.desc}</i></span>`).join("");
+  $("#myAugTags").innerHTML = mine || `<span class="none">없음</span>`;
+  const theirs = oppAugs.map((k) => AUGMENTS[k]).filter(Boolean)
+    .map((d) => `<span class="aug"><b>${d.icon} ${d.name}</b><i>${d.desc}</i></span>`).join("");
+  const box = $("#oppAugTags");
+  if (box) box.innerHTML = theirs || `<span class="none">아직 없음</span>`;
+}
+
+/** 상대 스냅샷에 실려 온 증강 목록을 반영한다 (새로 늘어난 것만 기록에 남긴다) */
+function syncOppAugs(list) {
+  if (!game || list.length === oppAugs.length) return;
+  for (const k of list.slice(oppAugs.length)) {
+    const d = AUGMENTS[k];
+    if (d) log(`<b class="warn">상대 증강</b> ${d.icon} ${d.name} — ${d.desc}`);
+  }
+  oppAugs = list.slice();
+  renderAugTags();
 }
 function renderPassiveTags() {
   // 내 목록에는 "상대가 나에게 건 약화"도 섞여 들어온다 — 그건 내 입장에서 읽히도록 문구를 뒤집는다
@@ -2641,7 +3169,18 @@ function drawOpponent(now) {
     if (img) {
       const sz = tile * 1.02;
       g.drawImage(img, cx - sz / 2, cy - sz / 2, sz, sz);
-    } else {
+    }
+    // 합체냥은 보랏빛 테두리와 짝 아이콘으로 구분한다
+    if (p.f && CATS[p.f]) {
+      g.strokeStyle = "#8f6ad8"; g.lineWidth = Math.max(1, cell * 0.05);
+      g.strokeRect(cx - tile / 2, cy - tile / 2, tile, tile);
+      g.font = `${Math.round(cell * 0.34)}px sans-serif`;
+      g.fillStyle = "#3a2f1e";
+      g.textAlign = "left"; g.textBaseline = "top";
+      g.fillText(CATS[p.f].icon, cx - tile / 2, cy - tile / 2);
+      g.textAlign = "start"; g.textBaseline = "alphabetic";
+    }
+    if (!img) {
       g.fillStyle = def.kind === "buff" ? "#f4b740" : "#5bc8e8";
       g.beginPath(); g.arc(cx, cy, cell * 0.26, 0, 7); g.fill();
     }
@@ -2664,31 +3203,41 @@ function beginBattle() {
   $("#lobby").classList.add("hidden");
   $("#gameRoot").classList.remove("hidden");
 
-  game = new Game({ map: "complex" });
+  // 시드는 서버가 정해 양쪽에게 같이 내려준다 — 웨이브 구성도 증강 후보도 완전히 같아진다
+  game = new Game({ map: "complex", seed: matchSeed || undefined });
   floaters.length = 0;
   sparks = [];
   skillFx = [];
   armedSkill = null; aimPt = null;
   shakeT = 0; shakeMag = 0;
+  iReady = false; oppReady = false; oppInPrep = false;
+  prepEndsAt = 0; prepSentWave = 0; oppAugs = [];
   $("#phaseLbl").textContent = "준비 단계";
-  btn("#btnGo").textContent = "웨이브 1 개시";
   $("#mapName").textContent = game.map.name;
   $("#oppLabel").textContent = youAre === "p1" ? "OPPONENT (후)" : "OPPONENT (선)";
   log(`<b>${game.map.name}</b> 방위 개시 · ${game.map.desc}`);
+  log(`증강은 웨이브 <b>${AUGMENT_WAVES.join(" · ")}</b> 클리어 직후에 나옵니다.`);
   buildBoardCells();
   bindSkillAiming();
   buildSkillBar();
   render();
   renderPassiveTags();
+  renderAugTags();
   setInterval(loop, 1000 / 60);
 }
 
+/**
+ * 개시 버튼 = 준비 신호.
+ * 서버에 붙어 있으면 상대도 누를 때까지(또는 준비시간이 끝날 때까지) 실제로 시작되지 않는다.
+ * 연결이 끊긴 상태에서는 예전처럼 혼자 바로 시작한다 — 아무것도 못 하게 막을 이유는 없다.
+ */
 $("#btnGo").addEventListener("click", () => {
-  if (game.awaitingPassive) return;
-  if (!game.startWave()) { log("동선이 막혀 있습니다."); return; }
-  $("#phaseLbl").textContent = `웨이브 ${game.wave} 진행 중`;
-  btn("#btnGo").textContent = "심사 중…";
-  render();
+  if (!canPrep()) return;
+  if (!online()) { doStartWave(); return; }
+  iReady = !iReady;
+  sendWS({ t: "ready", ready: iReady, wave: game.wave + 1 });
+  log(iReady ? "<b>준비 완료</b> — 상대가 준비하면 바로 개시됩니다." : "준비를 취소했습니다.");
+  renderReadyBar();
 });
 $("#btnSpeed").addEventListener("click", (e) => {
   speed = speed === 1 ? 2 : speed === 2 ? 3 : 1;
