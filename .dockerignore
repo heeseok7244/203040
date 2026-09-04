@@ -3,6 +3,7 @@ npm-debug.log*
 .git
 .gitignore
 *.zip
+*.bmp
 .DS_Store
 .env
 README.md

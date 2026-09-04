@@ -384,7 +384,15 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   color:#9b86bd;font-size:14px;margin:clamp(12px,2.2vh,22px) 0;display:flex;align-items:center;gap:12px}
 #lobby .or::before,#lobby .or::after{
   content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--violet-line),transparent)}
-#lobby .joinrow{display:flex;gap:8px}
+/* 1v1 쪽 입구는 솔로 버튼보다 한 단 낮은 톤으로 — 첫 화면의 주인공은 솔로 플레이다 */
+#lobby .entry .go.alt{
+  padding:13px;font-size:16px;color:var(--cream);
+  background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.05));
+  border:1px solid var(--violet-line);box-shadow:none}
+#lobby .entry .go.alt:hover:not(:disabled){
+  background:rgba(255,255,255,.16);transform:translateY(-1px);box-shadow:none}
+#lobby .entry .go.alt:active{transform:translateY(2px);box-shadow:none}
+#lobby .joinrow{display:flex;gap:8px;margin-top:10px}
 #lobby #joinCode{
   flex:1;min-width:0;font-family:var(--disp);font-size:22px;
   text-transform:uppercase;letter-spacing:.22em;text-indent:.22em;text-align:center;
@@ -466,6 +474,8 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   border:1px solid var(--paper-line)}
 #readyBar .rdytrack i{display:block;height:100%;background:linear-gradient(90deg,#c4322a,#cda43a);
   transition:width .12s linear}
+/* 솔로 플레이 — 상대를 기다리는 자리(준비 표시줄·상대 청사·상대효과)는 아예 지운다 */
+body.solo #readyBar,body.solo #oppPanel,body.solo #foeEfCol{display:none!important}
 .boardctl #btnGo.waiting{background:#3f7a2f;border-color:#3f7a2f}
 .boardctl #btnGo.waiting:hover:not(:disabled){background:#4a8f37;border-color:#4a8f37}
 
@@ -503,11 +513,11 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 .choicebar .track i{display:block;height:100%;background:linear-gradient(90deg,#cda43a,#c4322a);
   transition:width .12s linear}
 
-/* 합체 대상 위에 겹쳐 놓을 때의 표시 */
-.cell.fusehint{background:#d9c4f2;border-color:#8f6ad8}
-
-/* 합체냥 · 직권보정으로 뽑힌 냥 */
-.piece.cat.fused{border-color:#8f6ad8;box-shadow:2px 3px 0 rgba(143,106,216,.35)}
+/* 승진냥 · 직권보정으로 뽑힌 냥
+   (::after 는 무효 도장·보좌 후광이 이미 쓰고 있어서, 승진 표시는 pieceEl 이 붙이는
+    🕶️ 딱지와 테두리로만 낸다 — 같은 가상 요소를 두고 규칙이 서로 덮어쓰지 않도록) */
+.piece.cat.promoted{border-color:#2b2418;
+  box-shadow:0 0 0 2px rgba(205,164,58,.75),2px 3px 0 rgba(43,36,24,.4)}
 .piece.cat.golden{border-color:var(--gold);box-shadow:0 0 0 2px rgba(205,164,58,.55),2px 3px 0 rgba(205,164,58,.3);
   animation:goldPulse 1.4s ease-in-out infinite}
 @keyframes goldPulse{0%,100%{box-shadow:0 0 0 2px rgba(205,164,58,.45),0 0 4px rgba(205,164,58,.4)}
