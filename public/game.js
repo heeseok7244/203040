@@ -223,10 +223,11 @@ const AUGMENTS = {
   promote: {
     key: "promote", name: "승진", icon: "🕶️", tag: "판갈이", kind: "rule",
     desc: "냥타워 1명이 승진 — 선글라스·샷건으로 방사 피해",
-    detail: "묘한특허의 승진은 바로 시켜드립니다. 판에서 가장 값나가는 냥타워 한 명이 그 자리에서 승진해 " +
-      "선글라스를 쓰고 샷건을 든다. 공격력 +25% · 치명타 확률 +12%p · 치명타 배율 +0.5 에 더해, " +
+    detail: "묘한특허의 승진은 바로 시켜드립니다. 판에서 가장 값나가는 냥타워 한 명(사격하지 않는 " +
+      "변리사냥은 제외)이 그 자리에서 승진해 선글라스를 쓰고 샷건을 든다. " +
+      "공격력 +25% · 치명타 확률 +12%p · 치명타 배율 +0.5 에 더해, " +
       "명중 지점 반경 1.4칸의 다른 침입자에게도 70% 의 방사 피해가 퍼진다. " +
-      "판이 비어 있을 때 골랐다면 다음에 세우는 냥타워가 승진한다.",
+      "세워 둔 냥타워가 없을 때 골랐다면 다음에 세우는 냥타워가 승진한다.",
   },
   mono: {
     key: "mono", name: "선행기술 총동원", icon: "📚", tag: "특화", kind: "rule",
@@ -1393,21 +1394,35 @@ class Game {
     return p;
   }
 
-  /** 판에서 가장 값나가는 냥타워 (같은 값이면 먼저 놓은 쪽). 증강 대상 고를 때 쓴다. */
-  bestCat() {
-    const pool = B.cats(this).filter((c) => !c.void);
+  /** 이 종류가 실제로 사격을 하는가 (변리사냥은 「변리사 개업」을 골랐을 때만) */
+  canFight(key) {
+    const d = CATS[key];
+    if (!d) return false;
+    return d.dmg > 0 || (this.augSet.has("agentWar") && !!(d.auraDmg || d.auraRate));
+  }
+
+  /**
+   * 판에서 가장 값나가는 냥타워 (같은 값이면 먼저 놓은 쪽). 증강 대상 고를 때 쓴다.
+   * @param {boolean} [fighterOnly] 사격하는 냥타워만 — 승진은 총을 쏠 수 있는 냥에게만 의미가 있다
+   */
+  bestCat(fighterOnly) {
+    let pool = B.cats(this).filter((c) => !c.void);
+    if (fighterOnly) pool = pool.filter((c) => this.canFight(c.key));
     if (!pool.length) return null;
     return pool.reduce((a, c) => (CATS[c.key].cost > CATS[a.key].cost ? c : a));
   }
 
   /**
-   * 「승진」 — 대상이 아직 없으면 지금 판에서 가장 비싼 냥타워를 승진시킨다.
-   * 판이 비어 있을 때 증강을 골랐다면 다음에 냥타워를 세우는 순간 여기서 정해진다
+   * 「승진」 — 대상이 아직 없으면 지금 판에서 가장 비싼 "싸우는" 냥타워를 승진시킨다.
+   *
+   * 사격하지 않는 변리사냥은 대상에서 뺀다 — 값만 보면 변리사냥(145)이 대부분의 판에서
+   * 두 번째로 비싸서, 그냥 최고가로 뽑으면 총을 못 쏘는 냥이 승진해 증강이 통째로 낭비된다.
+   * 세울 냥타워가 아직 없다면 다음에 하나 세우는 순간 여기서 정해진다
    * (recompute 가 배치·이동 때마다 불리기 때문이다). 한 번 정해지면 판이 끝날 때까지 바뀌지 않는다.
    */
   maybePromote() {
     if (this.promotedUid || !this.augSet.has("promote")) return;
-    const best = this.bestCat();
+    const best = this.bestCat(true);
     if (!best) return;
     this.promotedUid = best.uid;
     this.events.push({ t: "promote", key: best.key, name: CATS[best.key].name, x: best.x, y: best.y });
@@ -1646,13 +1661,26 @@ const INLINE = "iVBORw0KGgoAAAANSUhEUgAAAYAAAAEACAMAAACNqVFVAAAB/lBMVEXloJpgHxOg
 const sprite = new Image();
 sprite.src = INLINE.startsWith("__") ? "./sprite.png" : "data:image/png;base64," + INLINE;
 
+/**
+ * 「승진」한 냥타워 전용 스프라이트 — 6프레임 384×64 한 줄.
+ * 원화(승진고양이 예시.bmp)의 「기본 동작」 6포즈를 잘라 배경을 지우고 64px로 맞춘 것이다
+ * (기본 · 손 흔들기 · 할퀴기1 · 할퀴기2 · 할퀴기3 · 대기 — 기본 시트와 프레임 순서가 같다).
+ * 색보정(filter)은 걸지 않는다 — 흰 냥이에 선글라스라는 원화 그대로가 승진의 표식이다.
+ */
+const promoSprite = new Image();
+promoSprite.src = "img/cat-promoted.png";
+/** 승진 스프라이트 한 칸의 크기(px) */
+const PROMO_CELL = 64;
+const promoReady = () => promoSprite.complete && promoSprite.naturalWidth > 0;
+
 /** 로드 완료 시 콜백 (이미 로드됐으면 즉시) */
 function onSpriteReady(fn) {
   if (sprite.complete && sprite.naturalWidth) fn();
   else sprite.addEventListener("load", fn, { once: true });
+  if (!promoReady()) promoSprite.addEventListener("load", fn, { once: true });
 }
 
-return { onSpriteReady, sprite };
+return { PROMO_CELL, onSpriteReady, promoReady, promoSprite, sprite };
 })();
 __mods["web/main.js"] = (function(){
 // @ts-check
@@ -1661,7 +1689,7 @@ const {CATS, ENEMIES, BAL, PASSIVES, PASSIVE_BY_KEY, SKILLS, AUGMENTS, AUGMENT_W
 const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {auraCells} = __req("core/stats.js");
-const {sprite, onSpriteReady} = __req("web/sprite.js");
+const {sprite, onSpriteReady, promoSprite, promoReady, PROMO_CELL} = __req("web/sprite.js");
 const $ = (s) => /** @type {HTMLElement} */ (document.querySelector(s));
 const CS = BAL.cellSize, GAP = BAL.cellGap;
 
@@ -1883,11 +1911,12 @@ function pieceEl(p, onBoard) {
   badge.textContent = CATS[p.key].icon;
   badge.style.cssText = BADGE("right");
 
-  // 승진냥은 왼쪽에 선글라스 딱지를 하나 더 단다 — 판에서 누가 승진했는지 한눈에 보이도록
+  // 승진냥은 왼쪽에 계급장을 단다 (냥이 자체는 선글라스 낀 원화로 그려진다)
   if (p.st && p.st.promoted) {
     const rank = document.createElement("span");
-    rank.textContent = "🕶️";
-    rank.style.cssText = BADGE("left") + ";border-color:#cda43a;background:#2b2418";
+    rank.textContent = "昇";
+    rank.style.cssText = BADGE("left") +
+      ";border-color:#cda43a;background:#2b2418;color:#ffd782;font-size:13px;font-weight:700";
     el.appendChild(rank);
   }
   el.appendChild(badge);
@@ -2039,9 +2068,32 @@ function renderReport() {
 
 /* ═══════ 캔버스 오버레이 ═══════ */
 const fxCanvas = () => /** @type {HTMLCanvasElement} */ ($("#fx"));
+
+/**
+ * 한 구간에서 예외가 나도 그 구간만 건너뛰고 나머지는 계속 그린다.
+ *
+ * 예전에는 그리기 도중 한 번만 터져도 그 뒤(침입자·미사일·연출)가 통째로 안 그려졌다.
+ * 전투는 화면과 무관하게 계속 돌기 때문에, 판이 멀쩡해 보이는 채로 침입자가 보이지 않고
+ * 그대로 돌파당해 냥타워가 줄줄이 무효가 되는 최악의 형태로 나타난다.
+ * 같은 오류는 한 번만 알리고(로그 + 콘솔), 판은 계속 굴러가게 한다.
+ */
+const errShown = new Set();
+function safe(what, fn) {
+  try { fn(); }
+  catch (e) {
+    if (errShown.has(what)) return;
+    errShown.add(what);
+    console.error(`[${what}]`, e);
+    log(`<b style="color:#e0574d">${what} 오류</b> ${e && e.message ? e.message : e} — F12 콘솔에 자세한 내용이 남았습니다`);
+  }
+}
+
 function draw(now) {
   const cv = fxCanvas();
   const g = cv.getContext("2d");
+  // 앞 프레임에서 save/restore 가 어긋났더라도 여기서 원점으로 되돌린다
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1;
   g.clearRect(0, 0, cv.width, cv.height);
 
   g.save();
@@ -2050,6 +2102,15 @@ function draw(now) {
     g.translate((Math.random() - 0.5) * 2 * k, (Math.random() - 0.5) * 2 * k);
   }
 
+  safe("동선 그리기", () => drawLanes(g));
+  safe("냥타워 그리기", () => drawCats(g, now));
+  safe("침입자 그리기", () => drawEnemies(g, now));
+  safe("탄환 그리기", () => { for (const s of game.shots) drawMissile(g, s); });
+  safe("연출 그리기", () => { drawSparks(g); drawSkillFx(g, now); drawFloaters(g); });
+  g.restore(); // 화면 흔들림 여기까지 — 이 아래는 화면에 고정된 UI라 흔들리지 않는다
+}
+
+function drawLanes(g) {
   for (const lane of game.lanes) {
     g.strokeStyle = "rgba(196,50,42,.26)"; g.lineWidth = 12;
     g.lineJoin = "round"; g.lineCap = "round";
@@ -2061,6 +2122,10 @@ function draw(now) {
     lane.pathPx.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
     g.stroke(); g.setLineDash([]);
   }
+}
+
+/** 냥타워 — 사거리 원과, 각 조각이 들고 있는 64×64 캔버스의 스프라이트 */
+function drawCats(g, now) {
   for (const c of B.cats(game)) {
     if (!c.st) continue;
     if (c.st.atk) {   // 「변리사 개업」을 고르면 보좌형에게도 사거리 원이 생긴다
@@ -2070,30 +2135,33 @@ function draw(now) {
       g.strokeStyle = c.st.golden ? "rgba(205,164,58,.6)" : "rgba(60,106,138,.32)"; g.lineWidth = 1; g.stroke();
     }
     const cc = catCanvas.get(c.uid);
-    if (cc && sprite.complete) {
-      const [row, fr] = frameOf(c, now);
-      const cg = cc.getContext("2d");
-      cg.clearRect(0, 0, 64, 64);
+    if (!cc) continue;
+    const cg = cc.getContext("2d");
+    const [row, fr] = frameOf(c, now);
+    cg.clearRect(0, 0, 64, 64);
+    if (c.st.promoted && promoReady()) {
+      // 승진냥 — 선글라스 낀 흰 냥이 원화를 그대로 쓴다 (색보정 없음). 샷건만 위에 얹는다.
+      cg.drawImage(promoSprite, fr * PROMO_CELL, 0, PROMO_CELL, PROMO_CELL, 0, 0, 64, 64);
+      drawShotgun(cg, !!(c.atkEnd && now < c.atkEnd));
+    } else if (sprite.complete) {
       cg.filter = CATS[c.key].filter || "none";
       cg.drawImage(sprite, fr * 64, row * 64, 64, 64, 0, 0, 64, 64);
       cg.filter = "none";
-      // 승진냥 — 스프라이트 위에 선글라스와 샷건을 덧그린다 (원본 시트는 건드리지 않는다)
-      if (c.st.promoted) drawPromoteGear(cg, c.atkEnd && now < c.atkEnd);
     }
   }
+}
+
+/** 침입자 + 머리 위 체력줄 */
+function drawEnemies(g, now) {
   for (const e of game.enemies) {
     const d = ENEMIES[e.t];
+    if (!d) continue;
     drawMonster(g, e, d, now);
     const w = d.r * 1.5, hp = Math.max(0, e.hp / e.max), by = -d.r * 1.05;
     g.fillStyle = "rgba(0,0,0,.5)"; g.fillRect(e.x - w / 2, e.y + by, w, 2.4);
     g.fillStyle = hp > .5 ? "#7fbf6a" : hp > .25 ? "#cda43a" : "#c4322a";
     g.fillRect(e.x - w / 2, e.y + by, w * hp, 2.4);
   }
-  for (const s of game.shots) drawMissile(g, s);
-  drawSparks(g);
-  drawSkillFx(g, now);
-  drawFloaters(g);
-  g.restore(); // 화면 흔들림 여기까지 — 이 아래는 화면에 고정된 UI라 흔들리지 않는다
 }
 /**
  * 떠오르며 사라지는 글씨들.
@@ -2262,38 +2330,24 @@ function drawRatSilhouette(g, r, slowed) {
 }
 
 /**
- * 「승진」 냥타워의 장비 — 냥 스프라이트(64×64)의 그 칸 위에 바로 덧그린다.
- * 스프라이트 시트에 승진 전용 그림이 없으므로 도형으로 얹는 방식이다.
- * 좌표는 64×64 프레임 기준이고, 냥 얼굴 위치에 맞춰 조정하려면 아래 숫자만 손보면 된다.
+ * 승진냥이 든 샷건 — 승진 스프라이트(64×64) 위에 겹쳐 그린다.
+ * 원화에는 총이 없어서 이 부분만 도형으로 얹는다. 좌표는 원화의 앞발 높이에 맞춰 잡았으므로,
+ * 스프라이트를 다시 뽑으면 아래 translate 값만 손보면 된다.
  * @param {CanvasRenderingContext2D} cg
- * @param {boolean} firing 지금 공격 모션 중인가 (총구 화염을 그릴지)
+ * @param {boolean} firing 공격 모션 중인가 (총구 화염을 그릴지)
  */
-function drawPromoteGear(cg, firing) {
+function drawShotgun(cg, firing) {
   cg.save();
-  // ── 선글라스 — 렌즈 둘 + 브리지 ──
-  cg.fillStyle = "#14161c";
-  cg.beginPath();
-  cg.roundRect ? cg.roundRect(17, 23, 13, 8, 2) : cg.rect(17, 23, 13, 8);
-  cg.fill();
-  cg.beginPath();
-  cg.roundRect ? cg.roundRect(34, 23, 13, 8, 2) : cg.rect(34, 23, 13, 8);
-  cg.fill();
-  cg.fillRect(30, 25.5, 4, 2.2);
-  cg.fillStyle = "rgba(255,255,255,.5)";     // 렌즈 반사광
-  cg.fillRect(19, 24.5, 4, 1.7);
-  cg.fillRect(36, 24.5, 4, 1.7);
-
-  // ── 샷건 — 개머리판 · 총열 · 펌프 ──
-  cg.translate(40, 43);
-  cg.rotate(-0.38);
-  cg.fillStyle = "#6b4a2a"; cg.fillRect(-15, -3.2, 12, 6.4);      // 개머리판
-  cg.fillStyle = "#3a3f47"; cg.fillRect(-4, -2.6, 24, 5.2);       // 총열
-  cg.fillStyle = "#22262c"; cg.fillRect(3, 1.6, 11, 2.6);         // 펌프
-  cg.fillStyle = "#8a939c"; cg.fillRect(17, -2.2, 3, 4.4);        // 총구
-  if (firing) {                                                   // 총구 화염
+  cg.translate(34, 40);
+  cg.rotate(-0.3);
+  cg.fillStyle = "#6b4a2a"; cg.fillRect(-11, -1.7, 7, 3.4);     // 개머리판
+  cg.fillStyle = "#3a3f47"; cg.fillRect(-4.5, -1.4, 14, 2.8);   // 총열
+  cg.fillStyle = "#22262c"; cg.fillRect(-1, 0.9, 6, 1.5);       // 펌프
+  cg.fillStyle = "#8a939c"; cg.fillRect(9.5, -1.2, 2, 2.4);     // 총구
+  if (firing) {                                                 // 총구 화염
     cg.fillStyle = "rgba(255,196,92,.92)";
     cg.beginPath();
-    cg.moveTo(20, 0); cg.lineTo(30, -5); cg.lineTo(27, 0); cg.lineTo(30, 5);
+    cg.moveTo(12, 0); cg.lineTo(21, -4); cg.lineTo(18.5, 0); cg.lineTo(21, 4);
     cg.closePath(); cg.fill();
   }
   cg.restore();
@@ -2816,12 +2870,13 @@ function loop() {
   const dt = Math.min(.05, (now - (last || now)) / 1000);
   last = now;
 
-  if (game.phase === "wave") {
+  safe("전투 진행", () => {
+    if (game.phase !== "wave") return;
     for (let i = 0; i < speed; i++) {
       if (!game.tick(dt, now)) break;
     }
     renderHud();
-  }
+  });
   for (let i = floaters.length - 1; i >= 0; i--) {
     floaters[i].life -= dt;
     if (floaters[i].life <= 0) floaters.splice(i, 1);
@@ -2830,12 +2885,12 @@ function loop() {
   stepShake(dt);
   stepSkillFx(dt);
 
-  consumeEvents();
-  syncPrepState();
-  renderReadyBar();
+  // 각 단계를 따로 감싼다 — 한 군데가 터져도 나머지 화면은 계속 살아 있어야 한다
+  safe("이벤트 처리", () => consumeEvents());
+  safe("준비 표시", () => { syncPrepState(); renderReadyBar(); });
   draw(now);
-  drawOpponent(now);
-  maybeSendState(now);
+  safe("상대 청사", () => drawOpponent(now));
+  safe("상태 전송", () => maybeSendState(now));
 }
 
 /** 상대에게 내 보드 스냅샷을 초당 몇 번만 보낸다 (전투 자체는 각자 클라이언트가 계산) */
@@ -3409,22 +3464,18 @@ function drawOpponent(now) {
 
     // 대기 애니메이션 프레임까지 같이 맞춘다 (uid 대신 좌표로 위상을 흩뿌린다)
     const [row, fr] = frameOf({ key: p.k, uid: p.x * 31 + p.y * 7, atkEnd: 0 }, now || 0);
-    const img = catFrameCanvas(p.k, row, fr);
-    if (img) {
+    // 승진냥은 내 판과 같은 원화(선글라스 냥)로, 금빛 테두리까지 붙여 그린다
+    const img = (p.pr && promoReady()) ? null : catFrameCanvas(p.k, row, fr);
+    if (p.pr && promoReady()) {
       const sz = tile * 1.02;
-      g.drawImage(img, cx - sz / 2, cy - sz / 2, sz, sz);
-    }
-    // 승진냥은 금빛 테두리와 선글라스로 구분한다
-    if (p.pr) {
+      g.drawImage(promoSprite, fr * PROMO_CELL, 0, PROMO_CELL, PROMO_CELL,
+                  cx - sz / 2, cy - sz / 2, sz, sz);
       g.strokeStyle = "#cda43a"; g.lineWidth = Math.max(1, cell * 0.06);
       g.strokeRect(cx - tile / 2, cy - tile / 2, tile, tile);
-      g.font = `${Math.round(cell * 0.32)}px sans-serif`;
-      g.fillStyle = "#3a2f1e";
-      g.textAlign = "left"; g.textBaseline = "top";
-      g.fillText("🕶️", cx - tile / 2, cy - tile / 2);
-      g.textAlign = "start"; g.textBaseline = "alphabetic";
-    }
-    if (!img) {
+    } else if (img) {
+      const sz = tile * 1.02;
+      g.drawImage(img, cx - sz / 2, cy - sz / 2, sz, sz);
+    } else {
       g.fillStyle = def.kind === "buff" ? "#f4b740" : "#5bc8e8";
       g.beginPath(); g.arc(cx, cy, cell * 0.26, 0, 7); g.fill();
     }
@@ -3455,6 +3506,7 @@ function beginBattle() {
   game = new Game({ map: "complex", seed: matchSeed || undefined });
   floaters.length = 0;
   critShownAt.clear();
+  errShown.clear();     // 새 판에서는 오류 보고도 새로 시작한다
   sparks = [];
   skillFx = [];
   armedSkill = null; aimPt = null;
