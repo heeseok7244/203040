@@ -3189,12 +3189,12 @@ function drawOpponent(now) {
   for (const e of s.enemies) {
     const d = ENEMIES[e.t]; if (!d) continue;
     const cx = (e.x / (BAL.cellSize + BAL.cellGap)) * cell, cy = (e.y / (BAL.cellSize + BAL.cellGap)) * cell;
-    g.save();
-    g.translate(cx, cy);
-    g.scale(cell / 64, cell / 64);
-    drawRatSilhouette(g, 15 * (d.r / 18), false);
-    g.restore();
-  }
+      g.save();
+      g.translate(cx, cy);
+      g.scale(cell / 64, cell / 64);
+      drawRatSilhouette(g, 15 * (d.r / 18), false);
+      g.restore();
+    }
   g.restore();
 }
 
