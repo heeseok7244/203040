@@ -21,12 +21,14 @@
   <p class="subline">같은 발명, 특허는 하나. 냥이들이 막아내는 동안 출원서를 먼저 올리세요.</p>
 
   <div class="entry">
-    <button id="btnCreate" class="go">방 만들기</button>
+    <button id="btnSolo" class="go">솔로 플레이</button>
+    <div class="codehint">혼자서 12웨이브를 지켜냅니다 — 상대를 기다리지 않습니다</div>
+    <div class="or">또는 1v1 대전</div>
+    <button id="btnCreate" class="go alt">방 만들기</button>
     <div id="createdBox" class="hidden">
       <div id="codeDisplay">----</div>
       <div class="codehint">이 코드를 상대에게 알려주세요</div>
     </div>
-    <div class="or">또는</div>
     <div class="joinrow">
       <input id="joinCode" maxlength="4" placeholder="코드 4자리" autocomplete="off">
       <button id="btnJoin">입장하기</button>
@@ -48,7 +50,7 @@
     <div class="stat"><b id="sWave">0/12</b><span>웨이브</span></div>
     <div class="stat effects">
       <div class="efcol"><i>내효과</i><div class="passiveTags" id="myPassiveTags"></div></div>
-      <div class="efcol"><i>상대효과</i><div class="passiveTags" id="foePassiveTags"></div></div>
+      <div class="efcol" id="foeEfCol"><i>상대효과</i><div class="passiveTags" id="foePassiveTags"></div></div>
       <div class="efcol"><i>내증강</i><div class="passiveTags" id="myAugTags"></div></div>
     </div>
   </div>
@@ -100,7 +102,7 @@
   </div>
 
   <div>
-    <div class="panel">
+    <div class="panel" id="oppPanel">
       <h2>상대 청사 <em id="oppLabel">OPPONENT</em></h2>
       <div class="pad">
         <div class="oppStats">

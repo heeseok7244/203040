@@ -1651,6 +1651,7 @@ let ws = null, youAre = null;
 let oppSnapshot = null;   // 상대에게서 마지막으로 받은 보드 스냅샷
 let lastStateSentAt = 0;
 let matchSeed = 0;        // 서버가 정해 준 판 시드 — 양쪽이 같은 웨이브·같은 증강 후보를 받는다
+let soloMode = false;     // 솔로 플레이 — 상대도, 서버도 없다. 대기·준비·상대 화면이 전부 사라진다
 
 /* ── 웨이브 동시 개시 ──
  * 예전에는 「웨이브 개시」를 누르는 즉시 내 판에서만 웨이브가 굴러가서, 먼저 누르고 먼저 끝내는 쪽이
@@ -1674,7 +1675,7 @@ function connectWS() {
     onServerMessage(msg);
   };
 }
-function sendWS(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
+function sendWS(obj) { if (soloMode) return; if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
 
 function onServerMessage(msg) {
   switch (msg.t) {
@@ -1901,7 +1902,7 @@ const btn = (s) => /** @type {HTMLButtonElement} */ ($(s));
 /* ═══════ 웨이브 동시 개시 ═══════ */
 /** 지금 준비 버튼을 누를 수 있는 상태인가 (준비 단계 + 고를 것이 남아 있지 않음) */
 const canPrep = () => !!game && game.phase === "prep" && !game.awaitingPassive && !game.awaitingAugment;
-const online = () => !!ws && ws.readyState === 1;
+const online = () => !soloMode && !!ws && ws.readyState === 1;
 
 /**
  * 준비 단계에 들어섰다는 사실을 서버에 한 번만 알린다.
@@ -1909,7 +1910,7 @@ const online = () => !!ws && ws.readyState === 1;
  * 카운트다운도 시작되지 않으므로, 먼저 끝냈다고 해서 앞서 나갈 수가 없다.
  */
 function syncPrepState() {
-  if (!game) return;
+  if (!game || soloMode) return;   // 솔로에는 맞춰야 할 상대가 없다
   const next = game.wave + 1;
   if (canPrep() && prepSentWave !== next) {
     prepSentWave = next;
@@ -1936,12 +1937,14 @@ function renderReadyBar() {
     b.disabled = true; b.textContent = "효과 선택 중";
   } else if (game.phase === "prep") {
     b.disabled = false;
-    b.textContent = iReady ? "준비 취소" : `웨이브 ${next} 준비 완료`;
+    // 솔로에서는 "준비"가 아니라 곧바로 개시다 — 기다릴 상대가 없다
+    b.textContent = soloMode ? `웨이브 ${next} 개시` : iReady ? "준비 취소" : `웨이브 ${next} 준비 완료`;
   } else {
     b.disabled = true;
   }
-  b.classList.toggle("waiting", iReady && game.phase === "prep");
+  b.classList.toggle("waiting", !soloMode && iReady && game.phase === "prep");
 
+  if (soloMode) { bar.classList.add("hidden"); return; }
   const show = game.phase === "prep";
   bar.classList.toggle("hidden", !show);
   if (!show) return;
@@ -2077,6 +2080,69 @@ function drawLegs(g, r, phase) {
   g.moveTo(-r * 0.32, r * 0.62); g.lineTo(-r * 0.32 + phase * r * 0.28, r * 0.98);
   g.moveTo(r * 0.32, r * 0.62); g.lineTo(r * 0.32 - phase * r * 0.28, r * 0.98);
   g.stroke();
+}
+
+/** 침입자 원화 — 종류마다 투명 배경 PNG 한 장. 아직 안 올라왔으면 아래 벡터 실루엣으로 대체한다. */
+const MOB_SRC = { copy: "img/mob-copy.png", fast: "img/mob-fast.png", tank: "img/mob-tank.png", boss: "img/mob-boss.png" };
+/** @type {Record<string,HTMLImageElement>} */
+const MOB_IMG = {};
+for (const t in MOB_SRC) { const im = new Image(); im.src = MOB_SRC[t]; MOB_IMG[t] = im; }
+
+/** 그릴 준비가 끝난 원화만 돌려준다 (로딩 중이면 null → 벡터 실루엣으로 폴백) */
+function mobArt(t) {
+  const im = MOB_IMG[t];
+  return im && im.complete && im.naturalWidth ? im : null;
+}
+
+/**
+ * 달리기 리듬 — 원화가 한 장뿐이라 프레임을 넘기는 대신 몸 전체를 걸음 주기로 흔들어 뛰게 만든다.
+ * freq는 "이동 거리 1px당 걸음 위상"이라 빠른 쥐일수록 발이 저절로 빨라진다.
+ * rise 도약 높이 · tilt 앞뒤로 까딱이는 각도 · squash 착지 순간 눌리는 정도 (전부 r 기준 비율)
+ */
+const GAIT = {
+  // freq는 보폭의 역수다 — π/freq 픽셀마다 한 걸음. 초당 걸음 수 = 이동속도 × freq ÷ π
+  copy: { freq: 0.100, rise: 0.28, tilt: 0.09, squash: 0.10, dust: 0.9 },  // 초당 4.3걸음
+  fast: { freq: 0.085, rise: 0.38, tilt: 0.13, squash: 0.12, dust: 1.3 },  // 전력질주 — 초당 6.3걸음, 크게 튄다
+  tank: { freq: 0.075, rise: 0.14, tilt: 0.05, squash: 0.08, dust: 1.1 },  // 묵직하게 쿵쿵 — 초당 2.3걸음
+  boss: { freq: 0.055, rise: 0.10, tilt: 0.04, squash: 0.06, dust: 1.5 },  // 초당 1.4걸음
+};
+const GAIT_DEFAULT = GAIT.copy;
+
+/** 지금 걸음의 위상을 뽑는다. hop 0=발이 땅에 닿는 순간 → 1=도약 정점 */
+function gaitOf(e, r) {
+  const p = e.dist * (GAIT[e.t] || GAIT_DEFAULT).freq;
+  const d = GAIT[e.t] || GAIT_DEFAULT;
+  const hop = Math.abs(Math.sin(p));
+  return {
+    hop,
+    rise: hop * r * d.rise,
+    // 도약할 때 앞으로 숙였다가 착지하며 젖혀진다 — 걸음마다 한 번씩 까딱인다
+    tilt: Math.sin(p * 2) * d.tilt,
+    squash: d.squash,
+    dust: d.dust,
+  };
+}
+
+/** 원화를 반지름 r 기준 크기로, 발이 바닥 그림자에 닿도록 (0,0) 중심에 그린다.
+ *  원화는 전부 오른쪽을 보고 있어서 왼쪽으로 갈 때는 face=-1로 뒤집는다.
+ *  mo(gaitOf 결과)를 주면 도약·착지 스쿼시까지 얹어 달리는 모션이 된다.
+ *  slowed면 얼음빛으로 물들여 둔화 상태를 표시한다 (벡터 실루엣의 푸른 톤과 같은 역할). */
+function drawMobArt(g, im, r, slowed, face, mo) {
+  const k = (r * 2.9) / Math.max(im.naturalWidth, im.naturalHeight);
+  const w = im.naturalWidth * k, h = im.naturalHeight * k;
+  g.save();
+  if (face === -1) g.scale(-1, 1);
+  if (mo) {
+    // 발끝(y=r)을 축으로 삼아야 눌리든 기울든 발이 바닥에서 떨어지지 않는다
+    const land = 1 - mo.hop;               // 1 = 막 착지한 순간
+    g.translate(0, r);
+    g.rotate(mo.tilt);
+    g.scale(1 + land * mo.squash, 1 - land * mo.squash);
+    g.translate(0, -r - mo.rise);
+  }
+  if (slowed) g.filter = "grayscale(.6) sepia(.55) hue-rotate(165deg) saturate(1.8) brightness(1.05)";
+  g.drawImage(im, -w / 2, r - h, w, h);
+  g.restore();
 }
 
 /** 치비 비율의 쥐 몸통(둥근 귀·긴 꼬리·글로시 눈) — 침입자 4종이 전부 공유하는 기본 실루엣.
@@ -2353,6 +2419,10 @@ function drawMonster(g, e, d, now) {
   const bob = Math.sin(e.dist * 0.16) * r * 0.09;       // 이동 거리 기준 걸음 흔들림
   const legPhase = Math.sin(e.dist * 0.32);
   const slowed = e.slowT > 0;
+  // 진행 방향 — 직전 프레임의 x와 비교해 좌우 반전 여부를 정한다 (원화는 전부 오른쪽을 봄)
+  if (e._px !== undefined && Math.abs(e.x - e._px) > 0.05) e._face = e.x < e._px ? -1 : 1;
+  e._px = e.x;
+  const face = e._face === -1 ? -1 : 1;
   // 피격 펀치 — 맞은 직후 짧게 찌그러졌다 튕겨나오고(스쿼시), 맞은 반대쪽으로 살짝 밀린다
   const hitDur = e.hitCrit ? 0.22 : 0.14;
   const hitP = e.hitT > 0 ? e.hitT / hitDur : 0;         // 1(막 맞음) → 0(끝)
@@ -2366,13 +2436,20 @@ function drawMonster(g, e, d, now) {
     g.scale(sx, sy);
   }
 
-  // 바닥 그림자 — 캐릭터가 판 위에 실제로 서 있는 느낌
+  const art = mobArt(e.t);
+  // 실제로 나아가는 중일 때만 걸음을 굴린다 (가처분에 묶였거나 도감 초상화면 가만히 선 자세)
+  const mo = art && e.dist > 0 && !(e.freezeT > 0) ? gaitOf(e, r) : null;
+
+  // 바닥 그림자 — 캐릭터가 판 위에 실제로 서 있는 느낌.
+  // 뛰어오른 만큼 작고 옅어져야 발이 땅에서 떨어진 게 보인다.
   g.save();
-  g.globalAlpha = 0.24; g.fillStyle = "#0c1524";
-  g.beginPath(); g.ellipse(0, r * 0.92, r * 0.5, r * 0.16, 0, 0, 7); g.fill();
+  g.globalAlpha = 0.24 * (mo ? 1 - mo.hop * 0.45 : 1); g.fillStyle = "#0c1524";
+  const shk = mo ? 1 - mo.hop * 0.3 : 1;
+  g.beginPath(); g.ellipse(0, r * 0.92, r * 0.5 * shk, r * 0.16 * shk, 0, 0, 7); g.fill();
   g.restore();
 
-  g.translate(0, bob);
+  // 원화는 drawMobArt가 걸음 리듬을 직접 잡는다 — 여기서 흔드는 건 벡터 실루엣뿐
+  if (!art) g.translate(0, bob);
 
   if (punch > 0) {
     // 몸통 번쩍임 — 흰색(일반) / 금색(치명타) 실루엣 플래시로 "맞았다"를 즉시 알린다
@@ -2384,7 +2461,44 @@ function drawMonster(g, e, d, now) {
     g.restore();
   }
 
-  switch (e.t) {
+  if (art) {
+    // 발끝 먼지 — 착지하는 순간에만 뒤쪽으로 툭 피어오른다
+    if (mo && mo.hop < 0.35) {
+      const puff = (0.35 - mo.hop) / 0.35;
+      g.save();
+      g.globalAlpha = 0.34 * puff; g.fillStyle = "#a8977c";   // 통로 바닥(크림)에 묻히지 않게 한 톤 어둡게
+      for (let i = 0; i < 2; i++) {
+        const px = -face * (r * (0.35 + i * 0.4) + puff * r * 0.5 * mo.dust);
+        g.beginPath(); g.ellipse(px, r * 0.86, r * (0.16 + i * 0.05) * mo.dust, r * 0.11 * mo.dust, 0, 0, 7); g.fill();
+      }
+      g.restore();
+    }
+    // 원화가 올라왔으면 종류별 연출만 얹고 그림은 원화로 그린다
+    if (e.t === "fast") {
+      // 잔상 + 속도선 — 전력질주 느낌
+      g.save();
+      g.globalAlpha = 0.24; g.translate(-face * r * 0.75, 0);
+      drawMobArt(g, art, r * 0.95, slowed, face, mo);
+      g.restore();
+      g.strokeStyle = "rgba(12,21,36,.45)"; g.lineWidth = 1;
+      for (let i = 0; i < 3; i++) {
+        const x0 = -face * (r * 1.05 + i * 4), x1 = -face * (r * 1.5 + i * 4);
+        g.beginPath(); g.moveTo(x0, -r * 0.2 + i * 7); g.lineTo(x1, -r * 0.2 + i * 7); g.stroke();
+      }
+    }
+    if (e.t === "boss") {
+      // 국기색 위성(각국 소송팀)이 주위를 맴돈다
+      const flagCols = ["#c4322a", "#5bc8e8", "#e8ddc4"];
+      for (let i = 0; i < 3; i++) {
+        const a = now * 0.0016 + i * (Math.PI * 2 / 3), ox = Math.cos(a) * r * 1.15, oy = Math.sin(a) * r * 0.7;
+        g.save();
+        g.globalAlpha = 0.9; g.fillStyle = flagCols[i]; g.strokeStyle = "rgba(12,21,36,.8)"; g.lineWidth = 0.8;
+        g.beginPath(); g.arc(ox, oy, r * 0.14, 0, 7); g.fill(); g.stroke();
+        g.restore();
+      }
+    }
+    drawMobArt(g, art, r, slowed, face, mo);
+  } else switch (e.t) {   // 원화 로딩 전 — 예전 벡터 실루엣으로 그린다
     case "copy": { // 도용업자 쥐 — 눈만 드러나는 마스크 + 훔친 설계도 두루마리
       drawLegs(g, r, legPhase);
       drawRatSilhouette(g, r, slowed);
@@ -2588,6 +2702,7 @@ function loop() {
 
 /** 상대에게 내 보드 스냅샷을 초당 몇 번만 보낸다 (전투 자체는 각자 클라이언트가 계산) */
 function maybeSendState(now) {
+  if (soloMode) return;
   if (now - lastStateSentAt < 350) return;
   lastStateSentAt = now;
   const snap = {
@@ -2964,6 +3079,7 @@ function clearChoiceTimer() {
 }
 function startChoiceTimer(onExpire) {
   clearChoiceTimer();
+  if (soloMode) return;   // 자동 선택은 상대를 기다리게 하지 않으려는 장치 — 솔로에는 재촉할 이유가 없다
   const total = BAL.choiceSecs * 1000;
   const end = performance.now() + total;
   const tick = () => {
@@ -2977,7 +3093,7 @@ function startChoiceTimer(onExpire) {
   choiceTimer = setInterval(tick, 100);
   tick();
 }
-const choiceBarHtml = () =>
+const choiceBarHtml = () => soloMode ? "" :
   `<div class="choicebar"><b>${BAL.choiceSecs.toFixed(1)}초 뒤 자동 선택</b><span class="track"><i></i></span></div>`;
 
 /** 선택이 끝났을 때 공통으로 하는 뒷정리 */
@@ -2992,8 +3108,10 @@ function closeChoiceModal() {
 
 /** 웨이브 클리어 시 뜨는 패시브 선택 모달 */
 function openPassiveModal() {
+  // 솔로에는 "상대 약화"를 걸 상대가 없다 — 실제로 내 판이 달라지는 효과만 내놓는다
+  const list = soloMode ? PASSIVES.filter((p) => p.side === "self") : PASSIVES;
   $("#sheet").innerHTML = `<h3>웨이브 ${game.wave} 클리어 — 효과를 하나 고르세요</h3>
-    <div class="picks" style="grid-template-columns:repeat(3,1fr)">${PASSIVES.map((def) => `
+    <div class="picks" style="grid-template-columns:repeat(3,1fr)">${list.map((def) => `
       <div class="pick" data-k="${def.key}">
         <span class="nm">${def.name}</span>
         <span class="ef" style="color:${def.side === "self" ? "#3f5a2f" : "#8a2a24"}">${def.desc}</span>
@@ -3011,7 +3129,7 @@ function openPassiveModal() {
   $("#sheet").querySelectorAll(".pick").forEach((el) => {
     el.addEventListener("click", () => choose(/** @type {HTMLElement} */ (el).dataset.k));
   });
-  startChoiceTimer(() => choose(PASSIVES[0].key));
+  startChoiceTimer(() => choose(list[0].key));
 }
 
 /**
@@ -3023,8 +3141,8 @@ function openAugmentModal() {
   if (!offer.length) { game.awaitingAugment = false; return; }
   const round = AUGMENT_WAVES.indexOf(game.wave) + 1;
   $("#sheet").innerHTML = `<h3 class="augtitle">증강 ${round}차 — 판을 뒤집을 하나를 고르세요</h3>
-    <div class="augnote">패시브와 달리 <b>규칙 자체가 바뀝니다</b>. 이번 판에서 같은 증강은 다시 나오지 않고,
-      상대에게도 같은 3장이 갔습니다.</div>
+    <div class="augnote">패시브와 달리 <b>규칙 자체가 바뀝니다</b>. 이번 판에서 같은 증강은 다시 나오지 않습니다.
+      ${soloMode ? "" : "상대에게도 같은 3장이 갔습니다."}</div>
     <div class="picks augpicks">${offer.map((d) => `
       <div class="pick aug" data-k="${d.key}">
         <span class="ic">${d.icon}</span>
@@ -3109,6 +3227,7 @@ function catFrameCanvas(key, row, frame) {
 
 /** 상대 보드 미니맵 — 상대에게서 받은 스냅샷을 그린다 (상대 클라이언트가 계산한 결과를 그대로 그림) */
 function drawOpponent(now) {
+  if (soloMode) return;   // 상대 청사 패널 자체가 없다
   const cv = /** @type {HTMLCanvasElement} */ ($("#oppCv"));
   const g = cv.getContext("2d");
   g.clearRect(0, 0, cv.width, cv.height);
@@ -3192,7 +3311,9 @@ function drawOpponent(now) {
       g.save();
       g.translate(cx, cy);
       g.scale(cell / 64, cell / 64);
-      drawRatSilhouette(g, 15 * (d.r / 18), false);
+      const art = mobArt(e.t);
+      if (art) drawMobArt(g, art, 15 * (d.r / 18), false, 1);
+      else drawRatSilhouette(g, 15 * (d.r / 18), false);
       g.restore();
     }
   g.restore();
@@ -3202,8 +3323,10 @@ function drawOpponent(now) {
 function beginBattle() {
   $("#lobby").classList.add("hidden");
   $("#gameRoot").classList.remove("hidden");
+  document.body.classList.toggle("solo", soloMode);
 
   // 시드는 서버가 정해 양쪽에게 같이 내려준다 — 웨이브 구성도 증강 후보도 완전히 같아진다
+  // (솔로는 맞출 상대가 없으니 시드를 비워 매번 다른 판이 나오게 둔다)
   game = new Game({ map: "complex", seed: matchSeed || undefined });
   floaters.length = 0;
   sparks = [];
@@ -3215,6 +3338,9 @@ function beginBattle() {
   $("#phaseLbl").textContent = "준비 단계";
   $("#mapName").textContent = game.map.name;
   $("#oppLabel").textContent = youAre === "p1" ? "OPPONENT (후)" : "OPPONENT (선)";
+  log(soloMode
+    ? `<b>솔로 플레이</b> — 상대 없이 웨이브 ${BAL.waveCount}개를 혼자 막아냅니다.`
+    : `<b>1v1 대전</b> — 상대와 같은 판·같은 웨이브를 동시에 치릅니다.`);
   log(`<b>${game.map.name}</b> 방위 개시 · ${game.map.desc}`);
   log(`증강은 웨이브 <b>${AUGMENT_WAVES.join(" · ")}</b> 클리어 직후에 나옵니다.`);
   buildBoardCells();
@@ -3265,13 +3391,25 @@ function renderBestiary() {
     ctx.beginPath(); ctx.arc(cx, cy - 4, PORT * 0.42, 0, 7);
     ctx.fillStyle = d.col + "26"; ctx.fill();
     ctx.restore();
-    drawMonster(ctx, { t, x: cx, y: cy, dist: 0, hitT: 0, hitCrit: false, slowT: 0, hitAng: 0 }, d, performance.now());
+    // 초상화 칸(72px)에 맞게 반지름을 눌러 담는다 — 특허괴물(r 34)은 원화 그대로면 잘린다
+    drawMonster(ctx, { t, x: cx, y: cy, dist: 0, hitT: 0, hitCrit: false, slowT: 0, hitAng: 0 },
+      { ...d, r: Math.min(d.r, 21) }, performance.now());
   });
 }
 renderBestiary();
+// 원화는 비동기로 올라온다 — 다 올라온 뒤 도감을 한 번 더 그려야 이모지 대신 실제 그림이 남는다
+for (const t in MOB_IMG) MOB_IMG[t].addEventListener("load", () => renderBestiary(), { once: true });
 
 /* ═══════ 로비 ═══════ */
 connectWS();
+/** 솔로 플레이 — 대전용 연결을 아예 끊고 혼자 시작한다 (방/코드/준비 대기가 전부 필요 없다) */
+$("#btnSolo").addEventListener("click", () => {
+  if (game) return;
+  soloMode = true;
+  youAre = null; matchSeed = 0; oppSnapshot = null;
+  if (ws) { try { ws.close(); } catch (_) {} ws = null; }
+  beginBattle();
+});
 $("#btnCreate").addEventListener("click", () => sendWS({ t: "create" }));
 $("#btnJoin").addEventListener("click", () => {
   const code = /** @type {HTMLInputElement} */ ($("#joinCode")).value.trim();

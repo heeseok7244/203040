@@ -315,7 +315,15 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   color:#9b86bd;font-size:12px;margin:20px 0;display:flex;align-items:center;gap:12px}
 #lobby .or::before,#lobby .or::after{
   content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--violet-line),transparent)}
-#lobby .joinrow{display:flex;gap:8px}
+/* 1v1 쪽 입구는 솔로 버튼보다 한 단 낮은 톤으로 — 첫 화면의 주인공은 솔로 플레이다 */
+#lobby .entry .go.alt{
+  padding:13px;font-size:16px;color:var(--cream);
+  background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.05));
+  border:1px solid var(--violet-line);box-shadow:none}
+#lobby .entry .go.alt:hover:not(:disabled){
+  background:rgba(255,255,255,.16);transform:translateY(-1px);box-shadow:none}
+#lobby .entry .go.alt:active{transform:translateY(2px);box-shadow:none}
+#lobby .joinrow{display:flex;gap:8px;margin-top:10px}
 #lobby #joinCode{
   flex:1;min-width:0;font-family:var(--disp);font-size:19px;
   text-transform:uppercase;letter-spacing:.22em;text-indent:.22em;text-align:center;
@@ -397,6 +405,8 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   border:1px solid var(--paper-line)}
 #readyBar .rdytrack i{display:block;height:100%;background:linear-gradient(90deg,#c4322a,#cda43a);
   transition:width .12s linear}
+/* 솔로 플레이 — 상대를 기다리는 자리(준비 표시줄·상대 청사·상대효과)는 아예 지운다 */
+body.solo #readyBar,body.solo #oppPanel,body.solo #foeEfCol{display:none!important}
 .boardctl #btnGo.waiting{background:#3f7a2f;border-color:#3f7a2f}
 .boardctl #btnGo.waiting:hover:not(:disabled){background:#4a8f37;border-color:#4a8f37}
 
