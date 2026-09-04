@@ -2721,16 +2721,6 @@ function renderBestiary() {
 }
 renderBestiary();
 
-// 냥타워 로비 미리보기
-$("#lobbyRoster").innerHTML = Object.keys(CATS).map((k) => {
-  const d = CATS[k];
-  return `<div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:7px">
-    <span style="font-size:18px;flex:none">${d.icon}</span>
-    <div><div style="font-size:12px;color:#e8eef4">${d.name}
-      <span style="font-family:var(--mono);font-size:9.5px;color:var(--muted)">${d.tag} · ₩${d.cost} (정가)</span></div>
-    <div style="font-size:10.5px;color:var(--muted)">${d.desc}</div></div></div>`;
-}).join("");
-
 /* ═══════ 로비 ═══════ */
 connectWS();
 $("#btnCreate").addEventListener("click", () => sendWS({ t: "create" }));

@@ -4,47 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>묘한특허 — 1v1 대전</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="lobby" class="wrap">
-  <header>
-    <div class="masthead">
-      <h1>묘한특허</h1>
-      <div class="sub">특허청 청사 방위전 · 1v1 실시간 대전</div>
+<div id="lobby">
+  <div class="hero">
+    <div class="glow"></div>
+    <div class="catsprite" id="catSprite"></div>
+  </div>
+
+  <h1 class="bigtitle">묘한특허</h1>
+  <p class="tagline">먼저 등록하는 쪽이 이깁니다.</p>
+  <p class="subline">같은 발명, 특허는 하나. 냥이들이 막아내는 동안 출원서를 먼저 올리세요.</p>
+
+  <div class="entry">
+    <button id="btnCreate" class="go">방 만들기</button>
+    <div id="createdBox" class="hidden">
+      <div id="codeDisplay">----</div>
+      <div class="codehint">이 코드를 상대에게 알려주세요</div>
     </div>
-  </header>
-  <div class="cols">
-    <div>
-      <div class="panel">
-        <h2>대전 상대 찾기 <em>MATCHMAKING</em></h2>
-        <div class="pad">
-          <p style="font-size:12.5px;color:var(--muted);line-height:1.7;margin:0 0 14px">
-            먼저 웨이브 12(특허결정)를 클리어하는 쪽이 승리합니다. 등록원부 내구가 0이 되면 즉시 패배합니다.<br>
-            웨이브를 클리어할 때마다 <b style="color:var(--ink)">패시브 효과</b>를 하나 골라 내 능력치를 올리거나 상대 능력치를 깎을 수 있습니다.
-          </p>
-          <button id="btnCreate" class="go" style="width:100%;padding:11px">방 만들기</button>
-          <div id="createdBox" class="hidden" style="text-align:center;margin-top:14px">
-            <div style="font-size:32px;font-weight:800;letter-spacing:.2em;color:var(--seal)" id="codeDisplay">----</div>
-            <div style="font-size:11.5px;color:var(--muted);margin-top:6px">이 코드를 상대에게 알려주세요. 상대가 입장하면 자동으로 시작됩니다.</div>
-          </div>
-          <div style="text-align:center;color:var(--muted);font-size:11px;margin:16px 0">또는</div>
-          <div class="row">
-            <input id="joinCode" maxlength="4" placeholder="코드 4자리" autocomplete="off"
-              style="flex:1;text-transform:uppercase;letter-spacing:.15em;text-align:center;font:inherit;
-              background:var(--ink3);border:1px solid var(--line);color:inherit;border-radius:4px;padding:10px">
-            <button id="btnJoin">입장하기</button>
-          </div>
-          <div id="joinError" class="hidden" style="color:var(--seal);font-size:12px;margin-top:8px"></div>
-        </div>
-      </div>
+    <div class="or">또는</div>
+    <div class="joinrow">
+      <input id="joinCode" maxlength="4" placeholder="코드 4자리" autocomplete="off">
+      <button id="btnJoin">입장하기</button>
     </div>
-    <div>
-      <div class="panel">
-        <h2>냥타워 편제 <em>PREVIEW</em></h2>
-        <div class="pad" id="lobbyRoster"></div>
-      </div>
-    </div>
+    <div id="joinError" class="hidden"></div>
   </div>
 </div>
 
