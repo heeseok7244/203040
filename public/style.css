@@ -225,79 +225,148 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 /* ══ 로비 ═══════════════════════════════════
    분위기는 캐릭터 아트에 맞춘다 — 깊은 보랏빛 던전, 크림색 냥이, 불티.
    게임 화면(청사 도면)은 원래 남색 톤을 그대로 쓴다.               */
+/* 로비는 한 화면에 딱 떨어져야 한다 — 스크롤이 생기면 스크롤바가 폭을 먹어
+   배경(16:9)의 비율까지 어긋난다. 그래서 세로로 늘어나는 값들은 전부 vh 상한을 건다. */
 #lobby{
   --violet:#241a3d; --violet2:#150e26; --violet-line:#4b3a72;
   --ember:#ff9a5c; --cream:#f3e6cf;
-  max-width:560px;margin:0 auto;padding:min(6vh,54px) 20px 64px;text-align:center;
+  --sky:#100c39;               /* 그림 귀퉁이 색 — 세로로 긴 화면에서 남는 자리를 메운다 */
+  --col:min(640px,100%);       /* 글자·버튼이 쓰는 폭 */
+  /* 배경 그림이 cover 로 깔렸을 때 실제로 차지하는 상자 크기.
+     .hero 가 이 상자를 그대로 재현해서, 냥이를 그림 속 퍼센트 좌표로 놓는다.
+     dvh 를 모르는 브라우저를 위해 vh 로 한 번 깔고 덮어쓴다. */
+  --stage-w:max(100vw,calc(100vh * 1672 / 941));
+  --stage-w:max(100vw,calc(100dvh * 1672 / 941));
+  --stage-h:calc(var(--stage-w) * 941 / 1672);
+  min-height:100vh;min-height:100dvh;
+  /* 글자·버튼은 아래로 붙인다 — 그림에서 건물 아래 빈 앞마당이 그 자리다. */
+  display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
+  text-align:center;
+  padding:clamp(16px,3vh,40px) 20px clamp(36px,12vh,130px);
   position:relative;z-index:1}
-/* 페이지 전체를 보랏빛으로 덮는다 — body 의 남색 격자를 가린다 */
+/* 청사 그림 한 장을 화면에 꽉 채운다. 그림이 이미 16:9 로 만들어져 있으므로
+   자르거나 가장자리를 덮는 처리는 하지 않는다 — cover 로 깔고 끝.
+   뒤의 --sky 는 창이 16:9 보다 세로로 길 때만 드러나는 여벌 바탕이다. */
 #lobby::before{
   content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:
-    radial-gradient(ellipse 70% 50% at 50% 34%,rgba(126,92,196,.30),transparent 70%),
-    radial-gradient(ellipse 90% 60% at 50% 100%,rgba(52,32,86,.9),transparent 75%),
-    linear-gradient(180deg,var(--violet2),var(--violet) 45%,#0f0a1c)}
+  background:url("img/lobby-bg.webp") center bottom / cover no-repeat,var(--sky)}
 
 /* ── 8프레임 공격 애니메이션 ──
-   스프라이트시트: public/img/cat-hero.png — 원본 1402×1122, 4열×2행, 1→8 순서.
+   스프라이트시트: public/img/cat-hero.webp — 2440×346, 1행×8열, 왼쪽부터 1→8.
+   배경을 투명하게 빼고 프레임마다 발끝을 같은 높이·같은 가로 중심에 맞춰
+   다시 조립한 시트라, 칸을 그대로 8등분해 넘기면 된다(떨림 없음).
    좌표는 전부 원본 픽셀 기준으로 적고 --u(픽셀당 배율) 로 한 번에 확대한다.
-   두 행의 냥이 위치가 31px 어긋나 있어, 아랫줄 창을 그만큼 위에서 잘라 발끝을 맞춘다.
-     칸 = 350.5 × 561 / 윗줄 창 시작 y=95 · 아랫줄 y=625 / 창 높이 410 */
+     칸 = 305 × 346 / 발끝은 칸 아래에서 8px 위 */
+/* .hero 는 눈에 보이지 않는 무대다 — 배경 그림이 cover 로 깔린 상자와 크기·위치가
+   똑같다(가운데 아래 정렬). 그래서 그 안의 냥이는 화면이 아니라 "그림"을 기준으로
+   좌표를 잡고, 창 비율이 바뀌어도 청사에 붙어 다닌다.
+
+   그림(1672×941) 속 좌표 — 격자를 씌워 실측:
+     본관 x 44~56% · 우측 별관 x 57~68% · 나무 x 58~70%
+     본관 꼭대기 y 21% · 건물 밑선 y 60% · 앞마당 지반 아래끝 y 63%       */
 #lobby .hero{
-  --fw:min(300px,74vw);
-  --u:calc(var(--fw) / 350.5);
-  --vh:calc(410 * var(--u));
-  position:relative;display:flex;align-items:flex-end;justify-content:center;
-  height:var(--vh);margin-bottom:4px}
+  --cat-x:60%;              /* 갈색 냥이 중심 — 현관 오른쪽, 우측 별관 앞 */
+  --cat-y:38%;              /* 발밑 = 그림 y 62%. 앞마당 앞 가장자리 */
+  /* --fw 는 "칸" 의 폭이다. 칸 안에서 냥이 몸통은 약 2/3 를 쓰고 나머지는
+     뻗은 앞발·모션선 자리라, 화면에 보이는 냥이는 이 값의 3분의 2쯤 된다. */
+  --fw:calc(var(--stage-w) * .115);
+  --u:calc(var(--fw) / 305);
+  --vh:calc(346 * var(--u));
+  position:fixed;left:50%;bottom:0;transform:translateX(-50%);
+  width:var(--stage-w);height:var(--stage-h);
+  z-index:0;pointer-events:none}
+/* 후광은 냥이와 같은 좌표에 두고 폭만 1.2배 — 발밑에서 머리 위까지 감싼다 */
 #lobby .glow{
-  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  position:absolute;left:var(--cat-x);bottom:var(--cat-y);transform:translateX(-50%);
   width:calc(var(--fw) * 1.2);height:calc(var(--fw) * 1.2);pointer-events:none;
   background:radial-gradient(circle,rgba(150,110,220,.42),rgba(150,110,220,.10) 45%,transparent 70%);
   animation:heroPulse 2.6s ease-in-out infinite}
-@keyframes heroPulse{0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(.94)}
-  50%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}}
+@keyframes heroPulse{0%,100%{opacity:.6;transform:translateX(-50%) scale(.94)}
+  50%{opacity:1;transform:translateX(-50%) scale(1.06)}}
 #lobby .catsprite{
-  position:relative;width:var(--fw);height:var(--vh);
-  background-image:url("img/cat-hero.png");
+  position:absolute;left:var(--cat-x);bottom:var(--cat-y);transform:translateX(-50%);
+  width:var(--fw);height:var(--vh);
+  background-image:url("img/cat-hero.webp");
   background-repeat:no-repeat;
-  background-size:calc(1402 * var(--u)) calc(1122 * var(--u));
-  background-position:0 calc(-95 * var(--u));
-  animation:catSwipe .96s steps(1,end) infinite;
-  /* 칸마다 딸려오는 네모난 배경이 드러나지 않도록 가장자리를 부드럽게 지운다 */
-  -webkit-mask-image:radial-gradient(ellipse 60% 62% at 50% 46%,#000 52%,transparent 100%);
-  mask-image:radial-gradient(ellipse 60% 62% at 50% 46%,#000 52%,transparent 100%)}
+  background-size:calc(2440 * var(--u)) calc(346 * var(--u));
+  background-position:0 0;
+  animation:catSwipe .96s steps(1,end) infinite}
+/* 현관 왼편에 서는 흰 냥이. 시트를 갈색 냥이와 똑같은 칸 규격(305×346)으로
+   조립해 두었으므로, 서는 자리와 그림 주소만 바꾸면 나머지 계산은 그대로 쓴다.
+   둘이 딱 맞춰 움직이면 기계처럼 보여서 반 박자 어긋나게 돌린다. */
+/* 40% = 갈색 냥이(60%) 를 화면 한가운데(50%) 기준으로 뒤집은 자리.
+   타이틀도 가운데 정렬이라, 이래야 두 마리가 글자에서 같은 거리에 선다.
+   둘을 더 벌리거나 모으려면 50 에서 같은 폭만큼 떨어뜨리면 된다. */
+#lobby .glow.white,#lobby .catsprite.white{--cat-x:40%}
+#lobby .catsprite.white{
+  background-image:url("img/cat-hero2.webp");
+  animation-delay:-.48s}
+/* 한 줄짜리 시트라 가로로만 305px 씩 밀면 된다 */
 @keyframes catSwipe{
-  0%   {background-position:calc(    0 * var(--u)) calc( -95 * var(--u))}
-  12.5%{background-position:calc(-350.5 * var(--u)) calc( -95 * var(--u))}
-  25%  {background-position:calc( -701 * var(--u)) calc( -95 * var(--u))}
-  37.5%{background-position:calc(-1051.5 * var(--u)) calc( -95 * var(--u))}
-  50%  {background-position:calc(    0 * var(--u)) calc(-625 * var(--u))}
-  62.5%{background-position:calc(-350.5 * var(--u)) calc(-625 * var(--u))}
-  75%  {background-position:calc( -701 * var(--u)) calc(-625 * var(--u))}
-  87.5%{background-position:calc(-1051.5 * var(--u)) calc(-625 * var(--u))}
-  100% {background-position:calc(    0 * var(--u)) calc( -95 * var(--u))}}
+  0%   {background-position:calc(    0 * var(--u)) 0}
+  12.5%{background-position:calc( -305 * var(--u)) 0}
+  25%  {background-position:calc( -610 * var(--u)) 0}
+  37.5%{background-position:calc( -915 * var(--u)) 0}
+  50%  {background-position:calc(-1220 * var(--u)) 0}
+  62.5%{background-position:calc(-1525 * var(--u)) 0}
+  75%  {background-position:calc(-1830 * var(--u)) 0}
+  87.5%{background-position:calc(-2135 * var(--u)) 0}
+  100% {background-position:calc(    0 * var(--u)) 0}}
 @media(prefers-reduced-motion:reduce){
   #lobby .catsprite{animation:none}
   #lobby .glow{animation:none}}
 
+/* ── 타이틀: 은하 레트로 ──
+   세 겹을 겹쳐 만든다.
+     ::before  뒤 — 오른쪽 아래로 흘러내리는 3D 돌출
+     본체      가운데 — 별이 박힌 보라→시안 은하 그라데이션 (background-clip:text)
+     ::after   앞 — 글자 윤곽을 잡아주는 시안 테두리
+   본체가 transparent 라 text-shadow 를 쓰면 그림자가 글자 안으로 비쳐 보인다.
+   그래서 돌출은 shadow 가 아니라 같은 글자를 한 벌 더 깔아서 만든다. */
 #lobby .bigtitle{
-  font-family:var(--disp);font-weight:400;margin:0;
-  font-size:clamp(50px,13vw,84px);line-height:1.1;letter-spacing:.05em;
-  background:linear-gradient(180deg,#fff8ec,var(--cream) 55%,#e2c79a);
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-  filter:drop-shadow(0 3px 18px rgba(160,110,240,.55))}
+  position:relative;display:block;
+  font-family:"Black Han Sans",var(--disp);font-weight:400;margin:0;
+  font-size:min(clamp(60px,16vw,112px),14vh);line-height:1.15;letter-spacing:.06em;
+  /* 앞의 세 겹은 크기가 서로 어긋나는 별 타일 — 겹치면서 불규칙한 별밭이 된다 */
+  background:
+    radial-gradient(circle at 22% 34%,#fff 0 1.1px,transparent 1.7px) 0 0/37px 43px,
+    radial-gradient(circle at 68% 71%,rgba(214,235,255,.9) 0 .9px,transparent 1.4px) 0 0/59px 53px,
+    radial-gradient(circle at 45% 12%,rgba(255,255,255,.75) 0 .7px,transparent 1.2px) 0 0/29px 31px,
+    linear-gradient(158deg,#8a4be0 0%,#a95cf0 22%,#6a63f2 48%,#3aa8f0 74%,#4fdcf7 100%);
+  -webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 30px rgba(130,95,245,.6))}
+/* left/right 를 둘 다 0 으로 잡아 본체와 똑같은 폭의 상자를 만든다.
+   폭이 같아야 text-align:center 가 같은 자리에 글자를 놓는다 —
+   left 만 주면 겹침 레이어가 왼쪽 끝으로 붙어 글자가 두 벌로 어긋나 보인다. */
+#lobby .bigtitle::before,
+#lobby .bigtitle::after{
+  content:attr(data-text);position:absolute;left:0;right:0;top:0;
+  pointer-events:none}
+#lobby .bigtitle::before{
+  z-index:-1;color:#1b1040;-webkit-text-fill-color:#1b1040;
+  text-shadow:
+    1px 1px 0 #3b2a7a, 2px 2px 0 #372773, 3px 3px 0 #33246c,
+    4px 4px 0 #2f2165, 5px 5px 0 #2b1e5e, 6px 6px 0 #271b57,
+    7px 7px 0 #231850, 8px 8px 0 #1f1549, 9px 9px 0 #1b1242,
+    10px 10px 0 #170f3b}
+#lobby .bigtitle::after{
+  z-index:1;color:transparent;-webkit-text-fill-color:transparent;
+  -webkit-text-stroke:1.3px rgba(150,231,255,.8)}
 #lobby .tagline{
-  font-family:var(--disp);font-size:clamp(17px,4.4vw,21px);color:#fff;
-  margin:12px 0 0;letter-spacing:.02em;
+  font-family:var(--disp);font-size:clamp(20px,5vw,27px);color:#fff;
+  margin:14px 0 0;letter-spacing:.02em;
   text-shadow:0 0 22px rgba(255,154,92,.45)}
 #lobby .subline{
-  font-size:13px;line-height:1.75;color:#bda9d8;margin:9px 0 0}
+  font-size:15px;line-height:1.75;color:#c6b3e0;margin:10px 0 0;max-width:var(--col)}
 
-#lobby .entry{margin-top:30px}
+/* #lobby 에 max-width 가 없으므로 글자·버튼 칸은 각자 --col 로 폭을 맞춘다 */
+#lobby .tagline,#lobby .bigtitle{max-width:var(--col)}
+#lobby .entry{width:var(--col);margin-top:clamp(14px,3vh,30px)}
 #lobby button{border-radius:12px;font-family:var(--disp);letter-spacing:.04em;
   transition:transform .12s ease,box-shadow .12s ease,background .12s ease}
 #lobby .entry .go{
-  width:100%;padding:16px;font-size:19px;color:#3a1c08;border:0;
+  width:100%;padding:20px;font-size:24px;color:#3a1c08;border:0;
   background:linear-gradient(180deg,#ffc07a,var(--ember));
   box-shadow:0 6px 0 #b95c2c,0 10px 26px rgba(255,140,70,.32)}
 #lobby .entry .go:hover:not(:disabled){
@@ -308,24 +377,24 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   margin-top:18px;padding:16px 12px;border-radius:14px;
   border:1px solid var(--violet-line);background:rgba(255,255,255,.05)}
 #lobby #codeDisplay{
-  font-family:var(--disp);font-size:42px;letter-spacing:.24em;text-indent:.24em;
+  font-family:var(--disp);font-size:50px;letter-spacing:.24em;text-indent:.24em;
   color:#ffd9a8;text-shadow:0 0 24px rgba(255,154,92,.55);line-height:1.15}
-#lobby .codehint{font-size:12px;color:#bda9d8;margin-top:6px}
+#lobby .codehint{font-size:13px;color:#bda9d8;margin-top:6px}
 #lobby .or{
-  color:#9b86bd;font-size:12px;margin:20px 0;display:flex;align-items:center;gap:12px}
+  color:#9b86bd;font-size:14px;margin:clamp(12px,2.2vh,22px) 0;display:flex;align-items:center;gap:12px}
 #lobby .or::before,#lobby .or::after{
   content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--violet-line),transparent)}
 #lobby .joinrow{display:flex;gap:8px}
 #lobby #joinCode{
-  flex:1;min-width:0;font-family:var(--disp);font-size:19px;
+  flex:1;min-width:0;font-family:var(--disp);font-size:22px;
   text-transform:uppercase;letter-spacing:.22em;text-indent:.22em;text-align:center;
-  padding:13px 10px;border-radius:12px;color:var(--cream);
+  padding:16px 10px;border-radius:12px;color:var(--cream);
   background:rgba(0,0,0,.28);border:1px solid var(--violet-line)}
 #lobby #joinCode:focus{outline:none;border-color:#a583e8;box-shadow:0 0 0 3px rgba(150,110,220,.25)}
 #lobby #joinCode::placeholder{
-  font-size:14px;letter-spacing:.06em;text-indent:0;color:#8a76ab}
+  font-size:16px;letter-spacing:.06em;text-indent:0;color:#8a76ab}
 #lobby #btnJoin{
-  flex:none;padding:13px 24px;font-size:16px;color:var(--cream);
+  flex:none;padding:16px 28px;font-size:19px;color:var(--cream);
   background:rgba(255,255,255,.07);border:1px solid var(--violet-line)}
 #lobby #btnJoin:hover:not(:disabled){
   background:rgba(255,255,255,.14);border-color:#a583e8;transform:translateY(-2px)}

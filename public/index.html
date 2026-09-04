@@ -6,17 +6,22 @@
 <title>묘한특허 — 1v1 대전</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="lobby">
+  <!-- 청사 앞마당에 두 마리 — 현관 오른쪽 갈색 냥이, 왼쪽 흰 냥이.
+       서는 자리는 style.css 의 --cat-x 로 정한다 -->
   <div class="hero">
     <div class="glow"></div>
     <div class="catsprite" id="catSprite"></div>
+    <div class="glow white"></div>
+    <div class="catsprite white" id="catSprite2"></div>
   </div>
 
-  <h1 class="bigtitle">묘한특허</h1>
+  <!-- data-text 는 3D 돌출·테두리 레이어(::before/::after)가 같은 글자를 겹쳐 그리는 데 쓴다 -->
+  <h1 class="bigtitle" data-text="묘한특허">묘한특허</h1>
   <p class="tagline">먼저 등록하는 쪽이 이깁니다.</p>
   <p class="subline">같은 발명, 특허는 하나. 냥이들이 막아내는 동안 출원서를 먼저 올리세요.</p>
 
