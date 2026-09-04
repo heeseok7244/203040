@@ -64,6 +64,7 @@ const CATS = {
   spec: {
     name: "출원냥", row: 2, arow: 3, kind: "atk",
     dmg: 12, rate: 2.0, range: 118, tag: "기본", cost: 55,
+    critC: 0.18, critM: 1.8,
     desc: "기본 공격, 무난하게 잘 싸운다.",
     filter: "none",
     icon: "📄",
@@ -71,6 +72,7 @@ const CATS = {
   claim: {
     name: "특허범위냥", row: 2, arow: 3, kind: "atk",
     dmg: 8, rate: 0.85, range: 304, pierce: 35, tag: "장사거리", cost: 85,
+    critC: 0.22, critM: 2.0,
     desc: "사거리가 길고 방어를 일부 무시한다.",
     filter: "hue-rotate(195deg) saturate(1.25)",
     icon: "📐",
@@ -78,8 +80,10 @@ const CATS = {
   search: {
     // 출원냥(dmg 12 / rate 2.0)을 기준으로 공격력 ×2, 공속 ÷2 — 초당 피해는 같고 한 방이 두 배다.
     // 방어력은 명중할 때마다 한 번씩 깎이므로, 같은 DPS라도 단단한 적에게는 이쪽이 훨씬 세게 들어간다.
+    // 치명타도 이 "한 방" 정체성에 맞춰 확률·배율 모두 가장 높다.
     name: "선행조사냥", row: 2, arow: 3, kind: "atk",
     dmg: 24, rate: 1.0, range: 118, tag: "한방", cost: 130,
+    critC: 0.30, critM: 2.4,
     desc: "출원냥의 두 배로 세게, 절반의 속도로 때린다. 방어가 두꺼운 적에게 강하다.",
     filter: "hue-rotate(255deg) saturate(1.35)",
     icon: "🔍",
@@ -87,6 +91,7 @@ const CATS = {
   pct: {
     name: "국제출원냥", row: 2, arow: 3, kind: "atk",
     dmg: 7, rate: 1.6, range: 118, targets: 3, tag: "다중조준", cost: 190,
+    critC: 0.12, critM: 1.6,
     desc: "한 번에 여러 마리를 동시에 공격한다.",
     filter: "hue-rotate(40deg) saturate(1.45)",
     icon: "🌐",
@@ -94,6 +99,7 @@ const CATS = {
   fast: {
     name: "우선심사냥", row: 2, arow: 3, kind: "atk",
     dmg: 4, rate: 5.0, range: 118, tag: "연사", cost: 65,
+    critC: 0.25, critM: 1.5,
     desc: "쉬지 않고 빠르게 연타한다.",
     filter: "hue-rotate(315deg) saturate(1.3)",
     icon: "⚡",
@@ -106,6 +112,17 @@ const CATS = {
     icon: "💼",
   },
 };
+
+/*
+ * 치명타 밸런스 메모 — 기대 피해 배율 = 1 + critC × (critM − 1)
+ *   출원냥   0.18 × 0.8 = +14.4%   (기준선)
+ *   특허범위냥 0.22 × 1.0 = +22.0%  (느린 대신 한 발의 값이 크다)
+ *   선행조사냥 0.30 × 1.4 = +42.0%  (「한방」 정체성 — 치명타가 터지면 57.6 피해)
+ *   국제출원냥 0.12 × 0.6 =  +7.2%  (이미 3인 동시조준으로 세다)
+ *   우선심사냥 0.25 × 0.5 = +12.5%  (연사라 치명타가 자주, 대신 작게)
+ * 전체 DPS가 7~42% 오르므로 웨이브 체력 배율(hpPerWave)은 건드리지 않고,
+ * 대신 후반 웨이브가 조금 수월해지는 쪽을 택했다 — 증강이 들어오면서 판이 길어졌기 때문이다.
+ */
 
 /**
  * 웨이브 클리어 시 고르는 패시브 효과 7종.
@@ -203,12 +220,13 @@ const AUGMENTS = {
       "장거리 화력이 되면서 기존 보좌 효과도 그대로 유지한다. 대신 다른 냥타워는 대리인에게 일을 맡기고 " +
       "손을 놓아 공격력이 35% 깎인다 — 판의 축이 통째로 변리사냥으로 옮겨간다.",
   },
-  fuse: {
-    key: "fuse", name: "합동특허법률사무소", icon: "🧬", tag: "판갈이", kind: "rule",
-    desc: "서로 다른 냥타워를 겹쳐 놓으면 합체냥이 된다",
-    detail: "종류가 다른 냥타워를 드래그해 서로 겹치면 하나로 합쳐진다. 합체냥은 두 냥의 공격력을 더하고, " +
-      "공속·사거리는 둘 중 좋은 쪽을, 방어무시·동시조준 같은 특수능력은 양쪽 모두를 이어받는다. " +
-      "변리사냥을 섞으면 보좌까지 들고 싸운다. 합체냥끼리 다시 합칠 수는 없다.",
+  promote: {
+    key: "promote", name: "승진", icon: "🕶️", tag: "판갈이", kind: "rule",
+    desc: "냥타워 1명이 승진 — 선글라스·샷건으로 방사 피해",
+    detail: "묘한특허의 승진은 바로 시켜드립니다. 판에서 가장 값나가는 냥타워 한 명이 그 자리에서 승진해 " +
+      "선글라스를 쓰고 샷건을 든다. 공격력 +25% · 치명타 확률 +12%p · 치명타 배율 +0.5 에 더해, " +
+      "명중 지점 반경 1.4칸의 다른 침입자에게도 70% 의 방사 피해가 퍼진다. " +
+      "판이 비어 있을 때 골랐다면 다음에 세우는 냥타워가 승진한다.",
   },
   mono: {
     key: "mono", name: "선행기술 총동원", icon: "📚", tag: "특화", kind: "rule",
@@ -294,6 +312,9 @@ const BAL = {
   prepSecs: 15,              // 양쪽 모두 준비 단계에 들어선 뒤 주어지는 최대 준비시간(초)
   choiceSecs: 15,            // 패시브·증강 선택 제한시간(초). 넘기면 첫 번째가 자동으로 선택된다
   burstSecs: 8,              // 「우선권 주장」 증강의 지속시간(초)
+  critCap: 0.75,             // 치명타 확률 상한 (증강으로도 이 위로는 못 올라간다)
+  promoteSplashR: 118,       // 「승진」 방사 피해 반경(px, 1칸 = 84px → 약 1.4칸)
+  promoteSplash: 0.7,        // 방사 피해 비율 (직격 피해의 70%)
 };
 
 return { AUGMENTS, AUGMENT_WAVES, BAL, CATS, ENEMIES, PASSIVES, PASSIVE_BY_KEY, SKILLS, WAVES };
@@ -815,30 +836,6 @@ function pieceCells(p) {
   return out;
 }
 
-/**
- * 조각의 "기본 정의". 합체냥(p.fuse)이면 두 종류를 합쳐 만든 가상의 정의를 돌려준다.
- *
- * 합치는 규칙: 공격력은 더하고, 공속·사거리는 좋은 쪽을, 특수능력(방어무시·동시조준·둔화·보좌)은
- * 양쪽 중 센 쪽을 그대로 이어받는다. 변리사냥(사거리 0)이 섞이면 상대 쪽 사거리를 쓰게 되므로
- * 보좌를 들고 직접 싸우는 냥이 된다.
- * @param {{key:string, fuse?:string|null}} p
- */
-function baseOf(p) {
-  const A = CATS[p.key];
-  if (!p.fuse || !CATS[p.fuse]) return A;
-  const Z = CATS[p.fuse];
-  const mx = (k, d) => Math.max(A[k] || d, Z[k] || d);
-  return {
-    name: `${A.name}×${Z.name}`, kind: "atk", tag: "합체",
-    row: A.row, arow: A.arow, filter: A.filter, icon: A.icon,
-    dmg: A.dmg + Z.dmg,
-    rate: mx("rate", 0), range: mx("range", 0),
-    pierce: mx("pierce", 0), targets: mx("targets", 1),
-    critC: mx("critC", 0), critM: mx("critM", 1), slow: mx("slow", 0),
-    auraDmg: mx("auraDmg", 0), auraRate: mx("auraRate", 0),
-    cost: A.cost + Z.cost, desc: "두 냥타워를 하나로 합친 합체냥.",
-  };
-}
 
 /**
  * 보드 전체 스탯을 계산해 각 심사관의 `st` 를 채우고 경제 수치를 반환.
@@ -869,11 +866,16 @@ function computeStats(b) {
 
   // 기본 스탯 (+ 증강으로 바뀐 규칙 + 패시브로 누적된 자기강화/상대약화 배율)
   for (const c of live) {
-    const base = baseOf(c);
+    const base = CATS[c.key];
     let dmg = base.dmg, rate = base.rate, range = base.range;
     let pierce = base.pierce || 0;
+    let critC = base.critC || 0, critM = base.critM || 1;
     let auraDmg = base.auraDmg || 0, auraRate = base.auraRate || 0;
-    const isAide = !!(auraDmg || auraRate);   // 보좌 능력을 가진 냥 (변리사냥 · 변리사냥이 섞인 합체냥)
+    const isAide = !!(auraDmg || auraRate);   // 보좌 능력을 가진 냥 (변리사냥)
+
+    // 「승진」 — 선글라스에 샷건. 화력·치명타가 오르고 명중 지점에 방사 피해가 퍼진다.
+    const promoted = AUG.has("promote") && b.promotedUid === c.uid;
+    if (promoted) { dmg *= 1.25; critC += 0.12; critM += 0.5; }
 
     // ── 증강: 규칙 자체를 바꾸는 것들 ──
     if (AUG.has("agentWar")) {
@@ -893,12 +895,14 @@ function computeStats(b) {
       dmg: dmg * bMul("dmg"), rate: rate * ATTACK_RATE_MULT * bMul("rate"), range: range * bMul("range"),
       pierce: Math.min(BAL.pierceCap, pierce),
       targets: base.targets || 1,
-      critC: base.critC || 0, critM: base.critM || 1,
+      critC: Math.min(BAL.critCap, critC), critM,
       slow: Math.min(BAL.slowCap, base.slow || 0),
       auraDmg, auraRate,
       // 실제로 사격을 하는가. 변리사냥은 평소 0이지만 「변리사 개업」을 고르면 이 값이 켜진다.
       atk: dmg > 0 && rate > 0 && range > 0,
-      golden, fused: !!c.fuse,
+      golden, promoted,
+      // 방사 피해 — 지금은 승진냥만 가진다. {r: 반경(px), f: 직격 대비 비율}
+      splash: promoted ? { r: BAL.promoteSplashR, f: BAL.promoteSplash } : null,
       buffDmg: 1, buffRate: 1,
     };
   }
@@ -929,7 +933,7 @@ function computeStats(b) {
   return { econ, active: new Set(), report };
 }
 
-return { auraCells, baseOf, computeStats };
+return { auraCells, computeStats };
 })();
 __mods["core/combat.js"] = (function(){
 // @ts-check
@@ -1036,23 +1040,53 @@ function step(g, dt, now) {
 
     c.cd = 1 / (c.st.rate * burst);
     c.atkEnd = now + g.atkTotal;
-    const col = c.st.slow ? "#79b7d8" : c.st.critC ? "#c79bff" : "#69b6d6";
+    const col = c.st.slow ? "#79b7d8" : "#69b6d6";
     const n = Math.min(c.st.targets, inRange.length);
     const isLong = c.key === "claim";          // 특허범위냥 — 장거리 미사일 전용 연출
+    let anyCrit = false;                       // 한 번 쏘는 동안 치명타가 하나라도 났는가
     for (let i = 0; i < n; i++) {
       const target = inRange[i];
       const crit = Math.random() < c.st.critC;
+      if (crit) anyCrit = true;
       const dist = Math.hypot(target.x - cx, target.y - cy);
       const life = isLong ? Math.min(0.7, Math.max(0.26, dist / 620)) : 0.13;
+      const amount = c.st.dmg * (crit ? c.st.critM : 1);
+
+      if (c.st.splash) {
+        // 승진냥 — 샷건. 탄이 퍼지는 궤적을 몇 가닥 더 그리고, 명중 지점 둘레에 방사 피해를 준다.
+        const ang = Math.atan2(target.y - cy, target.x - cx);
+        for (let k = -1; k <= 1; k++) {
+          if (!k) continue;
+          const a = ang + k * 0.13;
+          g.shots.push({ x1: cx, y1: cy, x2: cx + Math.cos(a) * dist, y2: cy + Math.sin(a) * dist,
+                         col: "#ffcf8a", w: 1.4, life: 0.1, max: 0.1, crit: false, long: false });
+        }
+        g.shots.push({ ring: true, x1: target.x, y1: target.y, r: c.st.splash.r,
+                       col: "#ff9a5c", life: 0.2, max: 0.2 });
+      }
+
       g.shots.push({ x1: cx, y1: cy, x2: target.x, y2: target.y,
                      col: crit ? "#cda43a" : col, w: crit ? 3 : 2, life, max: life, crit, long: isLong });
-      damage(g, target, c.st.dmg * (crit ? c.st.critM : 1), c.st);
+      damage(g, target, amount, c.st);
       // 명중 연출 — 몸통이 잠깐 번쩍이고 살짝 튕긴다. 타이밍은 발사와 동시(즉발 데미지),
       // 미사일이 날아가는 건 순수 연출이라 실제 피격 반응은 여기서 바로 건다.
       target.hitT = crit ? 0.22 : 0.14;
       target.hitCrit = crit;
       target.hitAng = Math.atan2(target.y - cy, target.x - cx);
+
+      // 방사 피해 — 직격을 맞은 적 주변까지 함께 쓸어 버린다
+      if (c.st.splash) {
+        for (const e2 of g.enemies) {
+          if (e2 === target || e2.dead) continue;
+          if (Math.hypot(e2.x - target.x, e2.y - target.y) > c.st.splash.r) continue;
+          damage(g, e2, amount * c.st.splash.f, c.st);
+          e2.hitT = Math.max(e2.hitT, 0.12);
+          e2.hitAng = Math.atan2(e2.y - target.y, e2.x - target.x);
+        }
+      }
     }
+    // 치명타! — 쏜 냥타워 자리에 붉은 글씨가 떠오른다 (연출은 렌더러가 맡는다)
+    if (anyCrit) g.events.push({ t: "crit", uid: c.uid, x: cx, y: cy });
   }
 
   // ── 적 이동 ──
@@ -1113,7 +1147,7 @@ const {Rng} = __req("core/rng.js");
 const {WAVES, BAL, CATS, SKILLS, AUGMENTS, AUGMENT_WAVES} = __req("core/data.js");
 const {getMap, parseMap} = __req("core/maps.js");
 const B = __req("core/board.js");
-const {baseOf, computeStats} = __req("core/stats.js");
+const {computeStats} = __req("core/stats.js");
 const {step, castSkill} = __req("core/combat.js");
 /** 대기 모션: 핑퐁 루프 */
 const IDLE_ORDER = [0,1,2,3,4,5,4,3,2,1];
@@ -1193,6 +1227,7 @@ class Game {
     this.augDeck = new Rng((this.seed ^ 0x9e3779b9) >>> 0).shuffle(Object.keys(AUGMENTS));
     this.awaitingAugment = false;
     this.goldenUid = 0;                  // 「직권보정」으로 이번 웨이브 동안 3배가 된 냥타워
+    this.promotedUid = 0;                // 「승진」으로 선글라스·샷건을 든 냥타워 (판이 끝날 때까지 유지)
 
     /** 액티브 스킬 재사용 대기(초). 웨이브가 끝나면 전부 0으로 돌아간다. */
     this.skillCd = {};
@@ -1240,6 +1275,7 @@ class Game {
 
   /** 스탯 · 제압률을 다시 계산. 심사관을 놓거나 옮길 때마다 부른다. 동선(this.lanes)은 건드리지 않는다. */
   recompute() {
+    this.maybePromote();
     const { econ, active, report } = computeStats(this);
     this.econ = econ; this.active = active; this.report = report;
     this.cover = B.coverage(this, this.lanes);
@@ -1299,7 +1335,7 @@ class Game {
   buyCat(key) {
     const c = this.catCost(key);
     if (this.phase !== "prep" || this.gold < c) return null;
-    const p = { kind: "cat", key, fuse: null, x: -1, y: -1, w: 1, h: 1, uid: this.uid(), void: 0 };
+    const p = { kind: "cat", key, x: -1, y: -1, w: 1, h: 1, uid: this.uid(), void: 0 };
     const spot = B.firstLegalSpot(this, p);
     if (spot) { p.x = spot[0]; p.y = spot[1]; this.pieces.push(p); }
     else this.tray.push(p);
@@ -1347,38 +1383,34 @@ class Game {
 
   /** 「분할출원」 — 판에서 가장 비싼 냥타워를 하나 복제한다. 빈 터가 없으면 대기열로. */
   cloneBestCat() {
-    const pool = B.cats(this).filter((c) => !c.void);
-    if (!pool.length) return null;
-    const src = pool.reduce((a, c) => (baseOf(c).cost > baseOf(a).cost ? c : a));
-    const p = { kind: "cat", key: src.key, fuse: src.fuse || null,
-                x: -1, y: -1, w: 1, h: 1, uid: this.uid(), void: 0 };
+    const src = this.bestCat();
+    if (!src) return null;
+    const p = { kind: "cat", key: src.key, x: -1, y: -1, w: 1, h: 1, uid: this.uid(), void: 0 };
     const spot = B.firstLegalSpot(this, p);
     if (spot) { p.x = spot[0]; p.y = spot[1]; this.pieces.push(p); }
     else this.tray.push(p);
-    this.events.push({ t: "clone", key: p.key, name: baseOf(p).name, placed: !!spot });
+    this.events.push({ t: "clone", key: p.key, name: CATS[p.key].name, placed: !!spot });
     return p;
   }
 
-  // ── 합체 (「합동특허법률사무소」 증강) ──
-  /** src 를 dst 위에 겹쳐 합칠 수 있는가 */
-  canFuse(dst, src) {
-    if (!this.augSet.has("fuse") || this.phase !== "prep") return false;
-    if (!dst || !src || dst === src) return false;
-    if (dst.kind !== "cat" || src.kind !== "cat") return false;
-    if (dst.fuse || src.fuse) return false;      // 합체냥은 다시 합칠 수 없다
-    if (dst.void || src.void) return false;
-    return dst.key !== src.key;                  // 서로 다른 종류끼리만
+  /** 판에서 가장 값나가는 냥타워 (같은 값이면 먼저 놓은 쪽). 증강 대상 고를 때 쓴다. */
+  bestCat() {
+    const pool = B.cats(this).filter((c) => !c.void);
+    if (!pool.length) return null;
+    return pool.reduce((a, c) => (CATS[c.key].cost > CATS[a.key].cost ? c : a));
   }
 
-  /** src 를 dst 에 합친다. dst 가 합체냥이 되고 src 는 판에서 사라진다. */
-  fuse(dst, src) {
-    if (!this.canFuse(dst, src)) return false;
-    dst.fuse = src.key;
-    this.pieces = this.pieces.filter((p) => p !== src);
-    this.tray = this.tray.filter((p) => p !== src);
-    this.recompute();
-    this.events.push({ t: "fuse", name: baseOf(dst).name, x: dst.x, y: dst.y });
-    return true;
+  /**
+   * 「승진」 — 대상이 아직 없으면 지금 판에서 가장 비싼 냥타워를 승진시킨다.
+   * 판이 비어 있을 때 증강을 골랐다면 다음에 냥타워를 세우는 순간 여기서 정해진다
+   * (recompute 가 배치·이동 때마다 불리기 때문이다). 한 번 정해지면 판이 끝날 때까지 바뀌지 않는다.
+   */
+  maybePromote() {
+    if (this.promotedUid || !this.augSet.has("promote")) return;
+    const best = this.bestCat();
+    if (!best) return;
+    this.promotedUid = best.uid;
+    this.events.push({ t: "promote", key: best.key, name: CATS[best.key].name, x: best.x, y: best.y });
   }
 
   // ── 액티브 스킬 ──
@@ -1451,7 +1483,7 @@ class Game {
       this.goldenUid = pool.length ? pool[this.waveRng.int(pool.length)].uid : 0;
       this.recompute();
       const pick = pool.find((c) => c.uid === this.goldenUid);
-      if (pick) this.events.push({ t: "golden", name: baseOf(pick).name, x: pick.x, y: pick.y });
+      if (pick) this.events.push({ t: "golden", name: CATS[pick.key].name, x: pick.x, y: pick.y });
     }
 
     this.wave++;
@@ -1628,7 +1660,7 @@ const {Game, frameOf} = __req("core/game.js");
 const {CATS, ENEMIES, BAL, PASSIVES, PASSIVE_BY_KEY, SKILLS, AUGMENTS, AUGMENT_WAVES} = __req("core/data.js");
 const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
-const {auraCells, baseOf} = __req("core/stats.js");
+const {auraCells} = __req("core/stats.js");
 const {sprite, onSpriteReady} = __req("web/sprite.js");
 const $ = (s) => /** @type {HTMLElement} */ (document.querySelector(s));
 const CS = BAL.cellSize, GAP = BAL.cellGap;
@@ -1828,7 +1860,7 @@ function pieceEl(p, onBoard) {
   // 변리사냥의 보좌를 받고 있으면 배경이 은은하게 반짝인다 (실제로 이어진 터에만 적용됨)
   const buffed = !p.void && p.st && (p.st.buffDmg > 1 || p.st.buffRate > 1);
   el.className = "piece cat" + (p.void ? " void" : "") + (buffed ? " buffed" : "") +
-    (p.fuse ? " fused" : "") + (p.st && p.st.golden ? " golden" : "");
+    (p.st && p.st.promoted ? " promoted" : "") + (p.st && p.st.golden ? " golden" : "");
   el.dataset.uid = String(p.uid);
 
   if (onBoard) {
@@ -1851,12 +1883,12 @@ function pieceEl(p, onBoard) {
   badge.textContent = CATS[p.key].icon;
   badge.style.cssText = BADGE("right");
 
-  // 합체냥은 합쳐진 상대 쪽 아이콘을 왼쪽에 하나 더 단다 — 무엇과 무엇이 붙었는지 판에서 바로 보이도록
-  if (p.fuse && CATS[p.fuse]) {
-    const mate = document.createElement("span");
-    mate.textContent = CATS[p.fuse].icon;
-    mate.style.cssText = BADGE("left") + ";border-color:#8f6ad8";
-    el.appendChild(mate);
+  // 승진냥은 왼쪽에 선글라스 딱지를 하나 더 단다 — 판에서 누가 승진했는지 한눈에 보이도록
+  if (p.st && p.st.promoted) {
+    const rank = document.createElement("span");
+    rank.textContent = "🕶️";
+    rank.style.cssText = BADGE("left") + ";border-color:#cda43a;background:#2b2418";
+    el.appendChild(rank);
   }
   el.appendChild(badge);
 
@@ -2045,6 +2077,8 @@ function draw(now) {
       cg.filter = CATS[c.key].filter || "none";
       cg.drawImage(sprite, fr * 64, row * 64, 64, 64, 0, 0, 64, 64);
       cg.filter = "none";
+      // 승진냥 — 스프라이트 위에 선글라스와 샷건을 덧그린다 (원본 시트는 건드리지 않는다)
+      if (c.st.promoted) drawPromoteGear(cg, c.atkEnd && now < c.atkEnd);
     }
   }
   for (const e of game.enemies) {
@@ -2058,13 +2092,42 @@ function draw(now) {
   for (const s of game.shots) drawMissile(g, s);
   drawSparks(g);
   drawSkillFx(g, now);
-  g.textAlign = "center"; g.font = "bold 11px ui-monospace,monospace";
-  for (const f of floaters) {
-    g.globalAlpha = Math.max(0, f.life / .8); g.fillStyle = f.col;
-    g.fillText(f.txt, f.x, f.y - (.8 - f.life) * 22); g.globalAlpha = 1;
-  }
+  drawFloaters(g);
   g.restore(); // 화면 흔들림 여기까지 — 이 아래는 화면에 고정된 UI라 흔들리지 않는다
 }
+/**
+ * 떠오르며 사라지는 글씨들.
+ * 「Critical!」처럼 눈에 띄어야 하는 것(big)은 처음에 살짝 작게 나타났다가 커지면서 떠오르고,
+ * 마지막 구간에서 서서히 사라진다. 종이 판 위에서도 읽히도록 검은 테두리를 두른다.
+ */
+function drawFloaters(g) {
+  g.textAlign = "center"; g.textBaseline = "alphabetic";
+  for (const f of floaters) {
+    const max = f.max || 0.8;
+    const p = 1 - Math.max(0, f.life) / max;          // 0 → 1
+    const rise = (f.rise ?? 22) * p;
+    // 앞 15%는 나타나고, 뒤 40%는 사라진다
+    const alpha = Math.min(1, p / 0.15) * Math.min(1, Math.max(0, (1 - p) / 0.4));
+    const scale = f.big ? 0.72 + Math.min(1, p / 0.22) * 0.38 : 1;
+
+    g.save();
+    g.globalAlpha = Math.max(0, alpha);
+    g.translate(f.x, f.y - rise);
+    if (scale !== 1) g.scale(scale, scale);
+    g.font = f.big ? "bold 16px 'Jua','Gowun Dodum',ui-monospace,monospace"
+                   : "bold 11px ui-monospace,monospace";
+    if (f.big) {
+      g.lineWidth = 3.4; g.strokeStyle = "rgba(24,16,10,.85)";
+      g.lineJoin = "round";
+      g.strokeText(f.txt, 0, 0);
+    }
+    g.fillStyle = f.col;
+    g.fillText(f.txt, 0, 0);
+    g.restore();
+  }
+  g.globalAlpha = 1;
+}
+
 function fxCanvasSize() {
   const fx = /** @type {HTMLCanvasElement} */ ($("#fx"));
   return { w: fx.width, h: fx.height };
@@ -2198,9 +2261,61 @@ function drawRatSilhouette(g, r, slowed) {
   g.strokeStyle = out; g.lineWidth = 1.1;
 }
 
+/**
+ * 「승진」 냥타워의 장비 — 냥 스프라이트(64×64)의 그 칸 위에 바로 덧그린다.
+ * 스프라이트 시트에 승진 전용 그림이 없으므로 도형으로 얹는 방식이다.
+ * 좌표는 64×64 프레임 기준이고, 냥 얼굴 위치에 맞춰 조정하려면 아래 숫자만 손보면 된다.
+ * @param {CanvasRenderingContext2D} cg
+ * @param {boolean} firing 지금 공격 모션 중인가 (총구 화염을 그릴지)
+ */
+function drawPromoteGear(cg, firing) {
+  cg.save();
+  // ── 선글라스 — 렌즈 둘 + 브리지 ──
+  cg.fillStyle = "#14161c";
+  cg.beginPath();
+  cg.roundRect ? cg.roundRect(17, 23, 13, 8, 2) : cg.rect(17, 23, 13, 8);
+  cg.fill();
+  cg.beginPath();
+  cg.roundRect ? cg.roundRect(34, 23, 13, 8, 2) : cg.rect(34, 23, 13, 8);
+  cg.fill();
+  cg.fillRect(30, 25.5, 4, 2.2);
+  cg.fillStyle = "rgba(255,255,255,.5)";     // 렌즈 반사광
+  cg.fillRect(19, 24.5, 4, 1.7);
+  cg.fillRect(36, 24.5, 4, 1.7);
+
+  // ── 샷건 — 개머리판 · 총열 · 펌프 ──
+  cg.translate(40, 43);
+  cg.rotate(-0.38);
+  cg.fillStyle = "#6b4a2a"; cg.fillRect(-15, -3.2, 12, 6.4);      // 개머리판
+  cg.fillStyle = "#3a3f47"; cg.fillRect(-4, -2.6, 24, 5.2);       // 총열
+  cg.fillStyle = "#22262c"; cg.fillRect(3, 1.6, 11, 2.6);         // 펌프
+  cg.fillStyle = "#8a939c"; cg.fillRect(17, -2.2, 3, 4.4);        // 총구
+  if (firing) {                                                   // 총구 화염
+    cg.fillStyle = "rgba(255,196,92,.92)";
+    cg.beginPath();
+    cg.moveTo(20, 0); cg.lineTo(30, -5); cg.lineTo(27, 0); cg.lineTo(30, 5);
+    cg.closePath(); cg.fill();
+  }
+  cg.restore();
+}
+
+/** 승진냥 샷건의 방사 범위 — 명중 지점에서 퍼지는 주황 고리 한 겹. */
+function drawBlastRing(g, s) {
+  const p = 1 - Math.max(0, s.life / s.max);
+  g.save();
+  g.globalAlpha = (1 - p) * 0.75;
+  g.strokeStyle = s.col; g.lineWidth = 2.6 * (1 - p) + 0.8;
+  g.beginPath(); g.arc(s.x1, s.y1, s.r * (0.45 + p * 0.7), 0, 7); g.stroke();
+  g.globalAlpha = (1 - p) * 0.16;
+  g.fillStyle = s.col;
+  g.beginPath(); g.arc(s.x1, s.y1, s.r * (0.45 + p * 0.7), 0, 7); g.fill();
+  g.restore();
+}
+
 /** 미사일 발사 이펙트 — 타워→적을 잇는 직선 대신, 살짝 포물선을 그리며 날아가는 발광 구슬 + 궤적 + 명중 폭발.
  *  s.life가 s.max에서 0으로 줄어드는 걸 진행도로 삼는다 (0=발사 직후, 1=명중). */
 function drawMissile(g, s) {
+  if (s.ring) return drawBlastRing(g, s);
   if (s.long) return drawLongMissile(g, s);
   const p = 1 - Math.max(0, s.life / s.max);          // 0..1 진행도
   const crit = s.col === "#cda43a";
@@ -2598,22 +2713,40 @@ function drawMonster(g, e, d, now) {
 
 /** 캔버스 위를 떠다니는 짧은 텍스트 */
 const floaters = [];
+/** @param {{big?:boolean, rise?:number, life?:number}} [opt] */
+function addFloater(x, y, txt, col, opt = {}) {
+  const life = opt.life ?? 0.8;
+  floaters.push({ x, y, txt, col, life, max: life, big: !!opt.big, rise: opt.rise });
+}
+
+/** 치명타 글씨를 마지막으로 띄운 시각 (냥타워 uid → ms). 연사 냥타워가 화면을 도배하지 않도록 */
+const critShownAt = new Map();
 
 /* ═══════ 이벤트 → 연출 ═══════ */
 function consumeEvents() {
   for (const ev of game.drainEvents()) {
     switch (ev.t) {
       case "kill":
-        floaters.push({ x: ev.x, y: ev.y, txt: "+" + ev.reward, col: "#cda43a", life: .8 });
+        addFloater(ev.x, ev.y, "+" + ev.reward, "#cda43a");
         break;
       case "leak":
-        floaters.push({ x: ev.x, y: ev.y, txt: "돌파!", col: "#e0574d", life: .8 });
+        addFloater(ev.x, ev.y, "돌파!", "#e0574d");
         break;
+      case "crit": {
+        // 치명타! — 쏜 냥타워 바로 위에 붉은 글씨가 떠오른다.
+        // 우선심사냥처럼 초당 10발을 쏘는 냥은 치명타도 자주 나므로, 같은 냥은 0.45초에 한 번만 띄운다.
+        const last = critShownAt.get(ev.uid) || 0;
+        const t = performance.now();
+        if (t - last < 450) break;
+        critShownAt.set(ev.uid, t);
+        addFloater(ev.x, ev.y - 26, "Critical!", "#e0574d", { big: true, life: 1.0, rise: 30 });
+        break;
+      }
       case "void":
         log(`<b style="color:#e0574d">무효심결</b> ${ev.name} ${BAL.voidWaves}웨이브 정지`);
         break;
       case "fee":
-        floaters.push({ x: ev.x, y: ev.y, txt: `−${ev.amount}`, col: "#e0574d", life: 1.0 });
+        addFloater(ev.x, ev.y, `−${ev.amount}`, "#e0574d", { life: 1.0 });
         addShake(4, .2);
         log(ev.gold < 0
           ? `<b style="color:#e0574d">${ev.name}</b> 합의금 ${ev.amount} 징수 — 특허료가 <b style="color:#e0574d">${Math.floor(ev.gold)}</b>, 빚으로 남았습니다`
@@ -2636,7 +2769,7 @@ function consumeEvents() {
           skillFx.push({ kind: "purge", life: .5, max: .5, x: ev.x, y: ev.y, r: ev.radius });
           spawnSparks(ev.x, ev.y, true);
           addShake(6, .26);
-          floaters.push({ x: ev.x, y: ev.y, txt: `폐기 ${ev.killed}`, col: "#ffd782", life: .9 });
+          addFloater(ev.x, ev.y, `폐기 ${ev.killed}`, "#ffd782", { life: .9 });
           stamp(bb.left + ev.x, bb.top + ev.y, "廢 棄", ev.name);
           log(`<b style="color:#e0574d">${ev.name}</b> 집행 — 범위 내 ${ev.hit}건 중 ${ev.killed}건 제거 (−${ev.cost})`);
         }
@@ -2656,9 +2789,14 @@ function consumeEvents() {
       case "clone":
         log(`<b>분할출원</b> ${ev.name} 하나가 ${ev.placed ? "판에 추가되었습니다" : "대기열에 놓였습니다"}`);
         break;
-      case "fuse":
-        log(`<b style="color:#b48cff">합체</b> ${ev.name} 완성`);
+      case "promote": {
+        log(`<b style="color:#cda43a">승진</b> ${ev.name} — 선글라스·샷건 지급, 방사 피해가 붙습니다`);
+        const [px2, py2] = B.cellCenter(ev.x, ev.y);
+        const bb = $("#board").getBoundingClientRect();
+        stamp(bb.left + px2, bb.top + py2, "昇 進", ev.name);
+        addFloater(px2, py2 - 24, "승진!", "#cda43a", { big: true, life: 1.1, rise: 28 });
         break;
+      }
       case "golden":
         log(`<b style="color:#cda43a">직권보정</b> ${ev.name} — 이번 웨이브 동안 공격력 3배`);
         break;
@@ -2708,7 +2846,8 @@ function maybeSendState(now) {
   const snap = {
     hp: game.hp, maxHp: game.maxHp, wave: game.wave, phase: game.phase,
     augs: game.augments,
-    pieces: B.placed(game).filter((p) => !p.void).map((p) => ({ k: p.key, f: p.fuse || null, x: p.x, y: p.y })),
+    pieces: B.placed(game).filter((p) => !p.void)
+      .map((p) => ({ k: p.key, pr: p.uid === game.promotedUid, x: p.x, y: p.y })),
     enemies: game.enemies.map((e) => ({ t: e.t, x: Math.round(e.x), y: Math.round(e.y), hp: e.hp / e.max })),
     cols: game.cols, rows: game.rows, layout: game.map.layout,
   };
@@ -2752,15 +2891,8 @@ function moveDrag(e) {
   dragging.ghost.style.left = (e.clientX - dragging.ox) + "px";
   dragging.ghost.style.top = (e.clientY - dragging.oy) + "px";
   const t = dropTarget(e);
-  document.querySelectorAll(".cell").forEach((c) => c.classList.remove("hint", "bad", "fusehint"));
+  document.querySelectorAll(".cell").forEach((c) => c.classList.remove("hint", "bad"));
   if (t && t.type === "cell") {
-    // 이미 냥타워가 있는 칸이라도, 합체가 가능하면 "겹쳐 놓기"가 정답이므로 따로 표시한다
-    const occupant = B.pieceAt(game, t.x, t.y, dragging.p);
-    if (occupant && game.canFuse(occupant, dragging.p)) {
-      const c = cellEl(t.x, t.y);
-      if (c) c.classList.add("fusehint");
-      return;
-    }
     const ok = B.legal(game, dragging.p, t.x, t.y, dragging.p);
     for (let dy = 0; dy < dragging.p.h; dy++)
       for (let dx = 0; dx < dragging.p.w; dx++) {
@@ -2775,20 +2907,9 @@ function endDrag(e) {
   if (!dragging) return;
   const t = dropTarget(e), p = dragging.p;
   dragging.ghost.remove();
-  document.querySelectorAll(".cell").forEach((c) => c.classList.remove("hint", "bad", "fusehint"));
+  document.querySelectorAll(".cell").forEach((c) => c.classList.remove("hint", "bad"));
 
   if (t && t.type === "cell") {
-    // 「합동특허법률사무소」 증강 — 다른 종류 위에 겹쳐 놓으면 합체냥이 된다
-    const occupant = B.pieceAt(game, t.x, t.y, p);
-    if (occupant && game.canFuse(occupant, p)) {
-      game.fuse(occupant, p);
-      const [cx, cy] = B.pieceCenter(occupant);
-      const bb = $("#board").getBoundingClientRect();
-      stamp(bb.left + cx, bb.top + cy, "合 體", baseOf(occupant).name);
-      dragging = null;
-      render();
-      return;
-    }
     const wasNew = p.x < 0;
     if (game.place(p, t.x, t.y) && wasNew) {
       log(`<b>${CATS[p.key].name} 배치</b> — ${CATS[p.key].desc}`);
@@ -2822,10 +2943,14 @@ function log(html) {
 function showTip(e, p) {
   if (dragging) return;
   const t = $("#tip");
-  const d = baseOf(p);   // 합체냥이면 두 종류를 합친 정의가 나온다
+  const d = CATS[p.key];
   const s = p.st;
+  // 판에 놓이기 전(패널 카드)에는 st 가 없으므로 정의값을 그대로 보여준다
+  const critC = s ? s.critC : (d.critC || 0), critM = s ? s.critM : (d.critM || 1);
   t.innerHTML = `<b>${d.name}</b> — ${d.tag}<i>${d.desc}</i>
     ${s && s.atk ? `<i>공격력 ${s.dmg.toFixed(1)} · 공속 ${s.rate.toFixed(2)}/s · 사거리 ${(s.range/(CS+GAP)).toFixed(1)}칸</i>` : "<i>1칸짜리 벽이기도 하다.</i>"}
+    ${critC ? `<i style="color:#cda43a">치명타 ${Math.round(critC * 100)}% · 피해 ×${critM.toFixed(1)}</i>` : ""}
+    ${s && s.splash ? `<i style="color:#ff9a5c">승진 — 샷건 방사 피해 ${Math.round(s.splash.f * 100)}% (반경 ${(s.splash.r/(CS+GAP)).toFixed(1)}칸)</i>` : ""}
     ${s && s.golden ? `<i style="color:#cda43a">직권보정 — 이번 웨이브 공격력 3배</i>` : ""}
     ${p.void ? `<i style="color:#e0574d">무효 상태 · ${p.void}웨이브 남음</i>` : ""}`;
   t.style.display = "block";
@@ -3039,7 +3164,7 @@ function renderCatRoster() {
         <span class="ic" style="margin:0;font-size:22px">${d.icon}</span>
         <div style="min-width:0">
           <span class="nm" style="display:block">${d.name}</span>
-          <span class="ef" style="color:#8a7c5e;font-family:var(--mono);font-size:9.5px;display:block">${d.tag}${d.kind === "buff" && !game.augSet.has("agentWar") ? " · 비공격" : ""}${d.kind === "buff" && game.augSet.has("agentWar") ? " · 전투참전" : ""}</span>
+          <span class="ef" style="color:#8a7c5e;font-family:var(--mono);font-size:9.5px;display:block">${d.tag}${d.kind === "buff" ? (game.augSet.has("agentWar") ? " · 전투참전" : " · 비공격") : ` · 치명타 ${Math.round((d.critC || 0) * 100)}% ×${(d.critM || 1).toFixed(1)}`}</span>
         </div>
         <span class="ef" style="margin-left:auto;color:#3f5a2f;font-weight:700;white-space:nowrap">₩${cost.toLocaleString()}</span>
       </div>
@@ -3289,14 +3414,14 @@ function drawOpponent(now) {
       const sz = tile * 1.02;
       g.drawImage(img, cx - sz / 2, cy - sz / 2, sz, sz);
     }
-    // 합체냥은 보랏빛 테두리와 짝 아이콘으로 구분한다
-    if (p.f && CATS[p.f]) {
-      g.strokeStyle = "#8f6ad8"; g.lineWidth = Math.max(1, cell * 0.05);
+    // 승진냥은 금빛 테두리와 선글라스로 구분한다
+    if (p.pr) {
+      g.strokeStyle = "#cda43a"; g.lineWidth = Math.max(1, cell * 0.06);
       g.strokeRect(cx - tile / 2, cy - tile / 2, tile, tile);
-      g.font = `${Math.round(cell * 0.34)}px sans-serif`;
+      g.font = `${Math.round(cell * 0.32)}px sans-serif`;
       g.fillStyle = "#3a2f1e";
       g.textAlign = "left"; g.textBaseline = "top";
-      g.fillText(CATS[p.f].icon, cx - tile / 2, cy - tile / 2);
+      g.fillText("🕶️", cx - tile / 2, cy - tile / 2);
       g.textAlign = "start"; g.textBaseline = "alphabetic";
     }
     if (!img) {
@@ -3329,6 +3454,7 @@ function beginBattle() {
   // (솔로는 맞출 상대가 없으니 시드를 비워 매번 다른 판이 나오게 둔다)
   game = new Game({ map: "complex", seed: matchSeed || undefined });
   floaters.length = 0;
+  critShownAt.clear();
   sparks = [];
   skillFx = [];
   armedSkill = null; aimPt = null;

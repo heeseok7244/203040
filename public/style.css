@@ -444,11 +444,11 @@ body.solo #readyBar,body.solo #oppPanel,body.solo #foeEfCol{display:none!importa
 .choicebar .track i{display:block;height:100%;background:linear-gradient(90deg,#cda43a,#c4322a);
   transition:width .12s linear}
 
-/* 합체 대상 위에 겹쳐 놓을 때의 표시 */
-.cell.fusehint{background:#d9c4f2;border-color:#8f6ad8}
-
-/* 합체냥 · 직권보정으로 뽑힌 냥 */
-.piece.cat.fused{border-color:#8f6ad8;box-shadow:2px 3px 0 rgba(143,106,216,.35)}
+/* 승진냥 · 직권보정으로 뽑힌 냥
+   (::after 는 무효 도장·보좌 후광이 이미 쓰고 있어서, 승진 표시는 pieceEl 이 붙이는
+    🕶️ 딱지와 테두리로만 낸다 — 같은 가상 요소를 두고 규칙이 서로 덮어쓰지 않도록) */
+.piece.cat.promoted{border-color:#2b2418;
+  box-shadow:0 0 0 2px rgba(205,164,58,.75),2px 3px 0 rgba(43,36,24,.4)}
 .piece.cat.golden{border-color:var(--gold);box-shadow:0 0 0 2px rgba(205,164,58,.55),2px 3px 0 rgba(205,164,58,.3);
   animation:goldPulse 1.4s ease-in-out infinite}
 @keyframes goldPulse{0%,100%{box-shadow:0 0 0 2px rgba(205,164,58,.45),0 0 4px rgba(205,164,58,.4)}
