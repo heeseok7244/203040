@@ -77,17 +77,6 @@ const CATS = {
     filter: "hue-rotate(195deg) saturate(1.25)",
     icon: "📐",
   },
-  search: {
-    // 출원냥(dmg 12 / rate 2.0)을 기준으로 공격력 ×2, 공속 ÷2 — 초당 피해는 같고 한 방이 두 배다.
-    // 방어력은 명중할 때마다 한 번씩 깎이므로, 같은 DPS라도 단단한 적에게는 이쪽이 훨씬 세게 들어간다.
-    // 치명타도 이 "한 방" 정체성에 맞춰 확률·배율 모두 가장 높다.
-    name: "선행조사냥", row: 2, arow: 3, kind: "atk",
-    dmg: 24, rate: 1.0, range: 118, tag: "한방", cost: 130,
-    critC: 0.30, critM: 2.4,
-    desc: "출원냥의 두 배로 세게, 절반의 속도로 때린다. 방어가 두꺼운 적에게 강하다.",
-    filter: "hue-rotate(255deg) saturate(1.35)",
-    icon: "🔍",
-  },
   pct: {
     name: "국제출원냥", row: 2, arow: 3, kind: "atk",
     dmg: 7, rate: 1.6, range: 118, targets: 3, tag: "다중조준", cost: 190,
@@ -117,7 +106,6 @@ const CATS = {
  * 치명타 밸런스 메모 — 기대 피해 배율 = 1 + critC × (critM − 1)
  *   출원냥   0.18 × 0.8 = +14.4%   (기준선)
  *   특허범위냥 0.22 × 1.0 = +22.0%  (느린 대신 한 발의 값이 크다)
- *   선행조사냥 0.30 × 1.4 = +42.0%  (「한방」 정체성 — 치명타가 터지면 57.6 피해)
  *   국제출원냥 0.12 × 0.6 =  +7.2%  (이미 3인 동시조준으로 세다)
  *   우선심사냥 0.25 × 0.5 = +12.5%  (연사라 치명타가 자주, 대신 작게)
  * 전체 DPS가 7~42% 오르므로 웨이브 체력 배율(hpPerWave)은 건드리지 않고,
@@ -388,13 +376,20 @@ const COMPLEX = {
     "G........",   // 0  바깥 통로 (북)
     "TTTTTTTT.",   // 1  바깥 터
     ".......T.",   // 2  둘째 통로
-    ".TTTTT.T.",   // 3  둘째 터
-    ".T..XT.T.",   // 4  등록원부 — 나선의 끝
-    ".T.TTT.T.",   // 5
+    ".TTT#T.T.",   // 3  둘째 터 — 가운데 한 칸은 조형물 꼭대기(전구·원자로)가 걸쳐 있어 비워 둔다
+    ".T..X#.T.",   // 4  등록원부 — 나선의 끝. 좌우는 배경 원화의 조형물 자리(#)
+    ".T.###.T.",   // 5  조형물 아랫단 — 심사관을 세울 수 없다
     ".T.....T.",   // 6  셋째 통로
     ".TTTTTTT.",   // 7
     ".........",   // 8  바깥 통로 (남)
   ],
+  /**
+   * 배경 원화 한가운데 조형물이 깔고 앉은 칸 — 몸통 6칸(x 3~5 × y 4~5)과 꼭대기 한 칸(4,3).
+   * 판정상으로는 벽(#)이라 심사관을 세울 수 없고, 화면에는 원화가 그대로 보이도록
+   * 벽 무늬 대신 투명하게 그린다 (buildBoardCells 가 .mon 을 붙인다).
+   * 등록원부(4,4)와 마지막 진입 통로(3,4)도 같은 조형물 위라 함께 적어 둔다.
+   */
+  deco: [[4, 3], [3, 4], [4, 4], [5, 4], [3, 5], [4, 5], [5, 5]],
   annex: [],
   labels: [],
   catStart: [],
@@ -1819,14 +1814,16 @@ function buildBoardCells() {
       const opened = !fixed && baseFixed.has(`${x},${y}`);
       const tower = !!game.tower && !gate && !goal && !fixed && B.isTower(game, x, y);
       const road = !!game.tower && !gate && !goal && !fixed && !tower;
+      // 배경 원화의 조형물이 깔고 앉은 칸 — 판정은 그대로 두고 칠만 벗겨 원화가 드러나게 한다
+      const mon = (game.map.deco || []).some(([dx, dy]) => dx === x && dy === y);
       const d = document.createElement("div");
       d.className = "cell" +
         (gate ? " gate" : "") + (goal ? " goal" : "") +
         (fixed ? " fixed" : "") + (opened ? " annex" : "") +
-        (tower ? " tower" : "") + (road ? " road" : "");
+        (tower ? " tower" : "") + (road ? " road" : "") + (mon ? " mon" : "");
       d.dataset.x = String(x); d.dataset.y = String(y);
-      if (gate) d.innerHTML = `<span>${gateName(x, y)}</span>`;
-      if (goal) d.innerHTML = "<span>등록<br>원부</span>";
+      // 진입구·등록원부에는 글자를 얹지 않는다 — 배경 원화가 그 자리에 문(북문)과 조형물(등록원부)을
+      // 이미 그려 두어서, 그 위에 이름표까지 올리면 그림만 가린다
       b.appendChild(d);
     }
   }
@@ -1927,14 +1924,6 @@ function pieceEl(p, onBoard) {
   return el;
 }
 
-/** 진입구 위치로 방위 이름을 붙인다 */
-function gateName(x, y) {
-  if (y === 0) return "북문";
-  if (y === game.rows - 1) return "남문";
-  if (x === 0) return "서문";
-  if (x === game.cols - 1) return "동문";
-  return "진입";
-}
 /** 맵 원본의 고정 칸 (개방 여부 표시용) */
 function baseFixedCells() {
   const out = [];
@@ -1953,6 +1942,7 @@ function renderHud() {
   $("#sWave").textContent = `${game.wave}/${BAL.waveCount}`;
   $("#regHead").textContent = String(game.reg);
 
+  applyStageTheme();         // 스테이지 구간이 넘어가면 전장 원화도 같이 갈린다
   const prep = game.phase === "prep";
   if (prep) disarmSkill();   // 웨이브가 끝나면 조준 상태는 자동으로 풀린다
   renderReadyBar();          // 개시 버튼의 상태는 이제 준비 상황이 정한다
@@ -2102,26 +2092,11 @@ function draw(now) {
     g.translate((Math.random() - 0.5) * 2 * k, (Math.random() - 0.5) * 2 * k);
   }
 
-  safe("동선 그리기", () => drawLanes(g));
   safe("냥타워 그리기", () => drawCats(g, now));
   safe("침입자 그리기", () => drawEnemies(g, now));
   safe("탄환 그리기", () => { for (const s of game.shots) drawMissile(g, s); });
   safe("연출 그리기", () => { drawSparks(g); drawSkillFx(g, now); drawFloaters(g); });
   g.restore(); // 화면 흔들림 여기까지 — 이 아래는 화면에 고정된 UI라 흔들리지 않는다
-}
-
-function drawLanes(g) {
-  for (const lane of game.lanes) {
-    g.strokeStyle = "rgba(196,50,42,.26)"; g.lineWidth = 12;
-    g.lineJoin = "round"; g.lineCap = "round";
-    g.beginPath();
-    lane.pathPx.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
-    g.stroke();
-    g.strokeStyle = "rgba(120,30,25,.45)"; g.lineWidth = 1.4; g.setLineDash([6, 5]);
-    g.beginPath();
-    lane.pathPx.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
-    g.stroke(); g.setLineDash([]);
-  }
 }
 
 /** 냥타워 — 사거리 원과, 각 조각이 들고 있는 64×64 캔버스의 스프라이트 */
@@ -3495,6 +3470,52 @@ function drawOpponent(now) {
   g.restore();
 }
 
+/* ═══════ 스테이지 전장 원화 ═══════ */
+/**
+ * 스테이지(웨이브) 구간마다 판 아래에 깔리는 전장 원화가 바뀐다.
+ *   1~5   아이디어 캠퍼스 · 6~10 연구 개발 단지 · 11~ 우주 기술 기지
+ * pad 는 [위, 오른쪽, 아래, 왼쪽] 픽셀 — 원화마다 액자 두께가 달라서, 액자를 뺀 안쪽 타일밭에
+ * 9×9 판(752px)이 앉도록 테마별로 따로 잡아 둔 값이다. 원화의 타일밭도 정확히 9×9라서,
+ * 이 값이 맞으면 냥타워 한 칸이 원화의 네모 한 칸에 그대로 겹친다.
+ * 냥타워 타일은 84px 간격 안의 80px짜리라, 칸의 왼쪽·위에 붙어 그려진다 —
+ * 그래서 원화 격자를 판보다 2px 바깥에서 시작시켜야 타일이 네모 한가운데에 앉는다.
+ *
+ * 타일밭 격자는 원화의 이음매(그라우트)를 찾아 최소제곱으로 맞춘 값이다 — 바깥 테두리 선은
+ * 액자와 겹쳐 안쪽으로 밀려 잡히므로, 안쪽 선 8개만 써서 시작점과 간격을 낸 뒤 양끝으로 늘렸다.
+ * 눈대중으로 바깥 테두리를 재면 세로 길이가 9px쯤 짧게 잡혀, 아래쪽 줄로 갈수록 6px 넘게 어긋난다.
+ *   캠퍼스   x 28.5 + 132.58k · y 125.7 + 119.02k   (1254×1254)
+ *   연구단지 x 37.4 + 130.74k · y 124.1 + 118.73k   (1254×1254)
+ *   우주기지 x 63.2 + 131.90k · y 114.5 + 112.80k   (1312×1199)
+ */
+const STAGE_THEMES = [
+  { to: 5,        id: "idea_campus",      name: "아이디어 캠퍼스", img: "map/Idea_campus.png",      pad: [91, 23, 42, 20] },
+  { to: 10,       id: "research_complex", name: "연구 개발 단지",  img: "map/research_complex.png", pad: [90, 28, 45, 26] },
+  { to: Infinity, id: "space_base",       name: "우주 기술 기지",  img: "map/space_base.png",       pad: [87, 42, 54, 42] },
+];
+const themeForStage = (n) => STAGE_THEMES.find((t) => n <= t.to) || STAGE_THEMES[STAGE_THEMES.length - 1];
+/** 지금 보여줄 스테이지 번호 — 준비 단계에서는 곧 치를 다음 웨이브의 전장을 미리 보여준다 */
+const stageNo = () => !game ? 1
+  : Math.min(BAL.waveCount, Math.max(1, game.phase === "prep" ? game.wave + 1 : game.wave));
+
+let stageTheme = null;
+/** 스테이지가 다음 구간으로 넘어갔으면 전장 원화를 갈아 끼운다. 매 프레임 불려도 값이 같으면 바로 빠진다. */
+function applyStageTheme() {
+  const th = themeForStage(stageNo());
+  if (th === stageTheme) return;
+  const first = !stageTheme;
+  stageTheme = th;
+  const a = $("#arena");
+  a.style.setProperty("--map-art", `url("${th.img}")`);
+  a.style.setProperty("--map-pad", th.pad.map((v) => v + "px").join(" "));
+  a.dataset.stage = th.id;
+  $("#mapName").textContent = th.name;
+  if (!first) log(`<b>전장 변경</b> — 스테이지 ${stageNo()}부터는 <b>${th.name}</b>입니다.`);
+}
+/** 원화가 장당 2MB 남짓이라, 전환하는 순간 빈 판이 보이지 않도록 미리 한 장씩 받아 둔다 */
+function preloadStageArt() {
+  STAGE_THEMES.forEach((th, i) => setTimeout(() => { new Image().src = th.img; }, i * 4000));
+}
+
 /* ═══════ 대전 시작 ═══════ */
 function beginBattle() {
   $("#lobby").classList.add("hidden");
@@ -3514,13 +3535,16 @@ function beginBattle() {
   iReady = false; oppReady = false; oppInPrep = false;
   prepEndsAt = 0; prepSentWave = 0; oppAugs = [];
   $("#phaseLbl").textContent = "준비 단계";
-  $("#mapName").textContent = game.map.name;
+  stageTheme = null;        // 새 판이면 전장 원화도 1스테이지 것부터 다시 깐다
+  applyStageTheme();
+  preloadStageArt();
   $("#oppLabel").textContent = youAre === "p1" ? "OPPONENT (후)" : "OPPONENT (선)";
   log(soloMode
     ? `<b>솔로 플레이</b> — 상대 없이 웨이브 ${BAL.waveCount}개를 혼자 막아냅니다.`
     : `<b>1v1 대전</b> — 상대와 같은 판·같은 웨이브를 동시에 치릅니다.`);
   log(`<b>${game.map.name}</b> 방위 개시 · ${game.map.desc}`);
   log(`증강은 웨이브 <b>${AUGMENT_WAVES.join(" · ")}</b> 클리어 직후에 나옵니다.`);
+  log(`전장은 스테이지 <b>1~5 ${STAGE_THEMES[0].name}</b> · <b>6~10 ${STAGE_THEMES[1].name}</b> · <b>11~ ${STAGE_THEMES[2].name}</b> 순으로 바뀝니다.`);
   buildBoardCells();
   bindSkillAiming();
   buildSkillBar();

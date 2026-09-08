@@ -84,9 +84,13 @@
     <div class="panel">
       <h2><span id="mapName">청사 평면도</span> <em id="phaseLbl">준비 단계</em></h2>
       <div class="floor">
-        <div class="stage">
-          <div id="board"></div>
-          <canvas id="fx"></canvas>
+        <!-- 스테이지 원화(map/*.png)를 깔고 그 위에 판을 얹는다. 여백은 원화마다 액자 두께가
+             달라서 JS(STAGE_THEMES)가 테마별로 정해 넣는다 -->
+        <div class="arena" id="arena">
+          <div class="stage">
+            <div id="board"></div>
+            <canvas id="fx"></canvas>
+          </div>
         </div>
         <div id="tray"></div>
         <div class="boardctl">

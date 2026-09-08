@@ -48,32 +48,44 @@ h1{font-family:var(--disp);font-size:27px;margin:0;letter-spacing:.18em;color:#f
 .pad{padding:11px 12px}
 
 .floor{background:var(--paper);padding:16px 14px;overflow-x:auto}
+/* 스테이지 원화를 깐 액자. 배경과 안쪽 여백은 JS(applyStageTheme)가 테마별로 넣는다 —
+   원화마다 액자 두께가 달라 판이 안쪽 타일밭에 정확히 앉도록 맞춰야 한다. */
+.arena{position:relative;width:max-content;margin:0 auto;
+  background-image:var(--map-art,none);background-size:100% 100%;background-repeat:no-repeat;
+  padding:var(--map-pad,0)}
 .stage{position:relative;width:max-content;margin:0 auto}
 #board{display:grid;gap:4px;position:relative}
 #fx{position:absolute;left:0;top:0;pointer-events:none;z-index:5}
-.cell{width:80px;height:80px;background:var(--paper2);border:1px solid var(--paper-line);position:relative}
-.cell.adj::after{content:"";position:absolute;inset:2px;border:1px dashed rgba(196,50,42,.55);pointer-events:none}
-.cell.gate{background:#c3d4c0;border-color:#8fa88b}
-.cell.goal{background:#dcc6a0;border-color:#a98f60}
-.cell.gate span,.cell.goal span{
-  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:8px;color:#5b4f36;font-family:var(--disp);letter-spacing:.03em;text-align:center;line-height:1.1}
-.cell.hint{background:#c2ddbc} .cell.bad{background:#e2b0ab}
+/* 칸은 원화 위에 얹히는 반투명 판정 표시다 — 색으로 통로/터/벽만 구분되면 된다.
+   원화 바닥이 테마마다(초록 잔디 · 흰 타일 · 남색 패널) 제각각이라, 통로에는 어두운 막을 씌워
+   톤을 눌러 두고 심사관 터만 밝은 초록으로 띄운다 — 어느 전장에서도 같은 규칙으로 읽히도록. */
+.cell{width:80px;height:80px;background:rgba(20,30,45,.22);
+  border:1px solid rgba(255,255,255,.22);position:relative}
+.cell.adj::after{content:"";position:absolute;inset:2px;border:1px dashed rgba(196,50,42,.75);pointer-events:none}
+/* 진입구(북문)·등록원부 — 원화가 이미 문과 조형물을 그려 둔 자리다.
+   심사관을 세울 수 없는 칸이므로 심사관 터의 초록빛을 절대 쓰지 않는다. 칠을 걷어 그림만 보인다. */
+.cell.gate{background:transparent;border-color:rgba(255,255,255,.14)}
+.cell.goal{background:transparent;border-color:rgba(255,255,255,.14)}
+.cell.hint{background:rgba(120,230,110,.45)} .cell.bad{background:rgba(230,90,80,.45)}
 /* 고정 구조물 — 청사 건물 */
-.cell.fixed{background:#9aa89c;border-color:#76856f;
-  background-image:linear-gradient(135deg,rgba(255,255,255,.22) 25%,transparent 25%,
-    transparent 50%,rgba(255,255,255,.22) 50%,rgba(255,255,255,.22) 75%,transparent 75%);
+.cell.fixed{background:rgba(14,22,34,.62);border-color:rgba(255,255,255,.2);
+  background-image:linear-gradient(135deg,rgba(255,255,255,.16) 25%,transparent 25%,
+    transparent 50%,rgba(255,255,255,.16) 50%,rgba(255,255,255,.16) 75%,transparent 75%);
   background-size:8px 8px}
-.cell.annex{background:#c4c9ae;border-color:#a2a887}
+.cell.annex{background:rgba(196,201,174,.4);border-color:rgba(255,255,255,.28)}
 /* 심사관 터 — 심사관만 놓을 수 있다 */
-.cell.tower{background:#b5d3a8;border-color:#86aa78}
-/* 통로 — 침입자만 지난다 */
-.cell.road{background:#e8dcc4;border-color:#cdbd9c}
-.cell.tower.hint{background:#c2ddbc} .cell.tower.bad,.cell.road.bad{background:#e2b0ab}
+.cell.tower{background:rgba(96,214,104,.42);border-color:rgba(186,255,176,.8);
+  box-shadow:inset 0 0 0 1px rgba(60,160,70,.35)}
+/* 통로 — 침입자만 지난다. 어두운 막만 얇게 씌워 원화 바닥이 비쳐 보이게 둔다 */
+.cell.road{background:rgba(18,28,44,.34);border-color:rgba(255,255,255,.16)}
+.cell.tower.hint{background:rgba(120,230,110,.5)} .cell.tower.bad,.cell.road.bad{background:rgba(230,90,80,.5)}
+/* 가운데 조형물이 깔고 앉은 6칸 — 원화가 그대로 보이도록 칠도 벽 무늬도 걷어낸다.
+   (통로·등록원부 규칙보다 뒤에 와야 덮어쓴다) */
+.cell.mon{background:transparent;background-image:none;border-color:rgba(255,255,255,.14)}
 .wingtag{position:absolute;pointer-events:none;z-index:2;
   display:flex;align-items:center;justify-content:center;text-align:center;
-  font-family:var(--disp);font-size:10px;font-weight:700;color:#2e3a2c;
-  letter-spacing:.04em;text-shadow:0 1px 0 rgba(255,255,255,.5);line-height:1.2}
+  font-family:var(--disp);font-size:10px;font-weight:700;color:#fff;
+  letter-spacing:.04em;text-shadow:0 1px 3px rgba(0,0,0,.8);line-height:1.2}
 .mapbar{display:flex;gap:6px;margin-bottom:9px;flex-wrap:wrap}
 .mapbar button{flex:1;min-width:120px;text-align:left;padding:6px 10px;line-height:1.35}
 .mapbar button.on{background:var(--seal);border-color:var(--seal);color:#fff}
