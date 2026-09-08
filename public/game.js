@@ -3965,6 +3965,8 @@ function beginBattle() {
   $("#lobby").classList.add("hidden");
   $("#gameRoot").classList.remove("hidden");
   document.body.classList.toggle("solo", soloMode);
+  // 뒤로가기가 먹고 갈 기록을 하나 쌓아 둔다 (아래 popstate 참고)
+  history.pushState({ ingame: true }, "");
 
   // 시드는 서버가 정해 양쪽에게 같이 내려준다 — 웨이브 구성도 증강 후보도 완전히 같아진다
   // (솔로는 맞출 상대가 없으니 시드를 비워 매번 다른 판이 나오게 둔다)
@@ -4118,8 +4120,20 @@ $("#btnSolo").addEventListener("click", () => {
  */
 $("#btnExit").addEventListener("click", () => {
   if (!game) return;
-  if (!confirm("솔로 플레이를 종료합니다.")) return;
+  if (!confirm(exitMsg())) return;
   location.reload();
+});
+const exitMsg = () => soloMode ? "솔로 플레이를 종료합니다." : "대전을 중단하고 나갑니다.";
+
+/* ── 뒤로가기로 판이 날아가는 것 막기 ──
+ * 이 페이지는 히스토리의 첫 기록이라, 판 안에서 뒤로가기를 누르면 돌아갈 곳이 없어
+ * 탭이 그대로 닫혀 버렸다. 판에 들어설 때(beginBattle) 기록을 하나 쌓아 두면
+ * 뒤로가기가 그 기록을 먹고 popstate 로 돌아온다 — 페이지는 살아 있고, 물어볼 틈이 생긴다.
+ */
+addEventListener("popstate", () => {
+  if (!game) return;                        // 로비에서는 평소대로 뒤로가기가 동작한다
+  history.pushState({ ingame: true }, "");  // 먹힌 기록을 도로 채운다 (안 채우면 다음 뒤로가기에 떠난다)
+  if (confirm(exitMsg())) location.reload();
 });
 $("#btnCreate").addEventListener("click", () => sendWS({ t: "create" }));
 $("#btnJoin").addEventListener("click", () => {
