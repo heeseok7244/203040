@@ -3,7 +3,7 @@ __mods["core/rng.js"] = (function(){
 // @ts-check
 /**
  * 시드 고정 난수. 밸런스 실행을 재현 가능하게 만드는 핵심.
- * 같은 시드 → 같은 웨이브 구성, 같은 드래프트, 같은 무효화 대상.
+ * 같은 시드 → 같은 웨이브 구성, 같은 드래프트.
  */
 class Rng {
   /** @param {number} seed */
@@ -113,19 +113,25 @@ const CATS = {
  */
 
 /**
- * 웨이브 클리어 시 고르는 패시브 효과 7종.
+ * 웨이브 클리어 시 고르는 패시브 효과 8종.
  * side "self" = 내 스탯을 올린다 · side "foe" = 상대에게 적용된다 (네트워크로 상대에게 전달됨).
- * stat이 "hp"인 것은 %가 아니라 즉시 한 번 적용되는 고정 피해다 — 나머지 6개(dmg/rate/range)는
- * 지속적으로 누적되는 % 보정이라 이 하나만 성격이 다르다는 걸 UI에서 구분해서 보여준다.
- * @type {{key:string,name:string,side:"self"|"foe",stat:"dmg"|"rate"|"range"|"hp",amount:number,desc:string}[]}
+ * stat 이 "hp" 인 것만 성격이 다르다 — %가 아니라 즉시 한 번 적용되고 끝난다.
+ * gold 가 붙어 있으면 그 자리에서 특허료도 같이 들어온다 (내구만 올리는 선택지는 너무 약했다).
+ * 나머지는 계속 쌓이는 보정이다 — dmg/rate/range 는 % 배율, critC/critM 은 확률·배율에 그대로 더한다.
+ * @type {{key:string,name:string,side:"self"|"foe",
+ *   stat:"dmg"|"rate"|"range"|"hp"|"critC"|"critM",amount:number,gold?:number,desc:string}[]}
  */
 const PASSIVES = [
   { key: "amend",      name: "보정",             side: "self", stat: "dmg",  amount: 0.10,  desc: "내 공격력 +10%",
     detail: "명세서를 다듬어 권리를 또렷하게 만든다. 모든 냥타워의 공격력이 10% 올라가며, 고를 때마다 누적된다." },
   { key: "efile",      name: "전자출원",         side: "self", stat: "rate", amount: 0.10,  desc: "내 공속 +10%",
     detail: "서류를 전자로 넘겨 심사 회전을 빠르게 한다. 모든 냥타워의 공격 속도가 10% 올라가며, 고를 때마다 누적된다." },
-  { key: "appeal",     name: "거절결정불복심판", side: "self", stat: "hp",   amount: 10,    desc: "내 등록원부 내구 +10 (즉시)",
-    detail: "거절결정에 불복해 다시 판단을 구한다. 무너진 등록원부 내구를 그 자리에서 10 되살린다 (최대치를 넘지는 않는다). 누적 보정이 아니라 한 번 쓰고 끝나는 회복이다." },
+  { key: "keyclaim",   name: "핵심청구항 지정",  side: "self", stat: "critC", amount: 0.06, desc: "내 치명타 확률 +6%p",
+    detail: "권리의 급소가 되는 청구항을 짚어 둔다. 모든 냥타워의 치명타 확률이 6%p 올라가며, 고를 때마다 누적된다 (상한 75%)." },
+  { key: "treble",     name: "3배 배상",         side: "self", stat: "critM", amount: 0.30, desc: "내 치명타 피해 ×+0.3",
+    detail: "고의 침해에는 손해액의 몇 배를 물릴 수 있다. 치명타가 터졌을 때의 피해 배율이 0.3 올라가며, 고를 때마다 누적된다. 치명타 확률이 높을수록 값이 커진다." },
+  { key: "appeal",     name: "거절결정불복심판", side: "self", stat: "hp",   amount: 10, gold: 60, desc: "내 등록원부 내구 +10 · 특허료 +60 (즉시)",
+    detail: "거절결정에 불복해 다시 판단을 구한다. 무너진 등록원부 내구를 그 자리에서 10 되살리고(최대치는 넘지 않는다), 심판에서 돌려받은 수수료 60을 특허료로 챙긴다. 누적 보정이 아니라 한 번 쓰고 끝나는 회복이라, 내구가 가득 차 있어도 특허료만큼은 남는다." },
   { key: "info",       name: "정보제공",         side: "foe",  stat: "dmg",  amount: -0.10, desc: "상대 공격력 -10%",
     detail: "상대 출원의 흠을 심사관에게 제보한다. 상대의 모든 냥타워 공격력이 10% 깎인다." },
   { key: "oa",         name: "의견제출통지",     side: "foe",  stat: "rate", amount: -0.10, desc: "상대 공속 -10%",
@@ -136,17 +142,20 @@ const PASSIVES = [
 const PASSIVE_BY_KEY = Object.fromEntries(PASSIVES.map((p) => [p.key, p]));
 
 /**
- * 침입자. voids = 돌파 시 무효화하는 냥타워 수 · fee = 돌파 시 빼앗기는 특허료.
+ * 침입자. fee = 돌파 시 빼앗기는 특허료.
+ * (예전에는 무효심판 청구인이 돌파할 때마다 냥타워를 무작위로 무효화했지만, 웨이브 하나에서
+ *  여러 마리를 놓치면 판이 통째로 마비되고 그게 하필 증강 선택 직전에 몰려 보였다 — 지금은
+ *  무효화 자체를 없애고, 대신 돌파당했을 때의 내구 손실을 크게 잡았다.)
  * @type {Record<string,{nm:string,hp:number,spd:number,def:number,r:number,col:string,rw:number,
- *   leak:number,voids?:number,fee?:number,desc:string,icon:string}>}
+ *   leak:number,fee?:number,desc:string,icon:string}>}
  */
 const ENEMIES = {
   copy: { nm:"도용업자",       hp:42,  spd:136, def:1, r:18, col:"#8fa6bd", rw:3,  leak:1, icon:"🥷",
     desc:"허락 없이 슬쩍 가져다 쓴다. 수가 많다." },
   fast: { nm:"벤치마킹업체",   hp:32,  spd:232, def:1, r:16, col:"#c9b26a", rw:3,  leak:1, icon:"📊",
     desc:"분석이라 부르지만 사실상 베끼기. 빠르게 스치고 지나간다." },
-  tank: { nm:"무효심판 청구인", hp:190, spd:96,  def:8, r:24, col:"#7d5a8f", rw:9,  leak:3, voids:1, icon:"⚖️",
-    desc:"내 권리를 통째로 없애려 든다. 돌파 시 냥타워 1개를 무작위로 무효화한다." },
+  tank: { nm:"무효심판 청구인", hp:190, spd:96,  def:8, r:24, col:"#7d5a8f", rw:9,  leak:5, icon:"⚖️",
+    desc:"내 권리를 통째로 없애려 든다. 단단해서 잘 죽지 않고, 돌파 시 등록원부 내구를 5 깎는다." },
   boss: { nm:"특허괴물",       hp:1150, spd:80, def:13, r:34, col:"#c4322a", rw:70, leak:8, fee:100, icon:"👹",
     desc:"제품은 만들지 않고 특허만 사서 소송으로 돈을 받아낸다. 돌파 시 합의금 명목으로 특허료 100을 가져간다 — 잔고가 모자라면 빚으로 남는다." },
 };
@@ -189,6 +198,48 @@ const SKILLS = {
 };
 
 /**
+ * 방해 공작(SABOTAGE) — 특허료를 내고 **상대 판에** 직접 거는 훼방.
+ *
+ * 패시브의 "상대 약화"가 웨이브 클리어 보상 중 하나를 골라 쓰는 것이라면, 이쪽은 언제든
+ * 돈만 있으면 지를 수 있다. 대신 종류마다 한 웨이브 주기(준비 + 그 웨이브)에 한 번씩만 나간다.
+ *
+ * when  "live" 상대 판에서 곧바로 흐르기 시작한다 (상대가 준비 단계면 다음 웨이브 개시와 함께)
+ *       "next" 상대의 다음 웨이브 구성 자체를 바꾼다 (이미 웨이브 중이면 그 다음 웨이브)
+ * kind  haste 이동속도 · fog 사거리 · tough 체력 · swarm 물량 · elite 정예 추가 투입
+ * @type {Record<string,{key:string,name:string,short:string,icon:string,cost:number,
+ *   when:"live"|"next",kind:string,tag:string,amount:number,dur?:number,desc:string}>}
+ */
+const SABOTAGE = {
+  grease: {
+    key: "grease", name: "심사 지연 기름", short: "기름", icon: "🛢️", cost: 110,
+    when: "live", kind: "haste", amount: 0.45, dur: 10, tag: "실시간 · 이동속도",
+    desc: "상대 청사 복도에 기름을 붓는다. 상대 판의 모든 침입자가 10초 동안 45% 빨라진다. " +
+      "상대가 준비 단계면 다음 웨이브가 시작되는 순간부터 흐른다.",
+  },
+  fog: {
+    key: "fog", name: "심사 방해 연막", short: "연막", icon: "🌫️", cost: 100,
+    when: "live", kind: "fog", amount: 0.25, dur: 12, tag: "실시간 · 사거리",
+    desc: "서류를 잔뜩 밀어 넣어 시야를 흐린다. 상대 냥타워의 사거리가 12초 동안 25% 줄어든다. " +
+      "사거리로 버티는 배치일수록 크게 흔들린다.",
+  },
+  tough: {
+    key: "tough", name: "무효자료 보강", short: "보강", icon: "💊", cost: 130,
+    when: "next", kind: "tough", amount: 0.40, tag: "다음 웨이브 · 체력",
+    desc: "상대를 치러 가는 침입자들에게 자료를 쥐여 준다. 상대의 다음 웨이브 침입자 체력이 40% 늘어난다.",
+  },
+  swarm: {
+    key: "swarm", name: "이의신청 대량제출", short: "물량", icon: "📨", cost: 120,
+    when: "next", kind: "swarm", amount: 0.30, tag: "다음 웨이브 · 물량",
+    desc: "이의신청서를 무더기로 넣는다. 상대의 다음 웨이브 침입자 수가 30% 늘어난다 (보스는 늘지 않는다).",
+  },
+  elite: {
+    key: "elite", name: "전문가 증인 투입", short: "정예", icon: "⚖️", cost: 150,
+    when: "next", kind: "elite", amount: 6, tag: "다음 웨이브 · 정예",
+    desc: "무효심판 청구인 6명을 상대 쪽 웨이브에 끼워 넣는다. 단단한 정예가 줄 사이에 섞여 들어간다.",
+  },
+};
+
+/**
  * 증강(AUGMENT) — 몇 웨이브에 한 번씩 고르는 "판을 뒤집는" 규칙 변경.
  *
  * 패시브가 +10% 를 쌓는 미세 조정이라면, 이쪽은 규칙 자체를 바꾼다.
@@ -208,14 +259,12 @@ const AUGMENTS = {
       "장거리 화력이 되면서 기존 보좌 효과도 그대로 유지한다. 대신 다른 냥타워는 대리인에게 일을 맡기고 " +
       "손을 놓아 공격력이 35% 깎인다 — 판의 축이 통째로 변리사냥으로 옮겨간다.",
   },
-  promote: {
-    key: "promote", name: "승진", icon: "🕶️", tag: "판갈이", kind: "rule",
-    desc: "냥타워 1명이 승진 — 선글라스·샷건으로 방사 피해",
-    detail: "묘한특허의 승진은 바로 시켜드립니다. 판에서 가장 값나가는 냥타워 한 명(사격하지 않는 " +
-      "변리사냥은 제외)이 그 자리에서 승진해 선글라스를 쓰고 샷건을 든다. " +
-      "공격력 +25% · 치명타 확률 +12%p · 치명타 배율 +0.5 에 더해, " +
-      "명중 지점 반경 1.4칸의 다른 침입자에게도 70% 의 방사 피해가 퍼진다. " +
-      "세워 둔 냥타워가 없을 때 골랐다면 다음에 세우는 냥타워가 승진한다.",
+  precision: {
+    key: "precision", name: "정밀심사", icon: "🎯", tag: "특화", kind: "rule",
+    desc: "전체 치명타 확률 +15%p · 배율 +0.6",
+    detail: "선행문헌을 한 줄씩 대조하며 급소만 짚는다. 모든 냥타워의 치명타 확률이 15%p, " +
+      "치명타 배율이 0.6 올라간다. 원래 치명타가 잦은 우선심사냥·출원냥과 특히 잘 맞고, " +
+      "승진시켜 둔 냥타워에는 그 위에 다시 얹힌다 (확률 상한은 75%).",
   },
   mono: {
     key: "mono", name: "선행기술 총동원", icon: "📚", tag: "특화", kind: "rule",
@@ -295,18 +344,22 @@ const BAL = {
   incomeBase: 10, incomePerWave: 3,    // 수입도 줄여서 후반 화력 스노우볼을 억제
   catCostMul: 1.0,           // 같은 종류를 더 배치해도 가격은 그대로 — 임용 비용은 항상 정가다
   pierceCap: 70, slowCap: 70,
-  voidWaves: 3,              // 무효화 지속 웨이브 (상향 — 돌파당 손실이 더 오래 간다)
   spawnGap: 0.52, spawnGapBoss: 2.0,   // 더 촘촘하게 몰아친다
   waveCount: 12,
   prepSecs: 15,              // 양쪽 모두 준비 단계에 들어선 뒤 주어지는 최대 준비시간(초)
   choiceSecs: 15,            // 패시브·증강 선택 제한시간(초). 넘기면 첫 번째가 자동으로 선택된다
   burstSecs: 8,              // 「우선권 주장」 증강의 지속시간(초)
   critCap: 0.75,             // 치명타 확률 상한 (증강으로도 이 위로는 못 올라간다)
-  promoteSplashR: 118,       // 「승진」 방사 피해 반경(px, 1칸 = 84px → 약 1.4칸)
+  promoteCostMul: 1.6,       // 승진 임명료 = 임용가 × 이 값 (승진자가 늘수록 아래 배율만큼 더 붙는다)
+  promoteCostStep: 0.5,      // 이미 승진시킨 냥타워 한 명당 임명료 +50%
+  promoteDmg: 1.25,          // 승진 시 공격력 배율
+  promoteCritC: 0.12,        // 승진 시 치명타 확률 +12%p
+  promoteCritM: 0.5,         // 승진 시 치명타 배율 +0.5
+  promoteSplashR: 118,       // 승진냥 방사 피해 반경(px, 1칸 = 84px → 약 1.4칸)
   promoteSplash: 0.7,        // 방사 피해 비율 (직격 피해의 70%)
 };
 
-return { AUGMENTS, AUGMENT_WAVES, BAL, CATS, ENEMIES, PASSIVES, PASSIVE_BY_KEY, SKILLS, WAVES };
+return { AUGMENTS, AUGMENT_WAVES, BAL, CATS, ENEMIES, PASSIVES, PASSIVE_BY_KEY, SABOTAGE, SKILLS, WAVES };
 })();
 __mods["core/maps.js"] = (function(){
 // @ts-check
@@ -438,7 +491,7 @@ __mods["core/board.js"] = (function(){
 const {BAL} = __req("core/data.js");
 /**
  * @typedef {{kind:"cat"|"relic", key:string, x:number, y:number, w:number, h:number,
- *            uid:number, lv?:number, void?:number, reg?:number,
+ *            uid:number, lv?:number, promo?:boolean, reg?:number,
  *            st?:any, cd?:number, atkEnd?:number}} Piece
  * @typedef {{cols:number, rows:number, gates:number[][], goal:number[],
  *            fixed:Set<string>, tower:Set<string>|null, pieces:Piece[]}} Board
@@ -693,10 +746,10 @@ function adjCellsLR(b, piece) {
   return s;
 }
 
-/** 심사관과 맞닿은 유효 유물들 (무효화된 것 제외) */
+/** 심사관과 맞닿은 유물들 */
 function adjRelics(b, cat) {
   const s = adjCells(b, cat);
-  return relics(b).filter((p) => !p.void && s.has(`${p.x},${p.y}`));
+  return relics(b).filter((p) => s.has(`${p.x},${p.y}`));
 }
 
 /** 경로를 픽셀 폴리라인으로. 진입 방향 바깥 한 칸에서 시작한다. */
@@ -849,8 +902,8 @@ function pieceCells(p) {
  *            report:{cat:any, buffed:boolean}[]}}
  */
 function computeStats(b) {
-  const live = cats(b).filter((c) => !c.void);
-  const bonus = b.bonus || { dmg: 0, rate: 0, range: 0 };
+  const live = cats(b);
+  const bonus = b.bonus || { dmg: 0, rate: 0, range: 0, critC: 0, critM: 0 };
   const bMul = (k) => Math.max(0.2, 1 + bonus[k]);
   const ATTACK_RATE_MULT = 2.2;   // 공속 상향 — 균형을 위해 WAVES 스폰 수도 함께 늘렸다
   /** 선택한 증강 (Set). 증강이 없으면 아래 분기는 전부 건너뛴다. */
@@ -869,9 +922,9 @@ function computeStats(b) {
     let auraDmg = base.auraDmg || 0, auraRate = base.auraRate || 0;
     const isAide = !!(auraDmg || auraRate);   // 보좌 능력을 가진 냥 (변리사냥)
 
-    // 「승진」 — 선글라스에 샷건. 화력·치명타가 오르고 명중 지점에 방사 피해가 퍼진다.
-    const promoted = AUG.has("promote") && b.promotedUid === c.uid;
-    if (promoted) { dmg *= 1.25; critC += 0.12; critM += 0.5; }
+    // 승진 — 선글라스에 샷건. 특허료를 내고 냥타워 패널에서 직접 임명한다 (조각에 붙는 플래그).
+    const promoted = !!c.promo;
+    if (promoted) { dmg *= BAL.promoteDmg; critC += BAL.promoteCritC; critM += BAL.promoteCritM; }
 
     // ── 증강: 규칙 자체를 바꾸는 것들 ──
     if (AUG.has("agentWar")) {
@@ -882,6 +935,7 @@ function computeStats(b) {
     if (AUG.has("overwork")) { rate *= 1.65; dmg *= 0.8; }
     if (AUG.has("longspec")) range *= 1.4;
     if (AUG.has("isr")) pierce += 40;
+    if (AUG.has("precision")) { critC += 0.15; critM += 0.6; }
     if (AUG.has("mono") && sameKind[c.key] >= 3) dmg *= 1.5;
     const golden = AUG.has("golden") && b.goldenUid === c.uid;
     if (golden) dmg *= 3;
@@ -891,7 +945,9 @@ function computeStats(b) {
       dmg: dmg * bMul("dmg"), rate: rate * ATTACK_RATE_MULT * bMul("rate"), range: range * bMul("range"),
       pierce: Math.min(BAL.pierceCap, pierce),
       targets: base.targets || 1,
-      critC: Math.min(BAL.critCap, critC), critM,
+      // 패시브(핵심청구항 지정·3배 배상)는 확률·배율에 그대로 더한다 — %가 아니라 절대값이다
+      critC: Math.min(BAL.critCap, Math.max(0, critC + (bonus.critC || 0))),
+      critM: Math.max(1, critM + (bonus.critM || 0)),
       slow: Math.min(BAL.slowCap, base.slow || 0),
       auraDmg, auraRate,
       // 실제로 사격을 하는가. 변리사냥은 평소 0이지만 「변리사 개업」을 고르면 이 값이 켜진다.
@@ -902,7 +958,6 @@ function computeStats(b) {
       buffDmg: 1, buffRate: 1,
     };
   }
-  for (const c of cats(b).filter((c) => c.void)) c.st = null;
 
   // 인접 보좌 — 실제로 이어진 터 칸에만 배율을 곱한다.
   // 「심사 병합」 증강을 고르면 통로를 건너 반경 2칸까지 퍼진다.
@@ -933,7 +988,7 @@ return { auraCells, computeStats };
 })();
 __mods["core/combat.js"] = (function(){
 // @ts-check
-const {ENEMIES, CATS, BAL} = __req("core/data.js");
+const {ENEMIES, BAL} = __req("core/data.js");
 const {cats, pieceCenter, posOnPath} = __req("core/board.js");
 /**
  * 적 하나에 피해를 준다. 처치 시 보상 지급 + 이벤트.
@@ -994,17 +1049,6 @@ function castSkill(g, def, pt) {
   return { hit, killed };
 }
 
-/** 돌파 시 심사관 무효화 */
-function voidCats(g, n) {
-  const pool = cats(g).filter((p) => !p.void);
-  for (let i = 0; i < n && pool.length; i++) {
-    const p = pool.splice(g.rng.int(pool.length), 1)[0];
-    p.void = BAL.voidWaves;
-    g.voidedThisWave.add(p);   // 이번 웨이브 안에서 막 무효화된 심사관 — 이번 웨이브 종료 시 감산을 한 번 건너뛴다
-    g.events.push({ t: "void", key: p.key, name: CATS[p.key].name });
-  }
-}
-
 /**
  * 전투 한 틱. 시간이 흐르는 유일한 곳.
  * @param {any} g
@@ -1017,6 +1061,14 @@ function step(g, dt, now) {
   // 「우선권 주장」 증강 — 웨이브 개시 직후 잠깐 동안 전체 공속 2배
   const burst = (g.augSet && g.augSet.has("burst") && g.waveTime < BAL.burstSecs) ? 2 : 1;
 
+  // 상대가 건 방해 공작 — 전투가 흐르는 동안에만 닳는다.
+  // (준비 단계에서 맞았다면 다음 웨이브가 시작되는 순간부터 흐르기 시작한다는 뜻이다.)
+  const fx = g.fx;
+  if (fx.hasteT > 0) fx.hasteT = Math.max(0, fx.hasteT - dt);
+  if (fx.fogT > 0) fx.fogT = Math.max(0, fx.fogT - dt);
+  const hasteMul = g.enemySpeedMul;
+  const rangeMul = g.catRangeMul;
+
   // ── 사격 ──
   for (const c of cats(g)) {
     // 실제로 사격하는가는 st.atk 가 정한다 — 「변리사 개업」을 고르면 보좌형도 여기에 들어온다
@@ -1025,10 +1077,11 @@ function step(g, dt, now) {
     if (c.cd > 0) continue;
 
     const [cx, cy] = pieceCenter(c);
+    const reach = c.st.range * rangeMul;      // 「심사 방해 연막」을 맞으면 사거리가 줄어든다
     const inRange = [];
     for (const e of g.enemies) {
       if (e.dead) continue;
-      if (Math.hypot(e.x - cx, e.y - cy) > c.st.range) continue;
+      if (Math.hypot(e.x - cx, e.y - cy) > reach) continue;
       inRange.push(e);
     }
     if (!inRange.length) continue;
@@ -1096,7 +1149,7 @@ function step(g, dt, now) {
     if (e.freezeT > 0) { e.freezeT -= dt; continue; }
 
     const lane = g.lanes[e.lane] || g.lanes[0];
-    e.dist += ENEMIES[e.t].spd * (e.slowT > 0 ? 1 - e.slowPct : 1) * dt;
+    e.dist += ENEMIES[e.t].spd * (e.slowT > 0 ? 1 - e.slowPct : 1) * hasteMul * dt;
 
     if (e.dist >= lane.segs.total) {
       e.dead = true;
@@ -1104,7 +1157,6 @@ function step(g, dt, now) {
       g.hp -= d.leak;
       g.leaked++;
       g.events.push({ t: "leak", x: e.x, y: e.y, enemy: e.t, hp: g.hp });
-      if (d.voids) voidCats(g, d.voids);
       if (d.fee) {
         // 합의금 — 잔고가 모자라도 그대로 가져간다. 마이너스는 빚으로 남아 수입으로 갚아야 한다.
         g.gold -= d.fee;
@@ -1124,7 +1176,8 @@ function step(g, dt, now) {
   while (g.spawnQueue.length && g.spawnQueue[0].at <= g.waveTime) {
     const q = g.spawnQueue.shift();
     const d = ENEMIES[q.t];
-    const scale = 1 + BAL.hpPerWave * (g.wave - 1);
+    // 「무효자료 보강」을 맞은 웨이브는 여기서 체력이 통째로 부풀려진다
+    const scale = (1 + BAL.hpPerWave * (g.wave - 1)) * g.waveFx.hp;
     const lane = g.lanes[q.lane] || g.lanes[0];
     g.enemies.push({
       t: q.t, lane: q.lane ?? 0, hp: d.hp * scale, max: d.hp * scale, dist: 0,
@@ -1140,7 +1193,7 @@ return { castSkill, damage, step };
 __mods["core/game.js"] = (function(){
 // @ts-check
 const {Rng} = __req("core/rng.js");
-const {WAVES, BAL, CATS, SKILLS, AUGMENTS, AUGMENT_WAVES} = __req("core/data.js");
+const {WAVES, BAL, CATS, SKILLS, SABOTAGE, AUGMENTS, AUGMENT_WAVES} = __req("core/data.js");
 const {getMap, parseMap} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {computeStats} = __req("core/stats.js");
@@ -1180,10 +1233,10 @@ class Game {
   }
 
   reset() {
+    // 판 전용 난수. 전투 중에 굴려야 할 일이 생기면 이걸 쓴다.
     this.rng = new Rng(this.seed);
-    // 웨이브 구성과 증강 후보는 rng 와 따로 굴린다.
-    // 무효화 대상 추첨(rng)은 돌파 시점에만 일어나 양쪽 클라이언트에서 횟수가 어긋나는데,
-    // 같은 난수열을 나눠 쓰면 그 어긋남이 웨이브 구성까지 흔들어 대전이 불공평해지기 때문이다.
+    // 웨이브 구성과 증강 후보는 rng 와 따로 굴린다 — 전투 쪽에서 몇 번을 굴렸는지에 따라
+    // 난수열이 밀리면 그 어긋남이 웨이브 구성까지 흔들어 대전이 불공평해지기 때문이다.
     this.waveRng = new Rng((this.seed ^ 0x85ebca6b) >>> 0);
     this._uid = 0;
     this.atkTotal = ATK_TOTAL;
@@ -1209,7 +1262,9 @@ class Game {
     this.reg = 1000;
     this.killed = 0;
     this.leaked = 0;
-    this.bonus = { dmg: 0, rate: 0, range: 0 };  // 패시브로 누적된 % 보정 (자기강화 + 상대에게서 받은 약화)
+    // 패시브로 누적된 보정 (자기강화 + 상대에게서 받은 약화).
+    // dmg/rate/range 는 % 배율, critC/critM 은 확률·배율에 그대로 더하는 절대값이다.
+    this.bonus = { dmg: 0, rate: 0, range: 0, critC: 0, critM: 0 };
     this.myPassives = [];  // 내가 (직접 선택 또는 상대에게서) 받은 효과 로그
     this.foePassives = []; // 내가 상대에게 건 효과 로그
     this.awaitingPassive = false;
@@ -1223,7 +1278,7 @@ class Game {
     this.augDeck = new Rng((this.seed ^ 0x9e3779b9) >>> 0).shuffle(Object.keys(AUGMENTS));
     this.awaitingAugment = false;
     this.goldenUid = 0;                  // 「직권보정」으로 이번 웨이브 동안 3배가 된 냥타워
-    this.promotedUid = 0;                // 「승진」으로 선글라스·샷건을 든 냥타워 (판이 끝날 때까지 유지)
+    this.promoted = 0;                   // 지금까지 승진시킨 냥타워 수 (임명료가 이 수에 따라 오른다)
 
     /** 액티브 스킬 재사용 대기(초). 웨이브가 끝나면 전부 0으로 돌아간다. */
     this.skillCd = {};
@@ -1231,8 +1286,19 @@ class Game {
     this.skillUses = {};
     for (const k in SKILLS) { this.skillCd[k] = 0; this.skillUses[k] = 0; }
 
+    /* ── 방해 공작 ──
+     * sabUsed  이번 웨이브 주기(준비 + 그 웨이브)에 이미 지른 공작 — endWave 에서 비운다
+     * sabSent  내가 상대에게 건 공작 로그 (표시용)
+     * fx       상대가 나에게 건 실시간 공작. 전투가 흐르는 동안에만 닳는다
+     * waveMods 다음 웨이브 구성을 바꾸는 예약분 — 웨이브를 개시하는 순간 waveFx 로 옮겨간다
+     * waveFx   지금 굴러가는 웨이브에 실제로 적용된 값 */
+    this.sabUsed = new Set();
+    this.sabSent = [];
+    this.fx = { hasteT: 0, hasteMul: 1, fogT: 0, fogMul: 1 };
+    this.waveMods = { hp: 1, count: 1, elite: 0 };
+    this.waveFx = { hp: 1 };
+
     this.enemies = []; this.shots = []; this.spawnQueue = [];
-    this.voidedThisWave = new Set();   // 이번 웨이브 중에 새로 무효화된 심사관 — 웨이브 종료 시 감산에서 한 번 제외한다
     this.waveTime = 0;
     this.events = [];
     this.econ = { killGold: 0, income: 0, hp: 0 };
@@ -1269,9 +1335,13 @@ class Game {
     }
   }
 
+  /** 상대의 「기름」이 흐르는 동안 침입자가 그만큼 빨라진다 */
+  get enemySpeedMul() { return this.fx.hasteT > 0 ? this.fx.hasteMul : 1; }
+  /** 상대의 「연막」이 흐르는 동안 냥타워 사거리가 그만큼 줄어든다 */
+  get catRangeMul() { return this.fx.fogT > 0 ? this.fx.fogMul : 1; }
+
   /** 스탯 · 제압률을 다시 계산. 심사관을 놓거나 옮길 때마다 부른다. 동선(this.lanes)은 건드리지 않는다. */
   recompute() {
-    this.maybePromote();
     const { econ, active, report } = computeStats(this);
     this.econ = econ; this.active = active; this.report = report;
     this.cover = B.coverage(this, this.lanes);
@@ -1331,7 +1401,7 @@ class Game {
   buyCat(key) {
     const c = this.catCost(key);
     if (this.phase !== "prep" || this.gold < c) return null;
-    const p = { kind: "cat", key, x: -1, y: -1, w: 1, h: 1, uid: this.uid(), void: 0 };
+    const p = { kind: "cat", key, x: -1, y: -1, w: 1, h: 1, uid: this.uid(), promo: false };
     const spot = B.firstLegalSpot(this, p);
     if (spot) { p.x = spot[0]; p.y = spot[1]; this.pieces.push(p); }
     else this.tray.push(p);
@@ -1340,6 +1410,53 @@ class Game {
     this.events.push({ t: "buy", what: "cat", key, name: CATS[key].name, cost: c });
     return p;
   }
+
+  // ── 승진 ──
+  /**
+   * 승진 임명료. 이미 승진시킨 냥타워가 많을수록 비싸진다 —
+   * 판 전체를 승진으로 도배하는 것보다 한두 명을 골라 키우는 쪽이 이득이 되도록 했다.
+   * @param {any} p
+   */
+  promoteCost(p) {
+    if (!p || !CATS[p.key]) return Infinity;
+    return Math.round(CATS[p.key].cost * BAL.promoteCostMul * (1 + BAL.promoteCostStep * this.promoted));
+  }
+
+  /**
+   * 지금 이 냥타워를 승진시킬 수 있는가. 못 쓰는 이유가 있으면 문자열로, 되면 null.
+   * UI가 버튼에 그대로 띄울 수 있게 이유를 말로 돌려준다.
+   * @param {any} p
+   * @returns {string|null}
+   */
+  promoteBlocked(p) {
+    if (!p || p.kind !== "cat") return "대상 없음";
+    if (p.promo) return "이미 승진";
+    if (p.x < 0) return "판에 배치 후";
+    if (this.phase !== "prep") return "준비 단계에만";
+    if (!this.canFight(p.key)) return "사격하는 냥만";
+    if (this.gold < this.promoteCost(p)) return "특허료 부족";
+    return null;
+  }
+
+  /**
+   * 특허료를 내고 냥타워 한 명을 승진시킨다 — 선글라스를 쓰고 샷건을 든다.
+   * 예전에는 증강 「승진」이 대상을 자동으로 골랐는데, 누가 승진할지가 배치 순서에 휘둘려
+   * 엉뚱한 냥이 뽑히곤 했다. 이제는 내가 값을 치르고 직접 지목한다.
+   * @param {any} p
+   */
+  promoteCat(p) {
+    if (this.promoteBlocked(p)) return false;
+    const cost = this.promoteCost(p);
+    this.gold -= cost;
+    p.promo = true;
+    this.promoted++;
+    this.recompute();
+    this.events.push({ t: "promote", key: p.key, name: CATS[p.key].name, x: p.x, y: p.y, cost });
+    return true;
+  }
+
+  /** uid 로 판 위 냥타워를 되짚는다 (UI 카드가 조각을 다시 찾을 때 쓴다) */
+  catByUid(uid) { return B.cats(this).find((c) => c.uid === uid) || null; }
 
   // ── 증강 ──
   /** 이 웨이브가 증강을 고르는 웨이브인가 (클리어 직후 기준) */
@@ -1381,7 +1498,7 @@ class Game {
   cloneBestCat() {
     const src = this.bestCat();
     if (!src) return null;
-    const p = { kind: "cat", key: src.key, x: -1, y: -1, w: 1, h: 1, uid: this.uid(), void: 0 };
+    const p = { kind: "cat", key: src.key, x: -1, y: -1, w: 1, h: 1, uid: this.uid(), promo: false };
     const spot = B.firstLegalSpot(this, p);
     if (spot) { p.x = spot[0]; p.y = spot[1]; this.pieces.push(p); }
     else this.tray.push(p);
@@ -1397,30 +1514,68 @@ class Game {
   }
 
   /**
-   * 판에서 가장 값나가는 냥타워 (같은 값이면 먼저 놓은 쪽). 증강 대상 고를 때 쓴다.
-   * @param {boolean} [fighterOnly] 사격하는 냥타워만 — 승진은 총을 쏠 수 있는 냥에게만 의미가 있다
+   * 판에서 가장 값나가는 냥타워 (같은 값이면 먼저 놓은 쪽). 「분할출원」의 복제 대상을 고를 때 쓴다.
+   * @param {boolean} [fighterOnly] 사격하는 냥타워만
    */
   bestCat(fighterOnly) {
-    let pool = B.cats(this).filter((c) => !c.void);
+    let pool = B.cats(this);
     if (fighterOnly) pool = pool.filter((c) => this.canFight(c.key));
     if (!pool.length) return null;
     return pool.reduce((a, c) => (CATS[c.key].cost > CATS[a.key].cost ? c : a));
   }
 
+  // ── 방해 공작 ──
+  /** @param {string} key */
+  sabotageCost(key) { return SABOTAGE[key] ? SABOTAGE[key].cost : Infinity; }
+
   /**
-   * 「승진」 — 대상이 아직 없으면 지금 판에서 가장 비싼 "싸우는" 냥타워를 승진시킨다.
-   *
-   * 사격하지 않는 변리사냥은 대상에서 뺀다 — 값만 보면 변리사냥(145)이 대부분의 판에서
-   * 두 번째로 비싸서, 그냥 최고가로 뽑으면 총을 못 쏘는 냥이 승진해 증강이 통째로 낭비된다.
-   * 세울 냥타워가 아직 없다면 다음에 하나 세우는 순간 여기서 정해진다
-   * (recompute 가 배치·이동 때마다 불리기 때문이다). 한 번 정해지면 판이 끝날 때까지 바뀌지 않는다.
+   * 지금 이 공작을 지를 수 있는가. 못 지르면 이유를 문자열로, 되면 null.
+   * @param {string} key
+   * @returns {string|null}
    */
-  maybePromote() {
-    if (this.promotedUid || !this.augSet.has("promote")) return;
-    const best = this.bestCat(true);
-    if (!best) return;
-    this.promotedUid = best.uid;
-    this.events.push({ t: "promote", key: best.key, name: CATS[best.key].name, x: best.x, y: best.y });
+  sabotageBlocked(key) {
+    const d = SABOTAGE[key];
+    if (!d) return "없는 공작";
+    if (this.phase === "won" || this.phase === "lost") return "판 종료";
+    if (this.sabUsed.has(key)) return "이번 웨이브 소진";
+    if (this.gold < d.cost) return "특허료 부족";
+    return null;
+  }
+
+  /**
+   * 상대 판에 공작을 건다. 여기서는 특허료만 내고 기록을 남긴다 —
+   * 실제 효과는 상대 클라이언트가 receiveSabotage 로 자기 판에 적용한다.
+   * @param {string} key
+   * @returns {boolean} 실제로 나갔는가
+   */
+  useSabotage(key) {
+    if (this.sabotageBlocked(key)) return false;
+    const d = SABOTAGE[key];
+    this.gold -= d.cost;
+    this.sabUsed.add(key);
+    this.sabSent.push(key);
+    this.events.push({ t: "sabotage", key, name: d.name, icon: d.icon, cost: d.cost, desc: d.desc });
+    return true;
+  }
+
+  /**
+   * 상대가 나에게 건 공작을 내 판에 실제로 적용한다.
+   *
+   * 실시간(live)형은 전투가 흐르는 동안에만 닳으므로, 준비 단계에서 맞으면 고스란히 다음
+   * 웨이브 첫머리에 얹힌다. 다음 웨이브(next)형은 예약해 두었다가 startWave 가 꺼내 쓴다.
+   * @param {string} key
+   */
+  receiveSabotage(key) {
+    const d = SABOTAGE[key];
+    if (!d) return false;
+    if (d.kind === "haste") { this.fx.hasteMul = 1 + d.amount; this.fx.hasteT = Math.max(this.fx.hasteT, d.dur); }
+    if (d.kind === "fog")   { this.fx.fogMul = Math.max(0.3, 1 - d.amount); this.fx.fogT = Math.max(this.fx.fogT, d.dur); }
+    if (d.kind === "tough") this.waveMods.hp *= 1 + d.amount;
+    if (d.kind === "swarm") this.waveMods.count *= 1 + d.amount;
+    if (d.kind === "elite") this.waveMods.elite += d.amount;
+    this.recompute();
+    this.events.push({ t: "sabotaged", key, name: d.name, icon: d.icon, when: d.when, desc: d.desc });
+    return true;
   }
 
   // ── 액티브 스킬 ──
@@ -1500,15 +1655,20 @@ class Game {
     this.phase = "wave";
     this.waveTime = 0;
     this.spawnQueue = [];
-    this.voidedThisWave = new Set();   // 새 웨이브 시작 — 이번 웨이브 동안 새로 무효화될 심사관 추적 초기화
+
+    // 상대가 걸어 둔 다음 웨이브 공작을 여기서 꺼내 쓰고 예약분은 비운다
+    const mods = this.waveMods;
+    this.waveMods = { hp: 1, count: 1, elite: 0 };
+    this.waveFx = { hp: mods.hp };
 
     const def = WAVES[this.wave - 1];
-    const scale = this.bal.waveScale ?? 1;
+    const scale = (this.bal.waveScale ?? 1) * mods.count;   // 「이의신청 대량제출」이 물량을 부풀린다
     let list = [];
     for (const k in def) {
       const n = k === "boss" ? def[k] : Math.max(1, Math.round(def[k] * scale));
       for (let i = 0; i < n; i++) list.push(k);
     }
+    for (let i = 0; i < mods.elite; i++) list.push("tank");   // 「전문가 증인 투입」
     list = this.waveRng.shuffle(list);
     list.sort((a, b) => (a === "boss" ? 1 : 0) - (b === "boss" ? 1 : 0));
 
@@ -1523,19 +1683,17 @@ class Game {
     this.events.push({
       t: "wave_start", wave: this.wave, count: list.length,
       cover: this.cover, path: this.totalPath, covered: this.coveredPath, gates: nLanes,
+      hpMod: mods.hp, countMod: mods.count, elite: mods.elite,
     });
     return true;
   }
 
   endWave() {
     this.phase = "prep";
-    // 무효화 카운트다운 감산 — 단, "이번 웨이브 중에 막 무효화된" 심사관은 이번 한 번은 건너뛴다.
-    // (그렇지 않으면 웨이브 막판에 돌파당해 막 무효화된 심사관이, 곧바로 이어지는 이번 웨이브
-    //  종료 처리에서 카운트가 1 깎여버려 정해진 지속 웨이브보다 한 웨이브 일찍 부활하는 버그가 있었다.)
-    for (const p of B.placed(this)) {
-      if (p.void && !this.voidedThisWave.has(p)) p.void--;
-    }
-    this.voidedThisWave = new Set();
+    // 상대가 걸어 둔 실시간 공작(기름·연막)은 웨이브와 함께 끝난다 — 준비 단계까지 끌고 가지 않는다
+    this.fx.hasteT = 0; this.fx.fogT = 0;
+    // 방해 공작은 웨이브 주기마다 다시 한 번씩 지를 수 있다
+    this.sabUsed = new Set();
     // 이번 웨이브에서 날아가던 미사일이 남아있으면 웨이브가 끝나도 화면에 얼어붙은 채 남는 잔상 버그가
     // 있었다 — step()이 phase==="wave"일 때만 돌아서 s.life가 더는 줄지 않기 때문. 웨이브가 끝나면
     // 무조건 정리한다.
@@ -1563,15 +1721,17 @@ class Game {
    * self  → 내 스탯을 즉시 올린다.
    * foe   → 나에겐 아무 효과가 없다. 이 선택을 상대에게 전달해서 상대가 receiveFoePassive를 부르게 하는 건
    *         네트워크 레이어(웹 클라이언트)의 몫이다.
-   * @param {{key:string,side:"self"|"foe",stat:string,amount:number}} def
+   * @param {{key:string,side:"self"|"foe",stat:string,amount:number,gold?:number}} def
    */
   applyPassive(def) {
     if (def.side === "self") {
       if (def.stat === "hp") {
         // 거절결정불복심판류 — %가 아니라 즉시 한 번 들어오는 회복. 최대치는 넘기지 않는다.
+        // 내구가 이미 가득 차 있어도 함께 붙은 특허료만큼은 그대로 남는다.
         this.hp = Math.min(this.maxHp, this.hp + def.amount);
+        if (def.gold) this.gold += def.gold;
       } else {
-        this.bonus[def.stat] = Math.max(-0.7, this.bonus[def.stat] + def.amount);
+        this.bonus[def.stat] = Math.max(-0.7, (this.bonus[def.stat] || 0) + def.amount);
       }
       this.myPassives.push(def);
       this.recompute();
@@ -1593,7 +1753,7 @@ class Game {
       }
       return;
     }
-    this.bonus[def.stat] = Math.max(-0.7, this.bonus[def.stat] + def.amount);
+    this.bonus[def.stat] = Math.max(-0.7, (this.bonus[def.stat] || 0) + def.amount);
     this.myPassives.push(def);
     this.recompute();
   }
@@ -1632,7 +1792,9 @@ class Game {
       covered: this.coveredPath, gates: this.gates.length,
       cover: this.cover, gold: Math.round(this.gold),
       cats: B.cats(this).length,
+      promoted: this.promoted,
       augments: this.augments.slice(),
+      sabotage: this.sabSent.slice(),
       skillUses: { ...this.skillUses },
       skillTotal: Object.values(this.skillUses).reduce((a, b) => a + b, 0),
       reg: this.reg,
@@ -1680,7 +1842,7 @@ return { PROMO_CELL, onSpriteReady, promoReady, promoSprite, sprite };
 __mods["web/main.js"] = (function(){
 // @ts-check
 const {Game, frameOf} = __req("core/game.js");
-const {CATS, ENEMIES, BAL, PASSIVES, PASSIVE_BY_KEY, SKILLS, AUGMENTS, AUGMENT_WAVES} = __req("core/data.js");
+const {CATS, ENEMIES, BAL, PASSIVES, PASSIVE_BY_KEY, SKILLS, SABOTAGE, AUGMENTS, AUGMENT_WAVES} = __req("core/data.js");
 const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {auraCells} = __req("core/stats.js");
@@ -1785,6 +1947,9 @@ function onServerMessage(msg) {
       render();
       break;
     }
+    case "oppSabotage":
+      if (game) game.receiveSabotage(msg.key);
+      break;
     case "oppWon":
       if (game) endMatch(false, "상대가 먼저 특허 등록을 마쳤습니다.");
       break;
@@ -1877,15 +2042,16 @@ function render() {
   for (const p of game.tray) tray.appendChild(pieceEl(p, false));
 
   renderCatRoster();
+  renderPromoteList();
   renderHud();
 }
 
 function pieceEl(p, onBoard) {
   const el = document.createElement("div");
   // 변리사냥의 보좌를 받고 있으면 배경이 은은하게 반짝인다 (실제로 이어진 터에만 적용됨)
-  const buffed = !p.void && p.st && (p.st.buffDmg > 1 || p.st.buffRate > 1);
-  el.className = "piece cat" + (p.void ? " void" : "") + (buffed ? " buffed" : "") +
-    (p.st && p.st.promoted ? " promoted" : "") + (p.st && p.st.golden ? " golden" : "");
+  const buffed = p.st && (p.st.buffDmg > 1 || p.st.buffRate > 1);
+  el.className = "piece cat" + (buffed ? " buffed" : "") +
+    (p.promo ? " promoted" : "") + (p.st && p.st.golden ? " golden" : "");
   el.dataset.uid = String(p.uid);
 
   if (onBoard) {
@@ -1909,7 +2075,7 @@ function pieceEl(p, onBoard) {
   badge.style.cssText = BADGE("right");
 
   // 승진냥은 왼쪽에 계급장을 단다 (냥이 자체는 선글라스 낀 원화로 그려진다)
-  if (p.st && p.st.promoted) {
+  if (p.promo) {
     const rank = document.createElement("span");
     rank.textContent = "昇";
     rank.style.cssText = BADGE("left") +
@@ -1947,6 +2113,7 @@ function renderHud() {
   if (prep) disarmSkill();   // 웨이브가 끝나면 조준 상태는 자동으로 풀린다
   renderReadyBar();          // 개시 버튼의 상태는 이제 준비 상황이 정한다
   updateSkillBar();
+  updateSabotageBar();
 }
 const btn = (s) => /** @type {HTMLButtonElement} */ ($(s));
 
@@ -2105,7 +2272,8 @@ function drawCats(g, now) {
     if (!c.st) continue;
     if (c.st.atk) {   // 「변리사 개업」을 고르면 보좌형에게도 사거리 원이 생긴다
       const [cx, cy] = B.pieceCenter(c);
-      g.beginPath(); g.arc(cx, cy, c.st.range, 0, 7);
+      // 상대의 「심사 방해 연막」이 걸려 있으면 실제로 줄어든 사거리를 그대로 그린다
+      g.beginPath(); g.arc(cx, cy, c.st.range * game.catRangeMul, 0, 7);
       g.fillStyle = c.st.golden ? "rgba(205,164,58,.12)" : "rgba(105,182,214,.07)"; g.fill();
       g.strokeStyle = c.st.golden ? "rgba(205,164,58,.6)" : "rgba(60,106,138,.32)"; g.lineWidth = 1; g.stroke();
     }
@@ -2771,9 +2939,6 @@ function consumeEvents() {
         addFloater(ev.x, ev.y - 26, "Critical!", "#e0574d", { big: true, life: 1.0, rise: 30 });
         break;
       }
-      case "void":
-        log(`<b style="color:#e0574d">무효심결</b> ${ev.name} ${BAL.voidWaves}웨이브 정지`);
-        break;
       case "fee":
         addFloater(ev.x, ev.y, `−${ev.amount}`, "#e0574d", { life: 1.0 });
         addShake(4, .2);
@@ -2804,9 +2969,16 @@ function consumeEvents() {
         }
         break;
       }
-      case "wave_start":
+      case "wave_start": {
         log(`<b>웨이브 ${ev.wave}</b> 개시 · 침입 ${ev.count}건 · 동선 ${ev.path}칸 (제압 ${ev.covered}칸)`);
+        // 상대가 이 웨이브에 걸어 둔 공작이 있으면 개시와 함께 알려 준다
+        const sab = [];
+        if (ev.hpMod > 1) sab.push(`체력 +${Math.round((ev.hpMod - 1) * 100)}%`);
+        if (ev.countMod > 1) sab.push(`물량 +${Math.round((ev.countMod - 1) * 100)}%`);
+        if (ev.elite) sab.push(`정예 ${ev.elite}마리 추가`);
+        if (sab.length) log(`<b class="warn">상대 공작이 실린 웨이브</b> — ${sab.join(" · ")}`);
         break;
+      }
       case "wave_end":
         log(`웨이브 ${ev.wave} 방어 완료 · 수입 <b>+${ev.income}</b>`);
         if (game.awaitingAugment) openAugmentModal();
@@ -2819,11 +2991,29 @@ function consumeEvents() {
         log(`<b>분할출원</b> ${ev.name} 하나가 ${ev.placed ? "판에 추가되었습니다" : "대기열에 놓였습니다"}`);
         break;
       case "promote": {
-        log(`<b style="color:#cda43a">승진</b> ${ev.name} — 선글라스·샷건 지급, 방사 피해가 붙습니다`);
+        log(`<b style="color:#cda43a">승진 임명</b> ${ev.name} — 선글라스·샷건 지급, 방사 피해가 붙습니다 (−${ev.cost})`);
         const [px2, py2] = B.cellCenter(ev.x, ev.y);
         const bb = $("#board").getBoundingClientRect();
         stamp(bb.left + px2, bb.top + py2, "昇 進", ev.name);
         addFloater(px2, py2 - 24, "승진!", "#cda43a", { big: true, life: 1.1, rise: 28 });
+        break;
+      }
+      case "sabotage": {
+        log(`<b style="color:#cda43a">방해 공작</b> ${ev.icon} ${ev.name} — 상대 판에 걸었습니다 (−${ev.cost})`);
+        // 심사현황 로그가 화면에서 빠졌으므로, 나갔다는 사실은 상대 청사 위에 도장으로 남긴다
+        const opp = $("#oppCv");
+        if (opp) {
+          const ob = opp.getBoundingClientRect();
+          stamp(ob.left + ob.width / 2, ob.top + ob.height / 2, "妨 害", ev.name);
+        }
+        break;
+      }
+      case "sabotaged": {
+        log(`<b class="warn">상대 공작</b> ${ev.icon} ${ev.name} — ${ev.desc}`);
+        const { w, h } = fxCanvasSize();
+        addFloater(w / 2, h / 2, `${ev.icon} ${ev.name}`, "#e0574d", { big: true, life: 1.4, rise: 34 });
+        addShake(5, .24);
+        renderHud();
         break;
       }
       case "golden":
@@ -2862,7 +3052,7 @@ function loop() {
 
   // 각 단계를 따로 감싼다 — 한 군데가 터져도 나머지 화면은 계속 살아 있어야 한다
   safe("이벤트 처리", () => consumeEvents());
-  safe("준비 표시", () => { syncPrepState(); renderReadyBar(); });
+  safe("준비 표시", () => { syncPrepState(); renderReadyBar(); renderFxTags(); });
   draw(now);
   safe("상대 청사", () => drawOpponent(now));
   safe("상태 전송", () => maybeSendState(now));
@@ -2876,8 +3066,7 @@ function maybeSendState(now) {
   const snap = {
     hp: game.hp, maxHp: game.maxHp, wave: game.wave, phase: game.phase,
     augs: game.augments,
-    pieces: B.placed(game).filter((p) => !p.void)
-      .map((p) => ({ k: p.key, pr: p.uid === game.promotedUid, x: p.x, y: p.y })),
+    pieces: B.placed(game).map((p) => ({ k: p.key, pr: !!p.promo, x: p.x, y: p.y })),
     enemies: game.enemies.map((e) => ({ t: e.t, x: Math.round(e.x), y: Math.round(e.y), hp: e.hp / e.max })),
     cols: game.cols, rows: game.rows, layout: game.map.layout,
   };
@@ -2981,8 +3170,7 @@ function showTip(e, p) {
     ${s && s.atk ? `<i>공격력 ${s.dmg.toFixed(1)} · 공속 ${s.rate.toFixed(2)}/s · 사거리 ${(s.range/(CS+GAP)).toFixed(1)}칸</i>` : "<i>1칸짜리 벽이기도 하다.</i>"}
     ${critC ? `<i style="color:#cda43a">치명타 ${Math.round(critC * 100)}% · 피해 ×${critM.toFixed(1)}</i>` : ""}
     ${s && s.splash ? `<i style="color:#ff9a5c">승진 — 샷건 방사 피해 ${Math.round(s.splash.f * 100)}% (반경 ${(s.splash.r/(CS+GAP)).toFixed(1)}칸)</i>` : ""}
-    ${s && s.golden ? `<i style="color:#cda43a">직권보정 — 이번 웨이브 공격력 3배</i>` : ""}
-    ${p.void ? `<i style="color:#e0574d">무효 상태 · ${p.void}웨이브 남음</i>` : ""}`;
+    ${s && s.golden ? `<i style="color:#cda43a">직권보정 — 이번 웨이브 공격력 3배</i>` : ""}`;
   t.style.display = "block";
   t.style.left = Math.min(e.clientX + 14, innerWidth - 244) + "px";
   t.style.top = Math.min(e.clientY + 14, innerHeight - 120) + "px";
@@ -2999,8 +3187,9 @@ function endMatch(iWon, reasonText) {
       <span>처치</span><b>${s.killed}</b><span>돌파 허용</span><b>${s.leaked}</b>
       <span>최종 동선</span><b>${s.totalPath}칸 (제압 ${s.covered})</b>
       <span>최종 제압률</span><b>${Math.round(s.cover * 100)}%</b>
-      <span>배치 심사관</span><b>${s.cats}명</b>
+      <span>배치 심사관</span><b>${s.cats}명 (승진 ${s.promoted}명)</b>
       <span>증강</span><b>${s.augments.length ? s.augments.map((k) => `${AUGMENTS[k].icon} ${AUGMENTS[k].name}`).join(" · ") : "없음"}</b>
+      <span>방해 공작</span><b>${s.sabotage.length ? s.sabotage.map((k) => `${SABOTAGE[k].icon} ${SABOTAGE[k].short}`).join(" · ") : "없음"}</b>
       <span>특허권 행사</span><b>${s.skillTotal}회 (가처분 ${s.skillUses.injunction} · 폐기 ${s.skillUses.scrap})</b></div>
     <button class="go" id="again" style="padding:10px 26px">로비로</button></div>`;
   $("#modal").classList.add("on");
@@ -3180,9 +3369,131 @@ function drawSkillFx(g, now) {
   }
 }
 
+/* ═══════ 방해 공작 (상대 판에 거는 훼방) ═══════ */
+/**
+ * 공작 버튼도 스킬처럼 판이 시작될 때 한 번만 만든다.
+ * 솔로에는 훼방을 놓을 상대가 없으므로 패널 자체를 감춘다.
+ */
+function buildSabotageBar() {
+  const panel = $("#sabPanel");
+  const el = $("#sabBar");
+  if (!panel || !el) return;
+  panel.classList.toggle("hidden", soloMode);
+  if (soloMode) return;
+
+  el.innerHTML = Object.keys(SABOTAGE).map((k) => {
+    const d = SABOTAGE[k];
+    return `<button class="skill sab" data-k="${k}" type="button">
+      <span class="ic">${d.icon}</span>
+      <span class="meta">
+        <b>${d.name}<span class="tag">${d.tag}</span></b>
+        <i>${d.when === "live" ? `상대 판에 즉시 · ${d.dur}초` : "상대의 다음 웨이브"}</i>
+      </span>
+      <span class="right">
+        <span class="cost">₩${d.cost}</span>
+        <span class="state">사용 가능</span>
+      </span>
+    </button>`;
+  }).join("");
+
+  el.querySelectorAll(".sab").forEach((b) => {
+    const key = /** @type {HTMLElement} */ (b).dataset.k;
+    b.addEventListener("click", () => onSabotageClick(key));
+    b.addEventListener("pointerenter", (e) => showSabotageTip(e, SABOTAGE[key]));
+    b.addEventListener("pointerleave", hideTip);
+  });
+  updateSabotageBar();
+}
+
+function updateSabotageBar() {
+  if (!game || soloMode) return;
+  for (const k in SABOTAGE) {
+    const b = /** @type {HTMLButtonElement} */ ($(`#sabBar .sab[data-k="${k}"]`));
+    if (!b) continue;
+    const blocked = game.sabotageBlocked(k);
+    b.disabled = !!blocked;
+    b.querySelector(".state").textContent = blocked || "사용 가능";
+  }
+}
+
+function showSabotageTip(e, d) {
+  if (dragging) return;
+  const t = $("#tip");
+  t.innerHTML = `<b>${d.name}</b> — ${d.tag}<i>${d.desc}</i>
+    <i>특허료 ${d.cost} · 웨이브 주기마다 종류별 1회</i>`;
+  t.style.display = "block";
+  t.style.left = Math.min(e.clientX + 14, innerWidth - 264) + "px";
+  t.style.top = Math.min(e.clientY + 14, innerHeight - 150) + "px";
+}
+
+/** 특허료를 내고 상대 판에 공작을 건다 — 실제 효과는 상대 클라이언트가 적용한다 */
+function onSabotageClick(key) {
+  const d = SABOTAGE[key];
+  if (!d) return;
+  const blocked = game.sabotageBlocked(key);
+  if (blocked) { log(`<b>${d.name}</b> 사용 불가 — ${blocked}`); return; }
+  if (!online()) { log(`<b>${d.name}</b> 사용 불가 — 서버 연결이 끊겨 상대에게 닿지 않습니다`); return; }
+  if (!game.useSabotage(key)) return;
+  sendWS({ t: "sabotage", key });
+  renderHud();
+}
+
+/** 상대가 나에게 걸어 둔 공작을 판 아래에 표시한다. 매 프레임 불린다. */
+function renderFxTags() {
+  const el = $("#fxTags");
+  if (!el || !game) return;
+  const tags = [];
+  const fx = game.fx, mods = game.waveMods;
+  if (fx.hasteT > 0)
+    tags.push(`<span>🛢️ 침입자 이동속도 +${Math.round((fx.hasteMul - 1) * 100)}% · ${fx.hasteT.toFixed(1)}초</span>`);
+  if (fx.fogT > 0)
+    tags.push(`<span>🌫️ 냥타워 사거리 −${Math.round((1 - fx.fogMul) * 100)}% · ${fx.fogT.toFixed(1)}초</span>`);
+  if (mods.hp > 1) tags.push(`<span>💊 다음 웨이브 체력 +${Math.round((mods.hp - 1) * 100)}%</span>`);
+  if (mods.count > 1) tags.push(`<span>📨 다음 웨이브 물량 +${Math.round((mods.count - 1) * 100)}%</span>`);
+  if (mods.elite) tags.push(`<span>⚖️ 다음 웨이브 정예 ${mods.elite}마리 추가</span>`);
+  el.innerHTML = tags.join("");
+  el.classList.toggle("hidden", !tags.length);
+}
+
+/* ═══════ 승진 임명 ═══════ */
+/**
+ * 판에 세워 둔 냥타워를 특허료로 승진시키는 목록.
+ * 증강으로 자동 선정되던 것을 걷어내고, 누구를 키울지 직접 고르게 했다.
+ */
+function renderPromoteList() {
+  const el = $("#promoteList");
+  if (!el) return;
+  const pool = B.cats(game).filter((c) => game.canFight(c.key) || c.promo);
+  if (!pool.length) {
+    el.innerHTML = `<div class="prnone">판에 세운 냥타워가 없습니다 — 먼저 임용해 배치하세요.</div>`;
+    return;
+  }
+  el.innerHTML = pool.map((c) => {
+    const cost = game.promoteCost(c);
+    const blocked = game.promoteBlocked(c);
+    return `<button class="prow${c.promo ? " done" : ""}" data-uid="${c.uid}" type="button"
+        ${blocked ? "disabled" : ""}>
+      <span class="ic">${CATS[c.key].icon}</span>
+      <span class="meta"><b>${CATS[c.key].name}</b><i>${c.promo ? "昇 승진 완료 — 샷건 방사 피해" : `${c.x + 1}열 ${c.y + 1}행`}</i></span>
+      <span class="right">${c.promo
+        ? `<span class="done">昇</span>`
+        : `<span class="cost">₩${cost.toLocaleString()}</span><span class="state">${blocked || "승진시키기"}</span>`}</span>
+    </button>`;
+  }).join("");
+
+  el.querySelectorAll(".prow").forEach((b) => {
+    b.addEventListener("click", () => {
+      const c = game.catByUid(+(/** @type {HTMLElement} */ (b).dataset.uid));
+      const blocked = game.promoteBlocked(c);
+      if (blocked) { log(`<b>승진 임명</b> 불가 — ${blocked}`); return; }
+      if (game.promoteCat(c)) render();
+    });
+  });
+}
+
 /** 냥타워 패널: 카드를 탭하면 그 자리에서 바로 구매·배치한다 */
 function renderCatRoster() {
-  const prep = game.phase === "prep" && !game.awaitingPassive;
+  const prep = game.phase === "prep" && !game.awaitingPassive && !game.awaitingAugment;
   $("#catRoster").innerHTML = Object.keys(CATS).map((k) => {
     const d = CATS[k];
     const cost = game.catCost(k);
@@ -3544,10 +3855,13 @@ function beginBattle() {
     : `<b>1v1 대전</b> — 상대와 같은 판·같은 웨이브를 동시에 치릅니다.`);
   log(`<b>${game.map.name}</b> 방위 개시 · ${game.map.desc}`);
   log(`증강은 웨이브 <b>${AUGMENT_WAVES.join(" · ")}</b> 클리어 직후에 나옵니다.`);
+  log(`냥타워는 <b>승진 임명</b>으로 샷건·방사 피해를 붙일 수 있습니다 (준비 단계, 특허료 소모).`);
+  if (!soloMode) log(`<b>방해 공작</b>으로 상대 판에 기름·연막·정예 투입을 걸 수 있습니다 (웨이브 주기마다 종류별 1회).`);
   log(`전장은 스테이지 <b>1~5 ${STAGE_THEMES[0].name}</b> · <b>6~10 ${STAGE_THEMES[1].name}</b> · <b>11~ ${STAGE_THEMES[2].name}</b> 순으로 바뀝니다.`);
   buildBoardCells();
   bindSkillAiming();
   buildSkillBar();
+  buildSabotageBar();
   render();
   renderPassiveTags();
   renderAugTags();

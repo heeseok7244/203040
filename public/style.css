@@ -106,11 +106,6 @@ h1{font-family:var(--disp);font-size:27px;margin:0;letter-spacing:.18em;color:#f
 .piece.cat .nm{font-family:var(--disp);font-size:9px;letter-spacing:.06em;color:#3a2f1e;margin-top:-3px}
 .piece.admin{background:#efe6cd}
 .piece.off{opacity:.45}
-.piece.void{filter:grayscale(1)}
-.piece.void::after{
-  content:"無效";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-family:var(--disp);font-size:12px;color:rgba(196,50,42,.85);
-  border:2px solid rgba(196,50,42,.7);transform:rotate(-12deg)}
 .piece.drag{z-index:99;pointer-events:none;opacity:.9;transform:rotate(-2deg)}
 .piece.mergeable{outline:2px solid var(--ok);outline-offset:-2px}
 
@@ -444,6 +439,41 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 #board.aiming{cursor:crosshair}
 #board.aiming .piece{cursor:crosshair;pointer-events:none}
 
+/* ── 방해 공작 — 스킬 버튼과 같은 모양에 색만 다르게 (내 판이 아니라 상대 판에 나간다) ── */
+#sabBar{display:flex;flex-direction:column;gap:6px}
+.skill.sab:not(:disabled){border-color:#8f6ad8}
+.skill.sab:not(:disabled) .state{color:#c3a8f5}
+.skill.sab .cost{color:#c3a8f5}
+
+/* 상대가 나에게 걸어 둔 공작 — 판 바로 아래 줄 */
+#fxTags{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 0}
+#fxTags span{font-family:var(--mono);font-size:9.5px;letter-spacing:.02em;
+  padding:3px 7px;border:1px solid rgba(196,50,42,.55);background:rgba(196,50,42,.12);
+  color:#f0b9b2}
+
+/* ── 승진 임명 ── */
+.promoteBox{border-top:1px solid var(--line);padding-top:9px}
+.promoteBox>i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;
+  letter-spacing:.12em;color:var(--muted);margin-bottom:6px}
+.promoteBox>i b{color:var(--gold);font-weight:400}
+#promoteList{display:flex;flex-direction:column;gap:5px}
+.prow{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:6px 8px;
+  line-height:1.3}
+.prow .ic{font-size:17px;flex:none}
+.prow .meta{min-width:0;flex:1}
+.prow .meta b{display:block;font-family:var(--disp);font-size:11.5px;color:#e8eef4;font-weight:700}
+.prow .meta i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;
+  color:var(--muted);margin-top:1px}
+.prow .right{flex:none;text-align:right}
+.prow .cost{display:block;font-family:var(--mono);font-size:11.5px;color:var(--gold);font-weight:700}
+.prow .state{display:block;font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:1px}
+.prow:not(:disabled){border-color:var(--gold)}
+.prow:not(:disabled) .state{color:var(--ok)}
+.prow.done{border-color:rgba(205,164,58,.45);opacity:.85}
+.prow.done .right .done{font-family:var(--disp);font-size:15px;color:var(--gold)}
+.prnone{font-size:10px;color:var(--muted);font-family:var(--mono);padding:2px 0}
+.prhint{font-size:10px;color:var(--muted);line-height:1.55;margin-top:7px}
+
 /* ── 헤더: 웨이브 옆 효과칸 (내효과 | 상대효과 나란히) ── */
 .stat.effects{display:flex;gap:14px;min-width:280px;flex:1;padding:4px 11px 5px}
 .stat.effects .efcol{flex:1;min-width:0}
@@ -487,7 +517,8 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 #readyBar .rdytrack i{display:block;height:100%;background:linear-gradient(90deg,#c4322a,#cda43a);
   transition:width .12s linear}
 /* 솔로 플레이 — 상대를 기다리는 자리(준비 표시줄·상대 청사·상대효과)는 아예 지운다 */
-body.solo #readyBar,body.solo #oppPanel,body.solo #foeEfCol{display:none!important}
+body.solo #readyBar,body.solo #oppPanel,body.solo #foeEfCol,
+body.solo #sabPanel{display:none!important}
 .boardctl #btnGo.waiting{background:#3f7a2f;border-color:#3f7a2f}
 .boardctl #btnGo.waiting:hover:not(:disabled){background:#4a8f37;border-color:#4a8f37}
 

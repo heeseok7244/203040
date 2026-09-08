@@ -66,6 +66,26 @@
     <div class="panel">
       <h2>냥타워 <em>CAT TOWERS</em></h2>
       <div class="pad" id="catRoster"></div>
+      <!-- 승진은 증강이 자동으로 골라 주던 것을 걷어내고, 여기서 특허료를 내고 직접 임명한다 -->
+      <div class="pad promoteBox">
+        <i>승진 임명 <b>PROMOTION</b></i>
+        <div id="promoteList"></div>
+        <div class="prhint">준비 단계에 판 위 냥타워를 골라 특허료를 내면 선글라스·샷건을 지급합니다 —
+          공격력 +25% · 치명타 +12%p · 배율 +0.5 에 명중 지점 반경 1.4칸 방사 피해 70%.
+          승진자가 늘수록 임명료가 올라갑니다.</div>
+      </div>
+    </div>
+    <div class="panel hidden" id="sabPanel">
+      <h2>방해 공작 <em>SABOTAGE</em></h2>
+      <div class="pad">
+        <div id="sabBar"></div>
+        <div style="font-size:10.5px;color:var(--muted);line-height:1.55;margin-top:8px">
+          특허료를 내고 <b style="color:var(--txt)">상대 판</b>에 직접 훼방을 놓습니다. 종류마다
+          <b style="color:var(--txt)">웨이브 주기(준비 + 그 웨이브)에 한 번</b>씩 쓸 수 있습니다.<br>
+          기름·연막은 상대 판에서 곧바로 흐르고(상대가 준비 중이면 다음 웨이브 첫머리부터),
+          나머지는 상대의 다음 웨이브 구성 자체를 바꿉니다.
+        </div>
+      </div>
     </div>
     <div class="panel">
       <h2>특허권 행사 <em>ACTIVE SKILLS</em></h2>
@@ -93,6 +113,8 @@
           </div>
         </div>
         <div id="tray"></div>
+        <!-- 상대가 나에게 걸어 둔 방해 공작 (실시간 남은 시간 · 다음 웨이브 예약분) -->
+        <div id="fxTags" class="hidden"></div>
         <div class="boardctl">
           <button id="btnGo" class="go">웨이브 1 준비 완료</button>
           <button id="btnSpeed">속도 ×1</button>

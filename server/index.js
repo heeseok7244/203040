@@ -114,7 +114,10 @@ function leaveRoom(conn) {
 }
 
 // 방(room) 안에서 상대에게 그대로 중계하는 메시지 타입 → 상대가 받을 때의 타입
-const RELAY = { state: 'oppState', passive: 'oppPassive', won: 'oppWon', lost: 'oppLost' };
+const RELAY = {
+  state: 'oppState', passive: 'oppPassive', sabotage: 'oppSabotage',
+  won: 'oppWon', lost: 'oppLost',
+};
 
 attachWebSocketServer(httpServer, (conn) => {
   conn._room = null;
