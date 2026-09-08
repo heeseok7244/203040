@@ -48,6 +48,9 @@
   <div class="masthead">
     <h1>묘한특허</h1>
     <div class="sub">특허청 청사 방위전 · 등록번호 제10-<span id="regHead">1000</span>호</div>
+    <!-- 판을 접고 첫 화면으로 — 브라우저 뒤로가기는 탭 자체를 닫아버려서 나갈 길이 없었다.
+         1v1 은 나가면 상대가 빈 판을 붙들고 있게 되므로 솔로에서만 보인다 (style.css) -->
+    <button id="btnExit" type="button">나가기</button>
   </div>
   <div class="stats">
     <div class="stat dmg"><b id="sHp">22</b><span>원부 내구</span></div>
@@ -102,7 +105,19 @@
 
   <div>
     <div class="panel">
-      <h2><span id="mapName">청사 평면도</span> <em id="phaseLbl">준비 단계</em></h2>
+      <h2><span id="mapName">청사 평면도</span>
+        <span class="h2right">
+          <em id="phaseLbl">준비 단계</em>
+          <!-- 침입자 도감은 늘 펼쳐 둘 만큼 자주 보는 것이 아니라, 물음표로 접어 두고
+               필요할 때만 꺼낸다. 단계 표시 바로 옆이라 판을 보다가 손이 닿는 자리다. -->
+          <button id="btnBestiary" class="qmark" type="button"
+                  aria-expanded="false" aria-controls="beastPop" title="침입자 도감">?</button>
+        </span></h2>
+      <!-- 물음표를 누르면 판 위에 겹쳐 뜬다 (모달이 아니라 말풍선이라 판이 가려지지 않는다) -->
+      <div class="beastpop hidden" id="beastPop">
+        <div class="beastpop-h">침입자 <em>THREATS</em></div>
+        <div class="pad" id="bestiary"></div>
+      </div>
       <div class="floor">
         <!-- 스테이지 원화(map/*.png)를 깔고 그 위에 판을 얹는다. 여백은 원화마다 액자 두께가
              달라서 JS(STAGE_THEMES)가 테마별로 정해 넣는다 -->
@@ -146,10 +161,6 @@
           <div class="passiveTags" id="oppAugTags"></div>
         </div>
       </div>
-    </div>
-    <div class="panel">
-      <h2>침입자 <em>THREATS</em></h2>
-      <div class="pad" id="bestiary"></div>
     </div>
   </div>
 </div>

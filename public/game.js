@@ -1008,7 +1008,8 @@ function damage(g, e, amt, src) {
     const reward = ENEMIES[e.t].rw * (1 + g.econ.killGold / 100);
     g.gold += reward;
     g.killed++;
-    g.events.push({ t: "kill", x: e.x, y: e.y, reward: Math.round(reward) });
+    // k/face 는 사망 연출용 — 어느 쥐가 어느 쪽을 보고 쓰러졌는지 알아야 사망 3컷을 맞게 그린다
+    g.events.push({ t: "kill", x: e.x, y: e.y, reward: Math.round(reward), k: e.t, face: e._face === -1 ? -1 : 1 });
   }
 }
 
@@ -2260,9 +2261,10 @@ function draw(now) {
   }
 
   safe("냥타워 그리기", () => drawCats(g, now));
-  safe("침입자 그리기", () => drawEnemies(g, now));
+  // 시신은 살아 있는 침입자 아래에 깔린다 — 뒤따라오는 쥐가 시신에 가려지지 않도록
+  safe("침입자 그리기", () => { drawCorpses(g); drawEnemies(g, now); });
   safe("탄환 그리기", () => { for (const s of game.shots) drawMissile(g, s); });
-  safe("연출 그리기", () => { drawSparks(g); drawSkillFx(g, now); drawFloaters(g); });
+  safe("연출 그리기", () => { drawCrumbs(g); drawSparks(g); drawSkillFx(g, now); drawFloaters(g); });
   g.restore(); // 화면 흔들림 여기까지 — 이 아래는 화면에 고정된 UI라 흔들리지 않는다
 }
 
@@ -2362,15 +2364,45 @@ const MOB_SRC = { copy: "img/mob-copy.png", fast: "img/mob-fast.png", tank: "img
 const MOB_IMG = {};
 for (const t in MOB_SRC) { const im = new Image(); im.src = MOB_SRC[t]; MOB_IMG[t] = im; }
 
+/**
+ * 달리기 4컷 · 사망 3컷 — 원화 스타일시트(img/mouse-sheet-v2.png)에서 잘라 낸 가로 스트립.
+ * 셀 폭은 늘 (그림 가로 ÷ 컷 수)로 나눠 쓰므로, 시트를 다시 뽑아 스트립만 갈아 끼워도 코드는 그대로다.
+ */
+const MOB_STRIP = { run: 4, die: 3 };
+/** @type {Record<string,Record<string,HTMLImageElement>>} */
+const MOB_ANIM = { run: {}, die: {} };
+for (const kind in MOB_STRIP) {
+  for (const t in MOB_SRC) {
+    const im = new Image(); im.src = `img/mob-${t}-${kind}.png`;
+    MOB_ANIM[kind][t] = im;
+  }
+}
+/** 아직 안 올라온 그림은 쓰지 않는다 (반쯤 그려진 채로 캔버스에 올라가지 않도록) */
+function imgReady(im) { return im && im.complete && im.naturalWidth ? im : null; }
+
 /** 그릴 준비가 끝난 원화만 돌려준다 (로딩 중이면 null → 벡터 실루엣으로 폴백) */
-function mobArt(t) {
-  const im = MOB_IMG[t];
-  return im && im.complete && im.naturalWidth ? im : null;
+function mobArt(t) { return imgReady(MOB_IMG[t]); }
+
+/**
+ * 이번에 그릴 컷 하나.
+ * kind가 "run"·"die"면 그 스트립의 i번째 컷을, 그 밖(예: "hero")이면 서 있는 원화 한 장을 돌려준다.
+ * 스트립이 아직 안 올라왔을 때도 원화로 흘러가므로, 화면이 비는 순간은 없다.
+ * @returns {{im:HTMLImageElement,sx:number,sy:number,sw:number,sh:number}|null}
+ */
+function mobFrame(t, kind, i) {
+  const n = MOB_STRIP[kind];
+  const st = n ? imgReady(MOB_ANIM[kind][t]) : null;
+  if (st) {
+    const cw = st.naturalWidth / n;
+    return { im: st, sx: cw * (((i % n) + n) % n), sy: 0, sw: cw, sh: st.naturalHeight };
+  }
+  const im = mobArt(t);
+  return im ? { im, sx: 0, sy: 0, sw: im.naturalWidth, sh: im.naturalHeight } : null;
 }
 
 /**
- * 달리기 리듬 — 원화가 한 장뿐이라 프레임을 넘기는 대신 몸 전체를 걸음 주기로 흔들어 뛰게 만든다.
- * freq는 "이동 거리 1px당 걸음 위상"이라 빠른 쥐일수록 발이 저절로 빨라진다.
+ * 달리기 리듬. freq는 "이동 거리 1px당 걸음 위상"이라 빠른 쥐일수록 발이 저절로 빨라진다.
+ * 위상 2π가 달리기 4컷 한 바퀴(= 두 걸음)이고, 같은 위상으로 몸 전체의 흔들림도 얹는다.
  * rise 도약 높이 · tilt 앞뒤로 까딱이는 각도 · squash 착지 순간 눌리는 정도 (전부 r 기준 비율)
  */
 const GAIT = {
@@ -2382,28 +2414,30 @@ const GAIT = {
 };
 const GAIT_DEFAULT = GAIT.copy;
 
-/** 지금 걸음의 위상을 뽑는다. hop 0=발이 땅에 닿는 순간 → 1=도약 정점 */
-function gaitOf(e, r) {
+/** 지금 걸음의 위상을 뽑는다. hop 0=발이 땅에 닿는 순간 → 1=도약 정점
+ *  k는 흔들림의 세기 — 진짜 달리기 컷이 있으면 그림 자체가 이미 뛰고 있으므로 절반만 얹는다. */
+function gaitOf(e, r, k = 1) {
   const p = e.dist * (GAIT[e.t] || GAIT_DEFAULT).freq;
   const d = GAIT[e.t] || GAIT_DEFAULT;
   const hop = Math.abs(Math.sin(p));
   return {
     hop,
-    rise: hop * r * d.rise,
+    rise: hop * r * d.rise * k,
     // 도약할 때 앞으로 숙였다가 착지하며 젖혀진다 — 걸음마다 한 번씩 까딱인다
-    tilt: Math.sin(p * 2) * d.tilt,
-    squash: d.squash,
+    tilt: Math.sin(p * 2) * d.tilt * k,
+    squash: d.squash * k,
     dust: d.dust,
   };
 }
 
-/** 원화를 반지름 r 기준 크기로, 발이 바닥 그림자에 닿도록 (0,0) 중심에 그린다.
+/** 원화 컷 하나(mobFrame 결과)를 반지름 r 기준 크기로, 발이 바닥 그림자에 닿도록 (0,0) 중심에 그린다.
+ *  스트립의 컷은 전부 바닥선을 공유하도록 잘라 놨으므로, 셀 아래쪽을 지면에 맞추면 컷이 넘어가도 발이 뜨지 않는다.
  *  원화는 전부 오른쪽을 보고 있어서 왼쪽으로 갈 때는 face=-1로 뒤집는다.
  *  mo(gaitOf 결과)를 주면 도약·착지 스쿼시까지 얹어 달리는 모션이 된다.
  *  slowed면 얼음빛으로 물들여 둔화 상태를 표시한다 (벡터 실루엣의 푸른 톤과 같은 역할). */
-function drawMobArt(g, im, r, slowed, face, mo) {
-  const k = (r * 2.9) / Math.max(im.naturalWidth, im.naturalHeight);
-  const w = im.naturalWidth * k, h = im.naturalHeight * k;
+function drawMobArt(g, fr, r, slowed, face, mo) {
+  const k = (r * 2.9) / Math.max(fr.sw, fr.sh);
+  const w = fr.sw * k, h = fr.sh * k;
   g.save();
   if (face === -1) g.scale(-1, 1);
   if (mo) {
@@ -2415,7 +2449,7 @@ function drawMobArt(g, im, r, slowed, face, mo) {
     g.translate(0, -r - mo.rise);
   }
   if (slowed) g.filter = "grayscale(.6) sepia(.55) hue-rotate(165deg) saturate(1.8) brightness(1.05)";
-  g.drawImage(im, -w / 2, r - h, w, h);
+  g.drawImage(fr.im, fr.sx, fr.sy, fr.sw, fr.sh, -w / 2, r - h, w, h);
   g.restore();
 }
 
@@ -2715,6 +2749,96 @@ function hexA(hex, a) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
+/* ═══════ 사망 연출 — 쓰러진 침입자와 사방으로 튀는 치즈 ═══════ */
+/** 쓰러져 사라지는 침입자들. 사망 3컷을 차례로 넘긴 뒤 스르르 사라진다. */
+let corpses = [];
+const CORPSE_LIFE = 1.15;        // 전체 지속(초) — 3컷 재생 + 페이드
+/** 침입자 하나가 쓰러졌다. 시신 한 구 + 흘린 치즈 조각을 그 자리에 뿌린다. */
+function spawnCorpse(t, x, y, face) {
+  const d = ENEMIES[t];
+  if (!d) return;
+  if (corpses.length > 60) corpses.shift();   // 물량 웨이브에서 시신이 쌓여 프레임을 잡아먹지 않도록
+  corpses.push({ t, x, y, face: face === -1 ? -1 : 1, life: CORPSE_LIFE });
+  spawnCrumbs(x, y, d.r);
+}
+function stepCorpses(dt) {
+  for (const c of corpses) c.life -= dt;
+  corpses = corpses.filter((c) => c.life > 0);
+}
+function drawCorpses(g) {
+  for (const c of corpses) {
+    const r = ENEMIES[c.t].r;
+    const p = 1 - c.life / CORPSE_LIFE;                          // 0(막 쓰러짐) → 1(사라짐)
+    // 앞 두 컷은 0.2초씩 넘기고, 마지막 컷(완전히 누운 자세)으로 남아 페이드아웃한다
+    const fr = mobFrame(c.t, "die", Math.min(2, Math.floor(p / 0.17)));
+    if (!fr) continue;
+    const fade = Math.min(1, Math.max(0, (1 - p) / 0.32));
+    const pop = Math.max(0, 1 - p / 0.12);                        // 쓰러지는 첫 순간 납작하게 눌린다
+
+    g.save();
+    g.translate(c.x, c.y);
+    // 바닥 그림자 — 서 있을 때보다 넓고 옅게 깔린다
+    g.globalAlpha = fade * 0.2; g.fillStyle = "#0c1524";
+    g.beginPath(); g.ellipse(0, r * 0.92, r * 0.62, r * 0.16, 0, 0, 7); g.fill();
+    // 넘어지며 발밑에서 확 퍼지는 먼지
+    if (p < 0.3) {
+      const q = p / 0.3;
+      g.globalAlpha = fade * 0.3 * (1 - q); g.fillStyle = "#a8977c";
+      for (let i = -1; i <= 1; i++) {
+        g.beginPath();
+        g.ellipse(i * r * (0.45 + q * 0.9), r * 0.85, r * (0.2 + q * 0.2), r * (0.13 + q * 0.09), 0, 0, 7);
+        g.fill();
+      }
+    }
+    g.globalAlpha = fade;
+    g.scale(1 + pop * 0.18, 1 - pop * 0.18);
+    drawMobArt(g, fr, r, false, c.face, null);
+    g.restore();
+  }
+  g.globalAlpha = 1;
+}
+
+/** 훔쳐 가던 치즈가 사방으로 튄다 — 사망 순간에만 뿌리고, 바닥에서 한 번 튀고 사라진다. */
+let crumbs = [];
+function spawnCrumbs(x, y, r) {
+  const n = 4 + Math.round(r / 7);
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.3;
+    const spd = 55 + Math.random() * 95;
+    crumbs.push({
+      x, y: y - r * 0.2, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+      rot: Math.random() * 7, vr: (Math.random() - 0.5) * 13,
+      sz: r * (0.11 + Math.random() * 0.09),
+      life: 0.55 + Math.random() * 0.3, ground: y + r * 0.9,
+    });
+  }
+}
+function stepCrumbs(dt) {
+  for (const c of crumbs) {
+    c.vy += 620 * dt;                                             // 중력
+    c.x += c.vx * dt; c.y += c.vy * dt; c.rot += c.vr * dt;
+    if (c.y > c.ground) { c.y = c.ground; c.vy *= -0.42; c.vx *= 0.6; c.vr *= 0.5; }
+    c.life -= dt;
+  }
+  crumbs = crumbs.filter((c) => c.life > 0);
+}
+function drawCrumbs(g) {
+  for (const c of crumbs) {
+    g.save();
+    g.globalAlpha = Math.min(1, c.life / 0.3);
+    g.translate(c.x, c.y); g.rotate(c.rot);
+    // 삼각 치즈 한 조각 — 구멍 하나까지
+    g.fillStyle = "#f4c53c"; g.strokeStyle = "#8a5f16"; g.lineWidth = 0.7; g.lineJoin = "round";
+    g.beginPath();
+    g.moveTo(-c.sz, c.sz * 0.72); g.lineTo(c.sz, c.sz * 0.72); g.lineTo(-c.sz, -c.sz * 0.72);
+    g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = "#dfa41e";
+    g.beginPath(); g.arc(-c.sz * 0.26, c.sz * 0.24, c.sz * 0.2, 0, 7); g.fill();
+    g.restore();
+  }
+  g.globalAlpha = 1;
+}
+
 let shakeT = 0, shakeMag = 0;
 function addShake(mag, dur) {
   shakeMag = Math.max(shakeMag, mag);   // 더 강한 흔들림이 있으면 그쪽을 따른다
@@ -2748,9 +2872,14 @@ function drawMonster(g, e, d, now) {
     g.scale(sx, sy);
   }
 
-  const art = mobArt(e.t);
-  // 실제로 나아가는 중일 때만 걸음을 굴린다 (가처분에 묶였거나 도감 초상화면 가만히 선 자세)
-  const mo = art && e.dist > 0 && !(e.freezeT > 0) ? gaitOf(e, r) : null;
+  // 실제로 나아가는 중일 때만 걸음을 굴린다 (가처분에 묶였으면 첫 컷에서 멈춰 선다)
+  const moving = e.dist > 0 && !(e.freezeT > 0);
+  // 달리기 4컷 — 위상 2π가 한 바퀴, 즉 π/2마다 컷이 한 장 넘어간다.
+  // 위상이 이동 거리에서 나오므로 빠른 쥐일수록 컷도 저절로 빨리 넘어간다.
+  const phase = e.dist * (GAIT[e.t] || GAIT_DEFAULT).freq;
+  const art = mobFrame(e.t, "run", moving ? Math.floor(phase / (Math.PI / 2)) : 0);
+  const framed = !!imgReady(MOB_ANIM.run[e.t]);   // 진짜 컷이 있으면 몸 흔들림은 절반만 얹는다
+  const mo = art && moving ? gaitOf(e, r, framed ? 0.5 : 1) : null;
 
   // 바닥 그림자 — 캐릭터가 판 위에 실제로 서 있는 느낌.
   // 뛰어오른 만큼 작고 옅어져야 발이 땅에서 떨어진 게 보인다.
@@ -2925,6 +3054,7 @@ function consumeEvents() {
     switch (ev.t) {
       case "kill":
         addFloater(ev.x, ev.y, "+" + ev.reward, "#cda43a");
+        spawnCorpse(ev.k, ev.x, ev.y, ev.face);
         break;
       case "leak":
         addFloater(ev.x, ev.y, "돌파!", "#e0574d");
@@ -3047,6 +3177,8 @@ function loop() {
     if (floaters[i].life <= 0) floaters.splice(i, 1);
   }
   stepSparks(dt);
+  stepCorpses(dt);
+  stepCrumbs(dt);
   stepShake(dt);
   stepSkillFx(dt);
 
@@ -3773,8 +3905,9 @@ function drawOpponent(now) {
       g.save();
       g.translate(cx, cy);
       g.scale(cell / 64, cell / 64);
-      const art = mobArt(e.t);
-      if (art) drawMobArt(g, art, 15 * (d.r / 18), false, 1);
+      // 상대 판은 스냅샷이라 이동 거리를 모른다 — 달리기 첫 컷으로 고정해 그린다
+      const art = mobFrame(e.t, "run", 0);
+      if (art) drawMobArt(g, art, 15 * (d.r / 18), false, 1, null);
       else drawRatSilhouette(g, 15 * (d.r / 18), false);
       g.restore();
     }
@@ -3840,6 +3973,7 @@ function beginBattle() {
   critShownAt.clear();
   errShown.clear();     // 새 판에서는 오류 보고도 새로 시작한다
   sparks = [];
+  corpses = []; crumbs = [];
   skillFx = [];
   armedSkill = null; aimPt = null;
   shakeT = 0; shakeMag = 0;
@@ -3900,21 +4034,69 @@ function renderBestiary() {
     </div>`;
   }).join("");
   el.querySelectorAll(".beast-cv").forEach((cv) => {
-    const t = /** @type {HTMLElement} */ (cv).dataset.t, d = ENEMIES[t];
-    const ctx = /** @type {HTMLCanvasElement} */ (cv).getContext("2d");
-    const cx = PORT / 2, cy = PORT / 2 + 6;
-    ctx.save();
-    ctx.beginPath(); ctx.arc(cx, cy - 4, PORT * 0.42, 0, 7);
-    ctx.fillStyle = d.col + "26"; ctx.fill();
-    ctx.restore();
-    // 초상화 칸(72px)에 맞게 반지름을 눌러 담는다 — 특허괴물(r 34)은 원화 그대로면 잘린다
-    drawMonster(ctx, { t, x: cx, y: cy, dist: 0, hitT: 0, hitCrit: false, slowT: 0, hitAng: 0 },
-      { ...d, r: Math.min(d.r, 21) }, performance.now());
+    const t = /** @type {HTMLElement} */ (cv).dataset.t;
+    paintBeast(/** @type {HTMLCanvasElement} */ (cv), t, null);
+    // 마우스를 올린 동안만 달리기 4컷을 돌린다 — 도감에서도 어떻게 뛰어오는지 눈으로 보인다
+    let raf = 0;
+    cv.addEventListener("mouseenter", () => {
+      if (raf) return;
+      const t0 = performance.now();
+      const spin = () => {
+        paintBeast(/** @type {HTMLCanvasElement} */ (cv), t, Math.floor((performance.now() - t0) / 110));
+        raf = requestAnimationFrame(spin);
+      };
+      raf = requestAnimationFrame(spin);
+    });
+    cv.addEventListener("mouseleave", () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      paintBeast(/** @type {HTMLCanvasElement} */ (cv), t, null);
+    });
   });
+}
+
+/** 도감 초상화 한 칸. frame이 null이면 서 있는 원화, 숫자면 그 번호의 달리기 컷을 그린다. */
+function paintBeast(cv, t, frame) {
+  const d = ENEMIES[t];
+  const ctx = cv.getContext("2d");
+  const PORT = cv.width, cx = PORT / 2, cy = PORT / 2 + 6;
+  ctx.clearRect(0, 0, PORT, PORT);
+  ctx.beginPath(); ctx.arc(cx, cy - 4, PORT * 0.42, 0, 7);
+  ctx.fillStyle = d.col + "26"; ctx.fill();
+  // 초상화 칸(72px)에 맞게 반지름을 눌러 담는다 — 특허괴물(r 34)은 원화 그대로면 잘린다
+  const r = Math.min(d.r, 21);
+  const fr = mobFrame(t, frame === null ? "hero" : "run", frame || 0);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.globalAlpha = 0.22; ctx.fillStyle = "#0c1524";
+  ctx.beginPath(); ctx.ellipse(0, r * 0.92, r * 0.5, r * 0.15, 0, 0, 7); ctx.fill();
+  ctx.globalAlpha = 1;
+  if (fr) drawMobArt(ctx, fr, r, false, 1, null);
+  else drawRatSilhouette(ctx, r, false);
+  ctx.restore();
 }
 renderBestiary();
 // 원화는 비동기로 올라온다 — 다 올라온 뒤 도감을 한 번 더 그려야 이모지 대신 실제 그림이 남는다
 for (const t in MOB_IMG) MOB_IMG[t].addEventListener("load", () => renderBestiary(), { once: true });
+
+/* ── 도감 여닫기 ──
+ * 도감은 판 패널 머릿글의 물음표에 접어 두었다. 판 위에 겹쳐 뜨는 말풍선이라
+ * 열어 둔 채로도 침입자가 오는 것이 보인다.
+ */
+function toggleBestiary(on) {
+  const pop = $("#beastPop"), btn = $("#btnBestiary");
+  const open = on === undefined ? pop.classList.contains("hidden") : on;
+  pop.classList.toggle("hidden", !open);
+  btn.setAttribute("aria-expanded", String(open));
+}
+$("#btnBestiary").addEventListener("click", (e) => { e.stopPropagation(); toggleBestiary(); });
+// 판이나 다른 패널을 누르면 알아서 접힌다 — 닫으려고 물음표를 다시 찾아갈 일은 없어야 한다
+document.addEventListener("pointerdown", (e) => {
+  if ($("#beastPop").classList.contains("hidden")) return;
+  if (/** @type {HTMLElement} */ (e.target).closest("#beastPop, #btnBestiary")) return;
+  toggleBestiary(false);
+});
+addEventListener("keydown", (e) => { if (e.key === "Escape") toggleBestiary(false); });
 
 /* ═══════ 로비 ═══════ */
 connectWS();
@@ -3925,6 +4107,19 @@ $("#btnSolo").addEventListener("click", () => {
   youAre = null; matchSeed = 0; oppSnapshot = null;
   if (ws) { try { ws.close(); } catch (_) {} ws = null; }
   beginBattle();
+});
+/**
+ * 나가기 — 판을 접고 첫 화면으로 돌아간다.
+ * 브라우저 뒤로가기는 이 페이지가 첫 기록이라 탭째로 닫혀 버려서, 판 안에는 나갈 길이 없었다.
+ *
+ * 판 하나에 걸려 있는 것이 한둘이 아니다 — 60fps 전투 루프, 선택 제한시간, 서버 연결,
+ * 시신·부스러기·연출 찌꺼기. 하나씩 되돌리는 대신 판을 새로 연다.
+ * 승부가 끝났을 때 뜨는 「로비로」 버튼도 같은 방식이다.
+ */
+$("#btnExit").addEventListener("click", () => {
+  if (!game) return;
+  if (!confirm("솔로 플레이를 종료합니다.")) return;
+  location.reload();
 });
 $("#btnCreate").addEventListener("click", () => sendWS({ t: "create" }));
 $("#btnJoin").addEventListener("click", () => {
