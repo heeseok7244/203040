@@ -34,11 +34,28 @@ const httpServer = http.createServer((req, res) => {
   if (p === '/') p = '/index.html';
   const full = path.join(PUBLIC_DIR, p);
   if (!full.startsWith(PUBLIC_DIR)) { res.writeHead(403); res.end('forbidden'); return; }
-  fs.readFile(full, (err, data) => {
-    if (err) { res.writeHead(404); res.end('not found'); return; }
-    const ext = path.extname(full);
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
-    res.end(data);
+  fs.stat(full, (statErr, st) => {
+    if (statErr || !st.isFile()) { res.writeHead(404); res.end('not found'); return; }
+    // 캐시 헤더를 아예 안 붙이면 브라우저가 제 나름의 기준으로 style.css 를 붙잡아 둔다.
+    // 그러면 CSS 를 고쳐도 예전 화면이 그대로 보여서 디버깅이 엉뚱한 데로 샌다.
+    // no-cache 는 "쓰기 전에 반드시 물어봐라" 라는 뜻이라, 안 바뀌었으면 304 로 끝나
+    // 매번 내려받지 않으면서도 항상 최신 파일을 보게 된다.
+    const tag = `W/"${st.size.toString(16)}-${st.mtimeMs.toString(16)}"`;
+    if (req.headers['if-none-match'] === tag) {
+      res.writeHead(304, { 'Cache-Control': 'no-cache', 'ETag': tag });
+      res.end();
+      return;
+    }
+    fs.readFile(full, (err, data) => {
+      if (err) { res.writeHead(404); res.end('not found'); return; }
+      const ext = path.extname(full);
+      res.writeHead(200, {
+        'Content-Type': MIME[ext] || 'application/octet-stream',
+        'Cache-Control': 'no-cache',
+        'ETag': tag,
+      });
+      res.end(data);
+    });
   });
 });
 
