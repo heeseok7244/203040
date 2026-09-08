@@ -238,13 +238,27 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   --violet:#241a3d; --violet2:#150e26; --violet-line:#4b3a72;
   --ember:#ff9a5c; --cream:#f3e6cf;
   --sky:#100c39;               /* 그림 귀퉁이 색 — 세로로 긴 화면에서 남는 자리를 메운다 */
-  --col:min(640px,100%);       /* 글자·버튼이 쓰는 폭 */
   /* 배경 그림이 cover 로 깔렸을 때 실제로 차지하는 상자 크기.
      .hero 가 이 상자를 그대로 재현해서, 냥이를 그림 속 퍼센트 좌표로 놓는다.
      dvh 를 모르는 브라우저를 위해 vh 로 한 번 깔고 덮어쓴다. */
   --stage-w:max(100vw,calc(100vh * 1672 / 941));
   --stage-w:max(100vw,calc(100dvh * 1672 / 941));
   --stage-h:calc(var(--stage-w) * 941 / 1672);
+  /* 로비 글자·버튼의 크기 단위.
+     배경·냥이와 같은 기준(무대 폭)에서 뽑아야 브라우저 배율을 바꿔도 셋이 같이 움직인다.
+     px 로 적으면 확대할 때 글자만 커져 그림과 어긋난다.
+
+     무대 폭의 1% 였을 때는 글자 기둥이 너무 커서 타이틀 윗선이 냥이 얼굴을 덮었다 —
+     창 비율을 0.89 부터 2.08 까지 바꿔 봐도 늘 92~119px 씩 겹쳤다. 비율 문제가 아니라
+     배율 문제라, 1/100 → 1/132 (0.76배) 로 낮춰 타이틀 윗선이 냥이 턱선 아래로 내려오게 했다.
+     (1920 화면에서 --ui ≈ 14.5px)
+
+     3.2vw 상한은 세로로 아주 긴 화면(휴대폰)에서 걸려 글자가 넘치는 것을 막고,
+     clamp 의 11px·26px 는 아주 작은 창과 4K 에서 글자가 읽을 수 없게 되거나
+     지나치게 커지는 것을 막는 하한·상한이다. */
+  --ui:clamp(11px,min(calc(var(--stage-w) / 132),3.2vw),26px);
+  --btn-gap:calc(var(--ui) * .98);   /* 솔로 버튼과 위아래 글자 사이 간격 */
+  --col:min(calc(var(--ui) * 33.3),100%);   /* 글자·버튼이 쓰는 폭 */
   min-height:100vh;min-height:100dvh;
   /* 글자·버튼은 아래로 붙인다 — 그림에서 건물 아래 빈 앞마당이 그 자리다. */
   display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
@@ -258,12 +272,13 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:url("img/lobby-bg.webp") center bottom / cover no-repeat,var(--sky)}
 
-/* ── 8프레임 공격 애니메이션 ──
-   스프라이트시트: public/img/cat-hero.webp — 2440×346, 1행×8열, 왼쪽부터 1→8.
-   배경을 투명하게 빼고 프레임마다 발끝을 같은 높이·같은 가로 중심에 맞춰
-   다시 조립한 시트라, 칸을 그대로 8등분해 넘기면 된다(떨림 없음).
-   좌표는 전부 원본 픽셀 기준으로 적고 --u(픽셀당 배율) 로 한 번에 확대한다.
-     칸 = 305 × 346 / 발끝은 칸 아래에서 8px 위 */
+/* ── 8프레임 할퀴기 애니메이션 ──
+   스프라이트시트: public/img/cat-hero.png — 1992×320, 1행×8열, 왼쪽부터 1→8.
+   원화는 2행×4열이었지만, 아래 행이 위 행보다 35px 낮게 그려져 있어 그대로 넘기면
+   중간에 냥이가 한 번 툭 떨어진다. 배경(남색)을 투명하게 빼고 프레임마다 발끝을
+   같은 높이·같은 가로 중심에 맞춰 한 줄로 다시 조립했다 — 그래서 8등분만 하면 된다.
+   좌표는 전부 시트 픽셀 기준으로 적고 --u(픽셀당 배율) 로 한 번에 확대한다.
+     칸 = 249 × 320 / 발끝은 칸 아래에서 7px 위 */
 /* .hero 는 눈에 보이지 않는 무대다 — 배경 그림이 cover 로 깔린 상자와 크기·위치가
    똑같다(가운데 아래 정렬). 그래서 그 안의 냥이는 화면이 아니라 "그림"을 기준으로
    좌표를 잡고, 창 비율이 바뀌어도 청사에 붙어 다닌다.
@@ -275,10 +290,19 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   --cat-x:60%;              /* 갈색 냥이 중심 — 현관 오른쪽, 우측 별관 앞 */
   --cat-y:38%;              /* 발밑 = 그림 y 62%. 앞마당 앞 가장자리 */
   /* --fw 는 "칸" 의 폭이다. 칸 안에서 냥이 몸통은 약 2/3 를 쓰고 나머지는
-     뻗은 앞발·모션선 자리라, 화면에 보이는 냥이는 이 값의 3분의 2쯤 된다. */
-  --fw:calc(var(--stage-w) * .115);
-  --u:calc(var(--fw) / 305);
-  --vh:calc(346 * var(--u));
+     뻗은 앞발·모션선 자리라, 화면에 보이는 냥이는 이 값의 3분의 2쯤 된다.
+     .094 는 이전 시트(칸 305×346, .115)와 냥이 키가 같아지도록 맞춘 값이다 —
+     새 칸이 세로로 더 길어서 같은 --fw 를 쓰면 냥이가 커져 버린다. */
+  --fw:calc(var(--stage-w) * .094);
+  --u:calc(var(--fw) / 249);
+  --vh:calc(320 * var(--u));
+  /* ── 할퀴기 속도 손잡이 ──
+     한 바퀴(대기 → 앞발 들기 → 긋기 → 되돌아오기)에 걸리는 시간.
+     아래 keyframes 는 전부 % 로 적어 뒀으므로, 이 값만 바꾸면 완급 비율은
+     그대로 둔 채 전체가 같이 빨라지고 느려진다. 흰 냥이의 반 박자 어긋남도
+     여기서 자동으로 따라온다.
+       .9s = 다급함 · 1.4s = 지금 · 2s = 여유로움  */
+  --swipe:1.4s;
   position:fixed;left:50%;bottom:0;transform:translateX(-50%);
   width:var(--stage-w);height:var(--stage-h);
   z-index:0;pointer-events:none}
@@ -293,12 +317,12 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 #lobby .catsprite{
   position:absolute;left:var(--cat-x);bottom:var(--cat-y);transform:translateX(-50%);
   width:var(--fw);height:var(--vh);
-  background-image:url("img/cat-hero.webp");
+  background-image:url("img/cat-hero.png");
   background-repeat:no-repeat;
-  background-size:calc(2440 * var(--u)) calc(346 * var(--u));
+  background-size:calc(1992 * var(--u)) calc(320 * var(--u));
   background-position:0 0;
-  animation:catSwipe .96s steps(1,end) infinite}
-/* 현관 왼편에 서는 흰 냥이. 시트를 갈색 냥이와 똑같은 칸 규격(305×346)으로
+  animation:catSwipe var(--swipe) steps(1,end) infinite}
+/* 현관 왼편에 서는 흰 냥이. 시트를 갈색 냥이와 똑같은 칸 규격(249×320)으로
    조립해 두었으므로, 서는 자리와 그림 주소만 바꾸면 나머지 계산은 그대로 쓴다.
    둘이 딱 맞춰 움직이면 기계처럼 보여서 반 박자 어긋나게 돌린다. */
 /* 40% = 갈색 냥이(60%) 를 화면 한가운데(50%) 기준으로 뒤집은 자리.
@@ -306,18 +330,27 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
    둘을 더 벌리거나 모으려면 50 에서 같은 폭만큼 떨어뜨리면 된다. */
 #lobby .glow.white,#lobby .catsprite.white{--cat-x:40%}
 #lobby .catsprite.white{
-  background-image:url("img/cat-hero2.webp");
-  animation-delay:-.48s}
-/* 한 줄짜리 시트라 가로로만 305px 씩 밀면 된다 */
+  background-image:url("img/cat-hero2.png");
+  /* 반 바퀴만큼 미리 돌려놓는다 — 둘이 딱 맞춰 움직이면 기계처럼 보인다.
+     --swipe 를 바꿔도 반 박자가 유지되도록 절대값 대신 나눠서 쓴다. */
+  animation-delay:calc(var(--swipe) / -2)}
+/* 한 줄짜리 시트라 가로로만 249px 씩 밀면 된다.
+   8칸을 똑같이 1/8 씩 나눠 주면 할퀴는 게 아니라 그냥 팔랑거리는 것으로 보인다.
+   실제 할퀴기는 "느리게 들었다가 → 한순간에 긋고 → 천천히 되돌아오는" 리듬이라,
+   칸마다 머무는 시간을 다르게 준다. % 로 적어 두면 --swipe 를 바꿔도 이 완급이
+   그대로 따라온다 (괄호 안은 --swipe:1.4s 일 때의 실제 시간):
+     1 대기 20% (.28s) · 2~3 들어올림 각 10% (.14s) · 4 정점에서 멈칫 20% (.28s)
+     5~7 긋기 각 6% (.084s — 여기가 순간) · 8 되돌아오기 22% (.31s)
+   steps(1,end) 라 각 구간은 시작 프레임을 그대로 붙들고 있다가 끝에서 다음 칸으로 튄다. */
 @keyframes catSwipe{
-  0%   {background-position:calc(    0 * var(--u)) 0}
-  12.5%{background-position:calc( -305 * var(--u)) 0}
-  25%  {background-position:calc( -610 * var(--u)) 0}
-  37.5%{background-position:calc( -915 * var(--u)) 0}
-  50%  {background-position:calc(-1220 * var(--u)) 0}
-  62.5%{background-position:calc(-1525 * var(--u)) 0}
-  75%  {background-position:calc(-1830 * var(--u)) 0}
-  87.5%{background-position:calc(-2135 * var(--u)) 0}
+  0%   {background-position:calc(    0 * var(--u)) 0}   /* 1 — 대기 */
+  20%  {background-position:calc( -249 * var(--u)) 0}   /* 2 — 앞발 든다 */
+  30%  {background-position:calc( -498 * var(--u)) 0}   /* 3 */
+  40%  {background-position:calc( -747 * var(--u)) 0}   /* 4 — 정점, 멈칫 */
+  60%  {background-position:calc( -996 * var(--u)) 0}   /* 5 — 긋기 시작 */
+  66%  {background-position:calc(-1245 * var(--u)) 0}   /* 6 — 긋는 순간 */
+  72%  {background-position:calc(-1494 * var(--u)) 0}   /* 7 — 끝까지 훑고 */
+  78%  {background-position:calc(-1743 * var(--u)) 0}   /* 8 — 되돌아오기 */
   100% {background-position:calc(    0 * var(--u)) 0}}
 @media(prefers-reduced-motion:reduce){
   #lobby .catsprite{animation:none}
@@ -333,7 +366,8 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 #lobby .bigtitle{
   position:relative;display:block;
   font-family:"Black Han Sans",var(--disp);font-weight:400;margin:0;
-  font-size:min(clamp(60px,16vw,112px),14vh);line-height:1.15;letter-spacing:.06em;
+  --ex:calc(var(--ui) * .052);   /* 3D 돌출 한 단 — 글자와 같이 커져야 두께가 안 어긋난다 */
+  font-size:min(calc(var(--ui) * 5.2),14vh);line-height:1.15;letter-spacing:.06em;
   /* 앞의 세 겹은 크기가 서로 어긋나는 별 타일 — 겹치면서 불규칙한 별밭이 된다 */
   background:
     radial-gradient(circle at 22% 34%,#fff 0 1.1px,transparent 1.7px) 0 0/37px 43px,
@@ -342,7 +376,7 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
     linear-gradient(158deg,#8a4be0 0%,#a95cf0 22%,#6a63f2 48%,#3aa8f0 74%,#4fdcf7 100%);
   -webkit-background-clip:text;background-clip:text;
   color:transparent;-webkit-text-fill-color:transparent;
-  filter:drop-shadow(0 0 30px rgba(130,95,245,.6))}
+  filter:drop-shadow(0 0 calc(var(--ui) * 1.56) rgba(130,95,245,.6))}
 /* left/right 를 둘 다 0 으로 잡아 본체와 똑같은 폭의 상자를 만든다.
    폭이 같아야 text-align:center 가 같은 자리에 글자를 놓는다 —
    left 만 주면 겹침 레이어가 왼쪽 끝으로 붙어 글자가 두 벌로 어긋나 보인다. */
@@ -353,27 +387,42 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 #lobby .bigtitle::before{
   z-index:-1;color:#1b1040;-webkit-text-fill-color:#1b1040;
   text-shadow:
-    1px 1px 0 #3b2a7a, 2px 2px 0 #372773, 3px 3px 0 #33246c,
-    4px 4px 0 #2f2165, 5px 5px 0 #2b1e5e, 6px 6px 0 #271b57,
-    7px 7px 0 #231850, 8px 8px 0 #1f1549, 9px 9px 0 #1b1242,
-    10px 10px 0 #170f3b}
+    calc(var(--ex) *  1) calc(var(--ex) *  1) 0 #3b2a7a,
+    calc(var(--ex) *  2) calc(var(--ex) *  2) 0 #372773,
+    calc(var(--ex) *  3) calc(var(--ex) *  3) 0 #33246c,
+    calc(var(--ex) *  4) calc(var(--ex) *  4) 0 #2f2165,
+    calc(var(--ex) *  5) calc(var(--ex) *  5) 0 #2b1e5e,
+    calc(var(--ex) *  6) calc(var(--ex) *  6) 0 #271b57,
+    calc(var(--ex) *  7) calc(var(--ex) *  7) 0 #231850,
+    calc(var(--ex) *  8) calc(var(--ex) *  8) 0 #1f1549,
+    calc(var(--ex) *  9) calc(var(--ex) *  9) 0 #1b1242,
+    calc(var(--ex) * 10) calc(var(--ex) * 10) 0 #170f3b}
 #lobby .bigtitle::after{
   z-index:1;color:transparent;-webkit-text-fill-color:transparent;
-  -webkit-text-stroke:1.3px rgba(150,231,255,.8)}
+  -webkit-text-stroke:calc(var(--ui) * .068) rgba(150,231,255,.8)}
 #lobby .tagline{
-  font-family:var(--disp);font-size:clamp(20px,5vw,27px);color:#fff;
-  margin:14px 0 0;letter-spacing:.02em;
-  text-shadow:0 0 22px rgba(255,154,92,.45)}
+  font-family:var(--disp);font-size:calc(var(--ui) * 1.54);color:#fff;
+  margin:calc(var(--ui) * .52) 0 0;letter-spacing:.02em;
+  text-shadow:0 0 calc(var(--ui) * 1.15) rgba(255,154,92,.45)}
 #lobby .subline{
-  font-size:15px;line-height:1.75;color:#c6b3e0;margin:10px 0 0;max-width:var(--col)}
+  /* 작은 글자에는 px 하한을 둔다 — 균일 축소만 하면 작은 창에서 8px 밑으로 내려가 못 읽는다 */
+  font-size:max(11px,calc(var(--ui) * .86));line-height:1.75;color:#c6b3e0;
+  margin:calc(var(--ui) * .38) 0 0;max-width:var(--col)}
 
 /* #lobby 에 max-width 가 없으므로 글자·버튼 칸은 각자 --col 로 폭을 맞춘다 */
 #lobby .tagline,#lobby .bigtitle{max-width:var(--col)}
-#lobby .entry{width:var(--col);margin-top:clamp(14px,3vh,30px)}
-#lobby button{border-radius:12px;font-family:var(--disp);letter-spacing:.04em;
+/* 세로 여백도 --ui 로 묶는다. vh 로 두면 창이 작아질 때 글자만 줄고 여백은 그대로라
+   기둥이 충분히 짧아지지 않아 타이틀이 다시 냥이 얼굴로 올라온다. */
+#lobby .entry{width:var(--col);margin-top:var(--btn-gap)}
+/* 솔로 버튼 위(설명문)·아래(안내문) 간격을 "눈에 보이는 대로" 같게 맞춘다.
+   버튼에는 0 6px 0 짜리 3D 받침 그림자가 있어 실제 아래 끝이 상자보다 6px 낮다.
+   위쪽 설명문은 line-height 1.75 라 글자 밑에 3px 남짓 여백을 이미 깔고 있고,
+   아래 안내문은 1.7px 뿐이다. 그 차(약 1.6px)와 그림자 6px 을 더한 8px 을 아래에 보탠다. */
+#lobby .entry .go + .codehint{margin-top:calc(var(--btn-gap) + 8px)}
+#lobby button{border-radius:calc(var(--ui) * .63);font-family:var(--disp);letter-spacing:.04em;
   transition:transform .12s ease,box-shadow .12s ease,background .12s ease}
 #lobby .entry .go{
-  width:100%;padding:20px;font-size:24px;color:#3a1c08;border:0;
+  width:100%;padding:calc(var(--ui) * 1.04);font-size:calc(var(--ui) * 1.38);color:#3a1c08;border:0;
   background:linear-gradient(180deg,#ffc07a,var(--ember));
   box-shadow:0 6px 0 #b95c2c,0 10px 26px rgba(255,140,70,.32)}
 #lobby .entry .go:hover:not(:disabled){
@@ -381,39 +430,63 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   box-shadow:0 8px 0 #b95c2c,0 14px 32px rgba(255,140,70,.42)}
 #lobby .entry .go:active{transform:translateY(4px);box-shadow:0 2px 0 #b95c2c}
 #lobby #createdBox{
-  margin-top:18px;padding:16px 12px;border-radius:14px;
+  margin-top:calc(var(--ui) * .94);padding:calc(var(--ui) * .83) calc(var(--ui) * .63);
+  border-radius:calc(var(--ui) * .73);
   border:1px solid var(--violet-line);background:rgba(255,255,255,.05)}
 #lobby #codeDisplay{
-  font-family:var(--disp);font-size:50px;letter-spacing:.24em;text-indent:.24em;
-  color:#ffd9a8;text-shadow:0 0 24px rgba(255,154,92,.55);line-height:1.15}
-#lobby .codehint{font-size:13px;color:#bda9d8;margin-top:6px}
+  font-family:var(--disp);font-size:calc(var(--ui) * 2.6);letter-spacing:.24em;text-indent:.24em;
+  color:#ffd9a8;text-shadow:0 0 calc(var(--ui) * 1.25) rgba(255,154,92,.55);line-height:1.15}
+#lobby .codehint{font-size:max(10px,calc(var(--ui) * .75));color:#bda9d8;margin-top:calc(var(--ui) * .31)}
 #lobby .or{
-  color:#9b86bd;font-size:14px;margin:clamp(12px,2.2vh,22px) 0;display:flex;align-items:center;gap:12px}
+  color:#9b86bd;font-size:max(10px,calc(var(--ui) * .80));margin:calc(var(--ui) * .85) 0;
+  display:flex;align-items:center;gap:calc(var(--ui) * .63)}
 #lobby .or::before,#lobby .or::after{
   content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--violet-line),transparent)}
 /* 1v1 쪽 입구는 솔로 버튼보다 한 단 낮은 톤으로 — 첫 화면의 주인공은 솔로 플레이다 */
 #lobby .entry .go.alt{
-  padding:13px;font-size:16px;color:var(--cream);
+  padding:calc(var(--ui) * .68);font-size:calc(var(--ui) * .91);color:var(--cream);
   background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.05));
   border:1px solid var(--violet-line);box-shadow:none}
 #lobby .entry .go.alt:hover:not(:disabled){
   background:rgba(255,255,255,.16);transform:translateY(-1px);box-shadow:none}
 #lobby .entry .go.alt:active{transform:translateY(2px);box-shadow:none}
-#lobby .joinrow{display:flex;gap:8px;margin-top:10px}
+#lobby .joinrow{display:flex;gap:calc(var(--ui) * .42);margin-top:calc(var(--ui) * .44)}
 #lobby #joinCode{
-  flex:1;min-width:0;font-family:var(--disp);font-size:22px;
+  flex:1;min-width:0;font-family:var(--disp);font-size:calc(var(--ui) * 1.27);
   text-transform:uppercase;letter-spacing:.22em;text-indent:.22em;text-align:center;
-  padding:16px 10px;border-radius:12px;color:var(--cream);
+  padding:calc(var(--ui) * .83) calc(var(--ui) * .52);
+  border-radius:calc(var(--ui) * .63);color:var(--cream);
   background:rgba(0,0,0,.28);border:1px solid var(--violet-line)}
 #lobby #joinCode:focus{outline:none;border-color:#a583e8;box-shadow:0 0 0 3px rgba(150,110,220,.25)}
 #lobby #joinCode::placeholder{
-  font-size:16px;letter-spacing:.06em;text-indent:0;color:#8a76ab}
+  font-size:max(11px,calc(var(--ui) * .91));letter-spacing:.06em;text-indent:0;color:#8a76ab}
 #lobby #btnJoin{
-  flex:none;padding:16px 28px;font-size:19px;color:var(--cream);
+  flex:none;padding:calc(var(--ui) * .83) calc(var(--ui) * 1.46);
+  font-size:calc(var(--ui) * 1.09);color:var(--cream);
   background:rgba(255,255,255,.07);border:1px solid var(--violet-line)}
 #lobby #btnJoin:hover:not(:disabled){
   background:rgba(255,255,255,.14);border-color:#a583e8;transform:translateY(-2px)}
-#lobby #joinError{color:#ff8f7d;font-size:13px;margin-top:12px}
+#lobby #joinError{color:#ff8f7d;font-size:max(10px,calc(var(--ui) * .75));margin-top:calc(var(--ui) * .63)}
+
+/* ── 작은 창 ──
+   글자에는 읽을 수 있는 최소 크기가 있어서(--ui 하한, 본문 11px) 글자 기둥은 305px 밑으로
+   줄지 않는다. 그런데 냥이는 창 크기와 무관하게 늘 화면 높이의 38~62% 자리에 서 있다.
+   그래서 창이 작아지면 기둥이 화면의 44% → 67% 까지 부풀며 냥이와 청사를 삼킨다.
+   여기서 더 축소하면 글자를 못 읽으니, 크기 대신 "여백과 설명"을 덜어낸다. */
+@media (max-height:820px),(max-width:820px){
+  #lobby{
+    --ui:clamp(9px,min(calc(var(--stage-w) / 132),3.2vw),26px);
+    --btn-gap:calc(var(--ui) * .9);
+    padding:clamp(10px,2vh,24px) 20px clamp(18px,4.4vh,60px)}
+  #lobby .bigtitle{font-size:min(calc(var(--ui) * 4.4),12vh)}
+  #lobby .tagline{margin-top:calc(var(--ui) * .45)}
+  #lobby .or{margin:calc(var(--ui) * .6) 0}
+}
+/* 더 좁아지면 보조 설명은 접는다 — 남길 것은 버튼과 코드 입력이다 */
+@media (max-height:560px),(max-width:620px){
+  #lobby .subline{display:none}
+  #lobby .entry .go + .codehint{display:none}
+}
 
 /* ── 특허권 행사 (액티브 스킬) ── */
 #skillBar{display:flex;flex-direction:column;gap:6px}
