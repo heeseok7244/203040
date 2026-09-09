@@ -62,11 +62,17 @@ h1{font-family:var(--disp);font-size:27px;margin:0;letter-spacing:.18em;color:#f
   background:var(--blue);border-color:var(--blue);color:var(--ink)}
 
 /* ── 침입자 도감 말풍선 ──
-   판 패널 오른쪽 위, 물음표 바로 아래에 겹쳐 뜬다. 판을 다 덮는 모달로 하면
-   "지금 오는 놈이 뭐였지" 를 확인하려고 열었을 때 정작 판이 안 보인다. */
-.beastpop{position:absolute;right:10px;top:36px;z-index:40;width:340px;max-width:calc(100% - 20px);
+   물음표 오른쪽 아래로 펼쳐진다. 왼쪽으로 펼치면 판을 덮어써서 "지금 오는 놈이 뭐였지" 를
+   확인하려고 열었을 때 정작 판이 안 보인다 — 그래서 판 바깥(오른쪽 칸 위)으로 내보낸다. */
+.beastpop{position:absolute;left:calc(100% - 24px);top:36px;z-index:40;width:340px;
   background:var(--ink2);border:1px solid var(--blue);
   box-shadow:0 10px 28px rgba(6,11,20,.6)}
+/* 물음표와 말풍선 사이의 10px 틈 — 그냥 두면 마우스를 옮기는 도중에 도감이 접힌다.
+   보이지 않는 다리를 깔아 두 영역을 하나로 잇는다. */
+.beastpop::before{content:"";position:absolute;left:0;width:44px;top:-12px;height:12px}
+/* 판이 화면 폭을 다 쓰는 좁은 화면에서는 오른쪽에 내보낼 자리가 없다 — 예전처럼 안쪽으로 접어 넣는다 */
+@media(max-width:980px){.beastpop{left:auto;right:10px;max-width:calc(100% - 20px)}
+  .beastpop::before{left:auto;right:0}}
 .beastpop-h{font-family:var(--disp);font-size:12px;padding:6px 12px;letter-spacing:.2em;
   border-bottom:1px solid var(--line);background:rgba(105,182,214,.1);color:#cfe2ee;font-weight:700;
   display:flex;justify-content:space-between;align-items:center;gap:8px}
