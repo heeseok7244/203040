@@ -56,9 +56,10 @@
     <div class="stat dmg"><b id="sHp">22</b><span>원부 내구</span></div>
     <div class="stat gold"><b id="sGold">85</b><span>특허료</span></div>
     <div class="stat"><b id="sWave">0/12</b><span>웨이브</span></div>
+    <!-- 스테이지 강화 · 증강이 곧 내 덱이다. 둘 다 1:1 대전장까지 그대로 실린다.
+         상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다. -->
     <div class="stat effects">
-      <div class="efcol"><i>내효과</i><div class="passiveTags" id="myPassiveTags"></div></div>
-      <div class="efcol" id="foeEfCol"><i>상대효과</i><div class="passiveTags" id="foePassiveTags"></div></div>
+      <div class="efcol"><i>스테이지 강화</i><div class="passiveTags" id="myPassiveTags"></div></div>
       <div class="efcol"><i>내증강</i><div class="passiveTags" id="myAugTags"></div></div>
     </div>
   </div>
@@ -68,23 +69,28 @@
   <div>
     <div class="panel">
       <h2>냥타워 <em>CAT TOWERS</em></h2>
+      <!-- 종류를 고르지 않는다. 정액을 내고 무작위로 한 명을 받는다 (확률표는 JS가 채운다) -->
       <div class="pad" id="catRoster"></div>
-      <!-- 승진은 증강이 자동으로 골라 주던 것을 걷어내고, 여기서 특허료를 내고 직접 임명한다 -->
+      <!-- 승진은 따로 사는 것이 아니라 합성의 마지막 단계다. 여기에는 지금 무엇이
+           몇 명·몇 레벨로 서 있는지(합성의 판단 재료)만 놓는다 -->
       <div class="pad promoteBox">
-        <i>승진 임명 <b>PROMOTION</b></i>
+        <i>보유 현황 <b>ROSTER</b></i>
         <div id="promoteList"></div>
-        <div class="prhint">준비 단계에 판 위 냥타워를 골라 특허료를 내면 선글라스·샷건을 지급합니다 —
-          공격력 +25% · 치명타 +12%p · 배율 +0.5 에 명중 지점 반경 1.4칸 방사 피해 70%.
-          승진자가 늘수록 임명료가 올라갑니다.</div>
+        <div class="prhint">합성은 두 갈래입니다 — <b>같은 종류·같은 레벨 3명</b>이면 레벨업(Lv2 공격력 ×1.85,
+          <b>Lv3 는 승진냥</b>: 선글라스·샷건에 반경 1.4칸 방사 피해 70%),
+          <b style="color:#6fe0d0">다른 종류</b>를 처방대로 모으면 뽑기에 없는 <b style="color:#6fe0d0">특수 냥타워</b>가
+          나옵니다. 어느 쪽이든 재료가 차면 판 <b>우측 상단</b>에 단추가 뜹니다 (준비 단계에만).</div>
       </div>
     </div>
+    <!-- 냥타워는 내가 고르고, 상대를 흔드는 쪽만 운에 맡긴다 — 무엇이 나갈지는 뽑아 봐야 안다 -->
     <div class="panel hidden" id="sabPanel">
-      <h2>방해 공작 <em>SABOTAGE</em></h2>
+      <h2>방해 공작 <em>SABOTAGE DRAW</em></h2>
       <div class="pad">
         <div id="sabBar"></div>
         <div style="font-size:10.5px;color:var(--muted);line-height:1.55;margin-top:8px">
-          특허료를 내고 <b style="color:var(--txt)">상대 판</b>에 직접 훼방을 놓습니다. 종류마다
-          <b style="color:var(--txt)">웨이브 주기(준비 + 그 웨이브)에 한 번</b>씩 쓸 수 있습니다.<br>
+          특허료를 내고 다섯 공작 중 <b style="color:#c3a8f5">하나를 무작위로 뽑아</b>
+          <b style="color:var(--txt)">상대 판</b>에 던집니다. 뽑기는
+          <b style="color:var(--txt)">웨이브 주기(준비 + 그 웨이브)마다 2회</b>씩 찹니다.<br>
           기름·연막은 상대 판에서 곧바로 흐르고(상대가 준비 중이면 다음 웨이브 첫머리부터),
           나머지는 상대의 다음 웨이브 구성 자체를 바꿉니다.
         </div>
@@ -123,6 +129,9 @@
         <!-- 스테이지 원화(map/*.png)를 깔고 그 위에 판을 얹는다. 여백은 원화마다 액자 두께가
              달라서 JS(STAGE_THEMES)가 테마별로 정해 넣는다 -->
         <div class="arena" id="arena">
+          <!-- 합성 가능한 묶음 — 판 우측 상단. 원화 액자의 윗여백에 얹혀서 판을 가리지 않는다.
+               같은 종류·같은 레벨이 3명 모이면 저절로 뜨고, 누르면 그 자리에서 합쳐진다 -->
+          <div id="mergeDock" class="hidden"></div>
           <div class="stage">
             <div id="board"></div>
             <canvas id="fx"></canvas>
@@ -165,6 +174,46 @@
     </div>
   </div>
 </div>
+</div>
+
+<!-- ── 1:1 대전장 (스테이지 5·11) ──
+     청사 판을 접어 두고 옆에서 본 한 줄짜리 전장으로 옮겨 온다. 왼쪽이 늘 내 성채,
+     오른쪽이 상대 성채다. 아래 출격 카드로 냥타워를 내보내 상대 성채를 무너뜨린다.
+     여기에는 배속이 없다 — 양쪽이 같은 속도로 봐야 같은 판이 된다. -->
+<div id="duelStage" class="hidden">
+  <div class="duelbox">
+    <div class="duelhead">
+      <span class="dside me"><i>내 성채</i><b id="duelMine">-</b></span>
+      <span class="duelmid">
+        <em>⚔ 1:1 대전 <span>DUEL ROUND</span></em>
+        <span class="dtime" id="duelTimer">90.0초</span>
+        <span class="dtrack"><i id="duelFill"></i></span>
+      </span>
+      <!-- 솔로에서는 상대가 사람이 아니라 무작위로 편성된 쥐 침입단이다 (JS가 이름을 바꿔 넣는다) -->
+      <span class="dside foe"><i id="duelFoeLabel">상대 성채</i><b id="duelTheirs">대기</b></span>
+    </div>
+    <div class="duelfield">
+      <canvas id="duelCv" width="1000" height="420"></canvas>
+      <div id="duelResult" class="hidden"></div>
+    </div>
+    <!-- 출격 줄 — 냥코의 그 줄이다. 특허료 게이지 + 내가 만든 냥타워 카드 -->
+    <div class="duelbottom">
+      <div class="dmoney">
+        <b id="duelMoney">0/0원</b>
+        <span class="dmtrack"><i id="duelMoneyFill"></i></span>
+      </div>
+      <div id="duelCards"></div>
+    </div>
+    <div class="duelnote">카드를 눌러 냥타워를 내보내면 상대 쪽으로 걸어가 마주친 적과 싸우고,
+      길이 뚫리면 성채를 두들깁니다. <b>먼저 상대 성채를 무너뜨리는 쪽이 이깁니다.</b>
+      특허료는 시간이 지나면 차오르고, 카드에 적힌 <b>×숫자</b>가 남은 출격 횟수입니다 —
+      청사 판에 세워 둔 만큼만 낼 수 있습니다.<br>
+      지금까지 쌓은 <b style="color:#7fbf6a">스테이지 강화</b> ·
+      <b style="color:var(--gold)">증강</b> · <b style="color:#6fe0d0">합성 레벨</b>이
+      <b>그대로 실려 있습니다</b> — 여기가 내 덱을 확인하는 자리입니다.
+      혼자 할 때는 침입자 넷이 <b style="color:var(--gold)">무작위로 편성된 쥐 침입단</b>으로 나섭니다.
+      <b>지는 쪽은 등록원부 내구 30을 잃습니다.</b></div>
+  </div>
 </div>
 
 <div id="modal"><div class="sheet" id="sheet"></div></div>
