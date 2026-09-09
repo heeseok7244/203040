@@ -131,8 +131,10 @@ function leaveRoom(conn) {
 }
 
 // 방(room) 안에서 상대에게 그대로 중계하는 메시지 타입 → 상대가 받을 때의 타입
+// duel 은 스테이지 5·11 의 1:1 대전 명세다. 서버는 승패를 판정하지 않고 명세만 넘긴다 —
+// 두 클라이언트가 같은 명세·같은 시드로 같은 시뮬레이션을 돌려 같은 결과에 닿는다.
 const RELAY = {
-  state: 'oppState', passive: 'oppPassive', sabotage: 'oppSabotage',
+  state: 'oppState', passive: 'oppPassive', sabotage: 'oppSabotage', duel: 'oppDuel',
   won: 'oppWon', lost: 'oppLost',
 };
 

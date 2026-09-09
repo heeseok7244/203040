@@ -557,28 +557,85 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   padding:3px 7px;border:1px solid rgba(196,50,42,.55);background:rgba(196,50,42,.12);
   color:#f0b9b2}
 
-/* ── 승진 임명 ── */
+/* ── 랜덤 임용 (뽑기) ──
+   종류를 고르는 카드 여섯 장 대신, 큰 단추 하나와 확률표만 남긴다. */
+.drawbtn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:11px 12px;
+  border-color:var(--gold);background:linear-gradient(180deg,rgba(205,164,58,.18),rgba(205,164,58,.06))}
+.drawbtn:hover:not(:disabled){background:rgba(205,164,58,.28);border-color:#e6bf55}
+.drawbtn .ic{font-size:26px;flex:none;line-height:1}
+.drawbtn .meta{min-width:0;flex:1}
+.drawbtn .meta b{display:block;font-family:var(--disp);font-size:14px;color:#f4e2b0;font-weight:700}
+.drawbtn .meta i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;
+  color:var(--muted);margin-top:2px}
+.drawbtn .cost{flex:none;font-family:var(--mono);font-size:14px;color:var(--gold);font-weight:700}
+
+/* 방금 무엇이 나왔는지 — 판 위 도장은 금방 사라지므로 글로도 한 번 남긴다 */
+.drawflash{display:flex;align-items:center;gap:8px;margin-top:7px;padding:7px 9px;
+  border:1px solid var(--gold);background:rgba(205,164,58,.12);
+  animation:drawPop .32s cubic-bezier(.2,1.4,.4,1)}
+.drawflash .ic{font-size:20px;flex:none}
+.drawflash b{font-family:var(--disp);font-size:12px;color:#f4e2b0;flex:none}
+.drawflash i{font-style:normal;font-size:10px;color:var(--muted);line-height:1.35;min-width:0}
+@keyframes drawPop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+@media(prefers-reduced-motion:reduce){.drawflash{animation:none}}
+
+.drawpool{display:flex;flex-direction:column;gap:3px;margin-top:9px;
+  border-top:1px solid var(--line);padding-top:8px}
+/* 확률표 · 보유 현황이 같이 쓰는 한 줄 */
+.prow2{display:flex;align-items:center;gap:8px;padding:3px 4px;line-height:1.3}
+.prow2 .ic{font-size:16px;flex:none}
+.prow2 .meta{min-width:0;flex:1}
+.prow2 .meta b{display:block;font-family:var(--disp);font-size:11.5px;color:#e8eef4;font-weight:700}
+.prow2 .meta b em{font-style:normal;font-family:var(--mono);font-size:9.5px;color:var(--gold)}
+.prow2 .meta i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;color:var(--muted)}
+.prow2 .pct{flex:none;font-family:var(--mono);font-size:11px;color:var(--blue);font-weight:700}
+.prow2.lvrow{border:1px solid var(--line);background:rgba(105,182,214,.05);padding:5px 7px}
+.prow2.lvrow.top{border-color:var(--gold);background:rgba(205,164,58,.12)}
+.prow2.lvrow.top .pct{color:var(--gold)}
+
+/* ── 합성 (판 우측 상단) ──
+   원화 액자의 윗여백(--map-pad 위쪽 87~91px)에 얹혀서 판을 가리지 않는다. */
+#mergeDock{position:absolute;top:6px;right:8px;z-index:30;
+  display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end;
+  max-width:min(560px,calc(100% - 16px));
+  padding:5px 7px;border:1px solid var(--gold);border-radius:3px;
+  background:rgba(20,16,10,.82);box-shadow:0 4px 14px rgba(6,11,20,.5)}
+#mergeDock .mhead{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:#f4e2b0;
+  align-self:center;white-space:nowrap}
+#mergeDock .mhead b{color:var(--gold);font-size:11px}
+.mchip{display:flex;align-items:center;gap:6px;padding:4px 7px;line-height:1.25;
+  border-color:var(--gold);background:rgba(205,164,58,.16);
+  animation:mergeReady 1.6s ease-in-out infinite}
+.mchip:hover:not(:disabled){background:var(--gold);border-color:var(--gold);animation:none}
+.mchip:hover .meta b,.mchip:hover .meta i,.mchip:hover .go{color:#2b2418}
+.mchip .ic{font-size:16px;flex:none}
+.mchip .meta{text-align:left;min-width:0}
+.mchip .meta b{display:block;font-family:var(--disp);font-size:11px;color:#f4e2b0;font-weight:700;
+  white-space:nowrap}
+.mchip .meta i{display:block;font-style:normal;font-family:var(--mono);font-size:8.5px;
+  color:#c8b98e;white-space:nowrap}
+.mchip .go{flex:none;font-family:var(--disp);font-size:10.5px;color:var(--gold);font-weight:700;
+  border-left:1px solid rgba(205,164,58,.5);padding-left:6px}
+@keyframes mergeReady{0%,100%{box-shadow:0 0 0 0 rgba(205,164,58,.5)}
+  50%{box-shadow:0 0 0 3px rgba(205,164,58,.16)}}
+@media(prefers-reduced-motion:reduce){.mchip{animation:none}}
+
+/* 합성 레벨 딱지 — 판 위 냥타워 왼쪽 위 */
+.piece.cat .lvtag{position:absolute;left:-3px;top:-3px;z-index:5;pointer-events:none;
+  font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.02em;
+  color:#ffd782;background:#2b2418;border:1px solid #cda43a;border-radius:3px;padding:1px 3px;
+  line-height:1}
+.piece.cat.lv2{box-shadow:0 0 0 2px rgba(105,182,214,.6),2px 3px 0 rgba(43,36,24,.35)}
+
+/* ── 보유 현황 ── */
 .promoteBox{border-top:1px solid var(--line);padding-top:9px}
 .promoteBox>i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;
   letter-spacing:.12em;color:var(--muted);margin-bottom:6px}
 .promoteBox>i b{color:var(--gold);font-weight:400}
 #promoteList{display:flex;flex-direction:column;gap:5px}
-.prow{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:6px 8px;
-  line-height:1.3}
-.prow .ic{font-size:17px;flex:none}
-.prow .meta{min-width:0;flex:1}
-.prow .meta b{display:block;font-family:var(--disp);font-size:11.5px;color:#e8eef4;font-weight:700}
-.prow .meta i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;
-  color:var(--muted);margin-top:1px}
-.prow .right{flex:none;text-align:right}
-.prow .cost{display:block;font-family:var(--mono);font-size:11.5px;color:var(--gold);font-weight:700}
-.prow .state{display:block;font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:1px}
-.prow:not(:disabled){border-color:var(--gold)}
-.prow:not(:disabled) .state{color:var(--ok)}
-.prow.done{border-color:rgba(205,164,58,.45);opacity:.85}
-.prow.done .right .done{font-family:var(--disp);font-size:15px;color:var(--gold)}
 .prnone{font-size:10px;color:var(--muted);font-family:var(--mono);padding:2px 0}
 .prhint{font-size:10px;color:var(--muted);line-height:1.55;margin-top:7px}
+.prhint b{color:var(--gold);font-weight:400}
 
 /* ── 헤더: 웨이브 옆 효과칸 (내효과 | 상대효과 나란히) ── */
 .stat.effects{display:flex;gap:14px;min-width:280px;flex:1;padding:4px 11px 5px}
@@ -661,6 +718,71 @@ body.solo #sabPanel{display:none!important}
 .choicebar .track{flex:1;height:5px;background:rgba(0,0,0,.35);border:1px solid var(--line)}
 .choicebar .track i{display:block;height:100%;background:linear-gradient(90deg,#cda43a,#c4322a);
   transition:width .12s linear}
+
+/* ══ 1:1 대전장 (스테이지 5·11) ═══════════════
+   청사 판을 가리고 화면 전체를 덮는다 — 「스테이지를 옮겨서 붙는다」가 눈에 그대로 보이도록.
+   모달(#modal, z-index 150)보다 아래에 둬야 대전 중에 판이 끝나도 결과창이 위로 뜬다. */
+#duelStage{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;
+  padding:18px;background:radial-gradient(circle at 50% 40%,rgba(36,26,61,.94),rgba(6,11,20,.97));
+  animation:duelIn .35s ease-out}
+@keyframes duelIn{from{opacity:0;transform:scale(.985)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){#duelStage{animation:none}}
+.duelbox{width:100%;max-width:940px;border:1px solid var(--gold);border-bottom-width:3px;
+  background:var(--ink2);box-shadow:0 18px 60px rgba(6,11,20,.7)}
+
+.duelhead{display:flex;align-items:center;gap:12px;padding:9px 14px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(90deg,rgba(105,182,214,.14),rgba(205,164,58,.16),rgba(196,50,42,.14))}
+.duelhead .dside{flex:none;min-width:104px}
+.duelhead .dside.foe{text-align:right}
+.duelhead .dside i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;
+  color:var(--muted);letter-spacing:.1em}
+.duelhead .dside b{display:block;font-family:var(--mono);font-size:16px;line-height:1.2;color:#fff}
+.duelhead .dside.me b{color:var(--blue)}
+.duelhead .dside.foe b{color:var(--seal-soft)}
+.duelhead .duelmid{flex:1;min-width:0;text-align:center}
+.duelhead .duelmid em{display:block;font-style:normal;font-family:var(--disp);font-size:15px;
+  letter-spacing:.16em;color:#f4e2b0;font-weight:700}
+.duelhead .duelmid em span{font-family:var(--mono);font-size:9px;letter-spacing:.14em;
+  color:var(--muted);margin-left:6px}
+.duelhead .dtime{display:block;font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:2px}
+.duelhead .dtrack{display:block;height:5px;margin-top:4px;background:rgba(0,0,0,.4);
+  border:1px solid var(--line)}
+.duelhead .dtrack i{display:block;height:100%;background:linear-gradient(90deg,#c4322a,#cda43a);
+  transition:width .12s linear}
+
+.duelfield{position:relative;padding:12px;background:var(--paper2)}
+#duelCv{display:block;width:100%;height:auto;border:1px solid var(--paper-line);
+  background:var(--paper);image-rendering:auto}
+
+/* 결과 — 대전장 한가운데에 도장처럼 얹힌다 */
+#duelResult{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  min-width:min(340px,80%);text-align:center;padding:18px 26px;
+  border:3px solid var(--gold);background:rgba(12,21,36,.93);
+  box-shadow:0 10px 34px rgba(6,11,20,.7);animation:duelStamp .4s cubic-bezier(.2,1.4,.4,1)}
+#duelResult b{display:block;font-family:var(--disp);font-size:26px;letter-spacing:.18em;color:var(--gold)}
+#duelResult i{display:block;font-style:normal;font-family:var(--mono);font-size:10.5px;
+  color:var(--muted);margin-top:5px;letter-spacing:.04em}
+#duelResult span{display:block;font-size:13px;color:var(--txt);margin-top:9px}
+#duelResult.win{border-color:var(--gold)}
+#duelResult.lose{border-color:var(--seal)}
+#duelResult.lose b{color:var(--seal-soft)}
+#duelResult.draw{border-color:var(--line)}
+#duelResult.draw b{color:var(--txt)}
+@keyframes duelStamp{0%{opacity:0;transform:translate(-50%,-50%) scale(1.5) rotate(-8deg)}
+  100%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(-2deg)}}
+@media(prefers-reduced-motion:reduce){#duelResult{animation:none}}
+
+.duelnote{font-size:10.5px;color:var(--muted);line-height:1.6;padding:9px 14px;
+  border-top:1px solid var(--line)}
+.duelnote b{color:var(--seal-soft)}
+/* 대전장이 덮은 동안 청사 판에서 딸려 온 말풍선이 위에 떠 있으면 안 된다 */
+body.dueling #tip{display:none!important}
+
+/* 다음 라운드가 대전이면 개시 버튼이 금빛으로 바뀐다 — 무엇이 시작되는지 눌러 보기 전에 알도록 */
+.boardctl #btnGo.duelnext{background:#8a6a1c;border-color:var(--gold)}
+.boardctl #btnGo.duelnext:hover:not(:disabled){background:#a37f22;border-color:#e6bf55}
+.boardctl #btnGo.duelnext.waiting{background:#3f7a2f;border-color:#3f7a2f}
 
 /* 승진냥 · 직권보정으로 뽑힌 냥
    (::after 는 무효 도장·보좌 후광이 이미 쓰고 있어서, 승진 표시는 pieceEl 이 붙이는

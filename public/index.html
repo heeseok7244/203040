@@ -68,14 +68,16 @@
   <div>
     <div class="panel">
       <h2>냥타워 <em>CAT TOWERS</em></h2>
+      <!-- 종류를 고르지 않는다. 정액을 내고 무작위로 한 명을 받는다 (확률표는 JS가 채운다) -->
       <div class="pad" id="catRoster"></div>
-      <!-- 승진은 증강이 자동으로 골라 주던 것을 걷어내고, 여기서 특허료를 내고 직접 임명한다 -->
+      <!-- 승진은 따로 사는 것이 아니라 합성의 마지막 단계다. 여기에는 지금 무엇이
+           몇 명·몇 레벨로 서 있는지(합성의 판단 재료)만 놓는다 -->
       <div class="pad promoteBox">
-        <i>승진 임명 <b>PROMOTION</b></i>
+        <i>보유 현황 <b>ROSTER</b></i>
         <div id="promoteList"></div>
-        <div class="prhint">준비 단계에 판 위 냥타워를 골라 특허료를 내면 선글라스·샷건을 지급합니다 —
-          공격력 +25% · 치명타 +12%p · 배율 +0.5 에 명중 지점 반경 1.4칸 방사 피해 70%.
-          승진자가 늘수록 임명료가 올라갑니다.</div>
+        <div class="prhint">같은 종류·같은 레벨 <b>3명</b>이 모이면 판 <b>우측 상단</b>에 합성 단추가 뜹니다.
+          Lv2 는 공격력 ×1.85, <b>Lv3 는 승진냥</b>이 되어 선글라스·샷건과 반경 1.4칸
+          방사 피해 70%가 붙습니다 (준비 단계에만 합성).</div>
       </div>
     </div>
     <div class="panel hidden" id="sabPanel">
@@ -123,6 +125,9 @@
         <!-- 스테이지 원화(map/*.png)를 깔고 그 위에 판을 얹는다. 여백은 원화마다 액자 두께가
              달라서 JS(STAGE_THEMES)가 테마별로 정해 넣는다 -->
         <div class="arena" id="arena">
+          <!-- 합성 가능한 묶음 — 판 우측 상단. 원화 액자의 윗여백에 얹혀서 판을 가리지 않는다.
+               같은 종류·같은 레벨이 3명 모이면 저절로 뜨고, 누르면 그 자리에서 합쳐진다 -->
+          <div id="mergeDock" class="hidden"></div>
           <div class="stage">
             <div id="board"></div>
             <canvas id="fx"></canvas>
@@ -165,6 +170,30 @@
     </div>
   </div>
 </div>
+</div>
+
+<!-- ── 1:1 대전장 (스테이지 5·11) ──
+     청사 판을 접어 두고 여기로 옮겨 온다. 왼쪽이 늘 내 냥타워, 오른쪽이 상대 냥타워다.
+     여기에는 배속이 없다 — 양쪽이 같은 속도로 봐야 같은 장면이 된다. -->
+<div id="duelStage" class="hidden">
+  <div class="duelbox">
+    <div class="duelhead">
+      <span class="dside me"><i>내 냥타워</i><b id="duelMine">0 / 0</b></span>
+      <span class="duelmid">
+        <em>⚔ 1:1 대전 <span>DUEL ROUND</span></em>
+        <span class="dtime" id="duelTimer">45.0초</span>
+        <span class="dtrack"><i id="duelFill"></i></span>
+      </span>
+      <span class="dside foe"><i>상대 냥타워</i><b id="duelTheirs">대기</b></span>
+    </div>
+    <div class="duelfield">
+      <canvas id="duelCv" width="900" height="460"></canvas>
+      <div id="duelResult" class="hidden"></div>
+    </div>
+    <div class="duelnote">사거리가 짧은 냥타워가 앞줄에서 먼저 붙고, 장사거리 냥타워가 뒤에서 지원합니다.
+      변리사냥은 싸우지 않고 가장 다친 아군을 회복시킵니다.
+      <b>지는 쪽은 등록원부 내구 30을 잃습니다.</b></div>
+  </div>
 </div>
 
 <div id="modal"><div class="sheet" id="sheet"></div></div>
