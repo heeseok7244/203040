@@ -136,7 +136,8 @@ function leaveRoom(conn) {
 //   duelDeploy  전투 중 출격 카드를 냈다는 알림 (상대 화면에 그 유닛이 걸어 나온다)
 //   duelResult  p1 이 내린 판정. 실시간 출격이라 두 화면이 어긋날 수 있어, 승패는 한쪽 계산을
 //               정본으로 삼는다 — 서버는 여기서도 판정하지 않고 그대로 넘기기만 한다
-// (스테이지 강화 효과는 넷 다 자기 판에만 작용해서 중계할 것이 없다 — 예전의 passive 는 뺐다)
+// (스테이지 강화 효과는 넷 다 자기 냥타워를 키우는 것이라 상대에게 걸 것이 없다 —
+//  중계할 일이 없어져 예전의 passive 는 뺐다)
 const RELAY = {
   state: 'oppState', sabotage: 'oppSabotage',
   duel: 'oppDuel', duelDeploy: 'oppDuelDeploy', duelResult: 'oppDuelResult',

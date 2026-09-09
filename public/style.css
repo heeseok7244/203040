@@ -190,6 +190,8 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 .picks{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:14px}
 @media(max-width:560px){.picks{grid-template-columns:1fr}}
 /* 스테이지 강화 효과 — 넷뿐이라 2×2 로 놓는다 (스테이지강화효과예시.png) */
+.upnote{font-size:11px;color:var(--muted);padding:10px 14px 0;line-height:1.55}
+.upnote b{color:#7fbf6a}
 .picks.upgrades{grid-template-columns:1fr 1fr;gap:10px}
 @media(max-width:520px){.picks.upgrades{grid-template-columns:1fr}}
 .pick.up{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;

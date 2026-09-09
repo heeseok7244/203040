@@ -214,10 +214,19 @@ const RECIPES = [
  * 상대를 건드리는 일은 이제 **방해 공작 뽑기**가 통째로 맡는다. 그래서 여기 남은 것은
  * **내 냥타워를 키우는 네 가지**뿐이고, 선택 화면도 2×2로 한눈에 들어온다.
  *
+ * ── 어디까지 따라가는가 ──
+ * 앞의 셋(공격력·공속·치명타)은 냥타워의 능력치 자체를 바꾸므로 **청사 판과 1:1 대전장 양쪽에
+ * 그대로 실린다.** 대전 명세(makeRoster)를 계산이 끝난 c.st 에서 뽑기 때문이다.
+ * 그래서 「스테이지 강화 + 증강 + 냥타워(합성)」로 쌓아 올린 것이 곧 내 덱이고,
+ * 그 덱이 얼마나 되는지를 확인하는 자리가 대전 라운드다.
+ *
+ * **gold2x 만 판 전용이다** — 처치 보상을 두 배로 만드는 효과인데, 대전장에는 처치 보상이
+ * 없으므로 실릴 곳이 없다.
+ *
  * stat 별 성격
- *   dmg/rate   % 배율로 계속 쌓인다 (bonus 에 더해진다)
- *   critC      확률에 그대로 더하는 절대값 (상한 BAL.critCap)
- *   gold2x     그 스테이지 한 번만 — 다음 웨이브의 처치 보상이 2배가 된다 (누적되지 않는다)
+ *   dmg/rate   % 배율로 계속 쌓인다 (bonus 에 더해진다) · 대전장에도 실린다
+ *   critC      확률에 그대로 더하는 절대값 (상한 BAL.critCap) · 대전장에도 실린다
+ *   gold2x     그 스테이지 한 번만 — 다음 웨이브의 처치 보상이 2배 (누적 없음, 판 전용)
  *
  * @type {{key:string,name:string,icon:string,stat:"dmg"|"rate"|"critC"|"gold2x",
  *   amount:number,desc:string,detail:string}[]}
@@ -1161,7 +1170,7 @@ function computeStats(b) {
     /* ── 승진 = 합성의 마지막 단계 ──
      * 최고 레벨(BAL.promoteLv)에 닿으면 저절로 승진냥이 되어 선글라스·샷건이 붙는다.
      * 단 **실제로 사격하는 냥만** 승진한다 — 쏘지 않는 변리사냥에게 샷건을 쥐여 줘도 쓸 데가 없고,
-     * 판에서만 「昇」 딱지가 붙어 헷갈린다. 「변리사 개업」으로 직접 싸우게 됐다면 그때는 승진한다.
+     * 판에서만 「승」 딱지가 붙어 헷갈린다. 「변리사 개업」으로 직접 싸우게 됐다면 그때는 승진한다.
      * 증강을 다 반영한 뒤에 계산하는 이유가 이것이다.
      * (레벨이 오른 비전투 변리사냥은 대신 보좌 배율이 세진다 — 위 auraDmg/auraRate 참고) */
     const promoted = lv >= BAL.promoteLv && dmg > 0 && rate > 0 && range > 0;
@@ -2679,10 +2688,15 @@ class Game {
   }
 
   /**
-   * 스테이지 강화 효과를 적용한다. 넷 다 내 판에만 작용하므로 상대에게 보낼 것이 없다.
+   * 스테이지 강화 효과를 적용한다.
+   *
+   * 넷 다 **내 냥타워를 키우는** 효과라 상대에게 걸 것이 없다 (예전의 「상대 약화」 셋은
+   * 방해 공작 뽑기로 옮겼다). 상대에게 중계할 필요가 없다는 뜻이지, 내 판에서만 산다는 뜻은
+   * 아니다 — dmg/rate/critC 는 냥타워의 능력치 자체를 바꾸므로 **1:1 대전장에도 그대로 실린다.**
    *
    * dmg/rate 는 % 배율로, critC 는 확률에 그대로 더하는 절대값으로 쌓인다.
-   * gold2x 만 성격이 다르다 — 쌓이지 않고 **다음 한 스테이지 동안만** 처치 보상을 두 배로 만든다.
+   * gold2x 만 성격이 다르다 — 쌓이지 않고 **다음 한 스테이지 동안만** 처치 보상을 두 배로 만들며,
+   * 처치 보상이 없는 대전장에는 실리지 않는다.
    * @param {{key:string,stat:string,amount:number}} def
    */
   applyPassive(def) {
@@ -2879,8 +2893,9 @@ function onServerMessage(msg) {
     case "waveGo":           // 서버의 개시 신호 — 양쪽이 같은 순간에 웨이브를 시작한다
       if (game && game.wave + 1 === msg.wave) doStartWave();
       break;
-    // 스테이지 강화 효과는 넷 다 자기 판에만 작용하므로 상대에게 오갈 것이 없다.
-    // 상대를 흔드는 일은 아래 방해 공작 뽑기가 통째로 맡는다.
+    // 스테이지 강화 효과는 넷 다 자기 냥타워를 키우는 것이라 상대에게 걸 것이 없다
+    // (상대를 흔드는 일은 아래 방해 공작 뽑기가 맡는다). 중계할 게 없다는 뜻일 뿐,
+    // 공격력·공속·치명타는 1:1 대전장까지 그대로 따라간다.
     case "oppSabotage":
       if (game) game.receiveSabotage(msg.key);
       break;
@@ -3023,7 +3038,7 @@ function pieceEl(p, onBoard) {
   // 승진냥(최고 레벨)은 왼쪽에 계급장을 단다 (냥이 자체는 선글라스 낀 원화로 그려진다)
   if (promoted) {
     const rank = document.createElement("span");
-    rank.textContent = "昇";
+    rank.textContent = "승";
     rank.style.cssText = BADGE("left") +
       ";border-color:#cda43a;background:#2b2418;color:#ffd782;font-size:13px;font-weight:700";
     el.appendChild(rank);
@@ -4093,14 +4108,14 @@ function consumeEvents() {
         const bb = $("#board").getBoundingClientRect();
         if (ev.kind === "freeze") {
           skillFx.push({ kind: "freeze", life: .6, max: .6, x: 0, y: 0, r: 0 });
-          stamp(bb.left + bb.width / 2, bb.top + bb.height / 2, "假處分", ev.name);
+          stamp(bb.left + bb.width / 2, bb.top + bb.height / 2, "가처분", ev.name);
           log(`<b style="color:#8fd8f0">${ev.name}</b> 집행 — 침입자 ${ev.hit}건 ${ev.dur}초 이동정지 (−${ev.cost})`);
         } else {
           skillFx.push({ kind: "purge", life: .5, max: .5, x: ev.x, y: ev.y, r: ev.radius });
           spawnSparks(ev.x, ev.y, true);
           addShake(6, .26);
           addFloater(ev.x, ev.y, `폐기 ${ev.killed}`, "#ffd782", { life: .9 });
-          stamp(bb.left + ev.x, bb.top + ev.y, "廢 棄", ev.name);
+          stamp(bb.left + ev.x, bb.top + ev.y, "폐 기", ev.name);
           log(`<b style="color:#e0574d">${ev.name}</b> 집행 — 범위 내 ${ev.hit}건 중 ${ev.killed}건 제거 (−${ev.cost})`);
         }
         break;
@@ -4127,12 +4142,12 @@ function consumeEvents() {
         break;
       case "merge": {
         log(ev.promoted
-          ? `<b style="color:#cda43a">합성 · 昇 승진</b> ${ev.icon} ${ev.name} <b>Lv${ev.lv}</b> — 선글라스·샷건, 방사 피해가 붙습니다`
+          ? `<b style="color:#cda43a">합성 · 승진</b> ${ev.icon} ${ev.name} <b>Lv${ev.lv}</b> — 선글라스·샷건, 방사 피해가 붙습니다`
           : `<b style="color:#cda43a">합성</b> ${ev.icon} ${ev.name} ${ev.used}명 → <b>Lv${ev.lv}</b>`);
         if (ev.placed) {
           const [mx, my] = B.cellCenter(ev.x, ev.y);
           const bb = $("#board").getBoundingClientRect();
-          stamp(bb.left + mx, bb.top + my, ev.promoted ? "昇 進" : "合 成", `${ev.name} Lv${ev.lv}`);
+          stamp(bb.left + mx, bb.top + my, ev.promoted ? "승 진" : "합 성", `${ev.name} Lv${ev.lv}`);
           addFloater(mx, my - 24, ev.promoted ? "승진!" : `Lv${ev.lv}!`, "#cda43a",
                      { big: true, life: 1.1, rise: 28 });
         }
@@ -4144,7 +4159,7 @@ function consumeEvents() {
         if (ev.placed) {
           const [cx2, cy2] = B.cellCenter(ev.x, ev.y);
           const bb = $("#board").getBoundingClientRect();
-          stamp(bb.left + cx2, bb.top + cy2, "特 殊", ev.name);
+          stamp(bb.left + cx2, bb.top + cy2, "특 수", ev.name);
           addFloater(cx2, cy2 - 24, ev.name, "#6fe0d0", { big: true, life: 1.3, rise: 30 });
         }
         break;
@@ -4179,7 +4194,7 @@ function consumeEvents() {
         const opp = $("#oppCv");
         if (opp) {
           const ob = opp.getBoundingClientRect();
-          stamp(ob.left + ob.width / 2, ob.top + ob.height / 2, "妨 害", ev.name);
+          stamp(ob.left + ob.width / 2, ob.top + ob.height / 2, "방 해", ev.name);
         }
         break;
       }
@@ -4754,7 +4769,7 @@ function renderDuelResult() {
   const won = r.outcome === "win", drew = r.outcome === "draw";
   const box = $("#duelResult");
   box.className = won ? "win" : drew ? "draw" : "lose";
-  box.innerHTML = `<b>${won ? "勝 — 대전 승리" : drew ? "無 — 무승부" : "敗 — 대전 패배"}</b>
+  box.innerHTML = `<b>${won ? "대전 승리" : drew ? "무승부" : "대전 패배"}</b>
     <i>${r.reason}</i>
     <span>${won ? `특허료 +${DUEL.prize}`
       : drew ? `특허료 +${DUEL.drawPrize}`
@@ -4879,7 +4894,7 @@ function endDrag(e) {
     const wasNew = p.x < 0;
     if (game.place(p, t.x, t.y) && wasNew) {
       log(`<b>${CATS[p.key].name} 배치</b> — ${CATS[p.key].desc}`);
-      stamp(/** @type {PointerEvent} */ (e).clientX, /** @type {PointerEvent} */ (e).clientY, "任 用", CATS[p.key].name);
+      stamp(/** @type {PointerEvent} */ (e).clientX, /** @type {PointerEvent} */ (e).clientY, "임 용", CATS[p.key].name);
     }
   } else if (t && t.type === "tray") {
     game.unplace(p);
@@ -4961,7 +4976,7 @@ function endMatch(iWon, reasonText) {
   document.body.classList.remove("dueling");
   const s = game.summary();
   $("#sheet").innerHTML = `<div class="end">
-    <h3 style="color:${iWon ? "#cda43a" : "#e0574d"}">${iWon ? "登錄 決定 — 승리" : "拒 絶 決 定 — 패배"}</h3>
+    <h3 style="color:${iWon ? "#cda43a" : "#e0574d"}">${iWon ? "등록결정 — 승리" : "거절결정 — 패배"}</h3>
     <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px">${reasonText}</p>
     <div class="kv" style="max-width:250px;margin:0 auto 16px;text-align:left">
       <span>처치</span><b>${s.killed}</b><span>돌파 허용</span><b>${s.leaked}</b>
@@ -5295,7 +5310,7 @@ function renderPromoteList() {
     return `<div class="prow2 lvrow${top ? " top" : ""}${d.special ? " spec" : ""}" data-k="${key}">
       <span class="ic">${d.icon}</span>
       <span class="meta"><b>${d.name} <em>Lv${lv}</em></b>
-        <i>${d.special ? `특수 · ${d.tag}` : top ? "昇 승진냥 — 샷건 방사 피해" : `합성까지 ${need}명`}</i></span>
+        <i>${d.special ? `특수 · ${d.tag}` : top ? "승진냥 — 샷건 방사 피해" : `합성까지 ${need}명`}</i></span>
       <span class="pct">×${count[id]}</span>
     </div>`;
   }).join("");
@@ -5342,7 +5357,7 @@ function renderCatRoster() {
       if (p.x >= 0) {
         const [cx, cy] = B.pieceCenter(p);
         const bb = $("#board").getBoundingClientRect();
-        stamp(bb.left + cx, bb.top + cy, "任 用", CATS[key].name);
+        stamp(bb.left + cx, bb.top + cy, "임 용", CATS[key].name);
       } else {
         log(`<b>심사관 임용</b> ${CATS[key].name} — 판이 가득 차서 대기열에 놓였습니다. 드래그해서 배치하세요.`);
       }
@@ -5477,10 +5492,14 @@ function closeChoiceModal() {
 
 /**
  * 스테이지 강화 효과 선택 모달 — 웨이브를 클리어할 때마다 뜬다.
- * 넷뿐이라 **2×2**로 놓는다. 전부 내 판에만 작용하므로 상대에게 보낼 것이 없다.
+ * 넷뿐이라 **2×2**로 놓는다 (스테이지강화효과예시.png).
+ * 고른 것은 증강·합성과 함께 내 덱으로 쌓이고, 1:1 대전장에도 그대로 실린다.
  */
 function openPassiveModal() {
   $("#sheet").innerHTML = `<h3>스테이지 ${game.wave} 클리어 — 강화 효과를 하나 고르세요</h3>
+    <div class="upnote">고른 강화는 증강·합성과 함께 쌓여 <b>내 덱</b>이 됩니다 —
+      공격력·공속·치명타는 <b>1:1 대전장에도 그대로 실립니다</b>
+      (수수료 환급만 청사 판 전용입니다).</div>
     <div class="picks upgrades">${PASSIVES.map((def) => `
       <div class="pick up" data-k="${def.key}">
         <span class="ic">${def.icon}</span>
