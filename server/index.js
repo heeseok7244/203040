@@ -131,10 +131,15 @@ function leaveRoom(conn) {
 }
 
 // 방(room) 안에서 상대에게 그대로 중계하는 메시지 타입 → 상대가 받을 때의 타입
-// duel 은 스테이지 5·11 의 1:1 대전 명세다. 서버는 승패를 판정하지 않고 명세만 넘긴다 —
-// 두 클라이언트가 같은 명세·같은 시드로 같은 시뮬레이션을 돌려 같은 결과에 닿는다.
+// 스테이지 5·11 의 1:1 대전(냥코식 레인 전투)에서 오가는 것 셋.
+//   duel        전투 시작 전 서로에게 보내는 「내 냥타워 명세」
+//   duelDeploy  전투 중 출격 카드를 냈다는 알림 (상대 화면에 그 유닛이 걸어 나온다)
+//   duelResult  p1 이 내린 판정. 실시간 출격이라 두 화면이 어긋날 수 있어, 승패는 한쪽 계산을
+//               정본으로 삼는다 — 서버는 여기서도 판정하지 않고 그대로 넘기기만 한다
+// (스테이지 강화 효과는 넷 다 자기 판에만 작용해서 중계할 것이 없다 — 예전의 passive 는 뺐다)
 const RELAY = {
-  state: 'oppState', passive: 'oppPassive', sabotage: 'oppSabotage', duel: 'oppDuel',
+  state: 'oppState', sabotage: 'oppSabotage',
+  duel: 'oppDuel', duelDeploy: 'oppDuelDeploy', duelResult: 'oppDuelResult',
   won: 'oppWon', lost: 'oppLost',
 };
 
