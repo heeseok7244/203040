@@ -155,11 +155,11 @@ const ENEMIES = {
   copy: { nm:"도용업자",       hp:42,  spd:106, def:1, r:18, col:"#8fa6bd", rw:3,  leak:1, icon:"🥷",
     desc:"허락 없이 슬쩍 가져다 쓴다. 수가 많다." },
   fast: { nm:"벤치마킹업체",   hp:32,  spd:181, def:1, r:16, col:"#c9b26a", rw:3,  leak:1, icon:"📊",
-    desc:"분석이라 부르지만 사실상 베끼기. 빠르게 스치고 지나간다." },
+    desc:"분석이라 부르지만 사실상 베끼기. <br>빠르게 스치고 지나간다." },
   tank: { nm:"무효심판 청구인", hp:190, spd:75,  def:8, r:24, col:"#7d5a8f", rw:9,  leak:5, icon:"⚖️",
-    desc:"내 권리를 통째로 없애려 든다. 단단해서 잘 죽지 않고, 돌파 시 등록원부 내구를 5 깎는다." },
+    desc:"내 권리를 통째로 없애려 든다. <br>돌파 시 등록원부 내구를 5 깎는다." },
   boss: { nm:"특허괴물",       hp:1150, spd:62, def:13, r:34, col:"#c4322a", rw:70, leak:8, fee:100, icon:"👹",
-    desc:"제품은 만들지 않고 특허만 사서 소송으로 돈을 받아낸다. 돌파 시 합의금 명목으로 특허료 100을 가져간다 — 잔고가 모자라면 빚으로 남는다." },
+    desc:"특허만 사서 소송으로 돈을 받아낸다. <br>돌파 시 합의금 명목으로 특허료 100을 가져간다. <br>— 잔고가 모자라면 빚으로 남는다." }
 };
 
 /** @type {Record<string,number>[]} */
@@ -4129,7 +4129,23 @@ function toggleBestiary(on) {
   pop.classList.toggle("hidden", !open);
   btn.setAttribute("aria-expanded", String(open));
 }
-$("#btnBestiary").addEventListener("click", (e) => { e.stopPropagation(); toggleBestiary(); });
+/* 마우스를 얹으면 펼쳐지고 물음표·말풍선 어느 쪽에서도 벗어나면 접힌다.
+ * 벗어나자마자 접으면 물음표에서 말풍선으로 건너가는 짧은 사이에 꺼져 버리므로 잠깐 여유를 둔다. */
+let bestiaryHideT = 0;
+function holdBestiary() { clearTimeout(bestiaryHideT); toggleBestiary(true); }
+function releaseBestiary() {
+  clearTimeout(bestiaryHideT);
+  bestiaryHideT = setTimeout(() => toggleBestiary(false), 160);
+}
+// 손가락으로 쓰는 화면에는 「올려 두기」가 없다 — 거기서는 눌러서 여닫는 것만 남긴다
+if (matchMedia("(hover: hover)").matches) {
+  for (const el of [$("#btnBestiary"), $("#beastPop")]) {
+    el.addEventListener("mouseenter", holdBestiary);
+    el.addEventListener("mouseleave", releaseBestiary);
+  }
+} else {
+  $("#btnBestiary").addEventListener("click", (e) => { e.stopPropagation(); toggleBestiary(); });
+}
 // 판이나 다른 패널을 누르면 알아서 접힌다 — 닫으려고 물음표를 다시 찾아갈 일은 없어야 한다
 document.addEventListener("pointerdown", (e) => {
   if ($("#beastPop").classList.contains("hidden")) return;

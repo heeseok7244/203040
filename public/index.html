@@ -109,11 +109,12 @@
         <span class="h2right">
           <em id="phaseLbl">준비 단계</em>
           <!-- 침입자 도감은 늘 펼쳐 둘 만큼 자주 보는 것이 아니라, 물음표로 접어 두고
-               필요할 때만 꺼낸다. 단계 표시 바로 옆이라 판을 보다가 손이 닿는 자리다. -->
+               필요할 때만 꺼낸다. 단계 표시 바로 옆이라 판을 보다가 손이 닿는 자리다.
+               제목표시줄(title)은 마우스를 얹으면 뜨는 도감과 겹쳐 버려서 쓰지 않는다. -->
           <button id="btnBestiary" class="qmark" type="button"
-                  aria-expanded="false" aria-controls="beastPop" title="침입자 도감">?</button>
+                  aria-expanded="false" aria-controls="beastPop" aria-label="침입자 도감">?</button>
         </span></h2>
-      <!-- 물음표를 누르면 판 위에 겹쳐 뜬다 (모달이 아니라 말풍선이라 판이 가려지지 않는다) -->
+      <!-- 물음표에 마우스를 얹으면 그 오른쪽 아래로 펼쳐진다 (모달이 아니라 말풍선이라 판이 가려지지 않는다) -->
       <div class="beastpop hidden" id="beastPop">
         <div class="beastpop-h">침입자 <em>THREATS</em></div>
         <div class="pad" id="bestiary"></div>
