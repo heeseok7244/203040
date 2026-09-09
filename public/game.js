@@ -146,17 +146,19 @@ const PASSIVE_BY_KEY = Object.fromEntries(PASSIVES.map((p) => [p.key, p]));
  * (예전에는 무효심판 청구인이 돌파할 때마다 냥타워를 무작위로 무효화했지만, 웨이브 하나에서
  *  여러 마리를 놓치면 판이 통째로 마비되고 그게 하필 증강 선택 직전에 몰려 보였다 — 지금은
  *  무효화 자체를 없애고, 대신 돌파당했을 때의 내구 손실을 크게 잡았다.)
+ * spd 는 넷 다 예전의 0.78배다 — 너무 빨라 달리는 모습이 눈에 안 담겼다. 서로의 상대적인
+ * 빠르기(벤치마킹업체가 가장 빠르고 특허괴물이 가장 느리다)는 그대로 두려고 같은 비율로 줄였다.
  * @type {Record<string,{nm:string,hp:number,spd:number,def:number,r:number,col:string,rw:number,
  *   leak:number,fee?:number,desc:string,icon:string}>}
  */
 const ENEMIES = {
-  copy: { nm:"도용업자",       hp:42,  spd:136, def:1, r:18, col:"#8fa6bd", rw:3,  leak:1, icon:"🥷",
+  copy: { nm:"도용업자",       hp:42,  spd:106, def:1, r:18, col:"#8fa6bd", rw:3,  leak:1, icon:"🥷",
     desc:"허락 없이 슬쩍 가져다 쓴다. 수가 많다." },
-  fast: { nm:"벤치마킹업체",   hp:32,  spd:232, def:1, r:16, col:"#c9b26a", rw:3,  leak:1, icon:"📊",
+  fast: { nm:"벤치마킹업체",   hp:32,  spd:181, def:1, r:16, col:"#c9b26a", rw:3,  leak:1, icon:"📊",
     desc:"분석이라 부르지만 사실상 베끼기. 빠르게 스치고 지나간다." },
-  tank: { nm:"무효심판 청구인", hp:190, spd:96,  def:8, r:24, col:"#7d5a8f", rw:9,  leak:5, icon:"⚖️",
+  tank: { nm:"무효심판 청구인", hp:190, spd:75,  def:8, r:24, col:"#7d5a8f", rw:9,  leak:5, icon:"⚖️",
     desc:"내 권리를 통째로 없애려 든다. 단단해서 잘 죽지 않고, 돌파 시 등록원부 내구를 5 깎는다." },
-  boss: { nm:"특허괴물",       hp:1150, spd:80, def:13, r:34, col:"#c4322a", rw:70, leak:8, fee:100, icon:"👹",
+  boss: { nm:"특허괴물",       hp:1150, spd:62, def:13, r:34, col:"#c4322a", rw:70, leak:8, fee:100, icon:"👹",
     desc:"제품은 만들지 않고 특허만 사서 소송으로 돈을 받아낸다. 돌파 시 합의금 명목으로 특허료 100을 가져간다 — 잔고가 모자라면 빚으로 남는다." },
 };
 
@@ -2365,10 +2367,27 @@ const MOB_IMG = {};
 for (const t in MOB_SRC) { const im = new Image(); im.src = MOB_SRC[t]; MOB_IMG[t] = im; }
 
 /**
- * 달리기 4컷 · 사망 3컷 — 원화 스타일시트(img/mouse-sheet-v2.png)에서 잘라 낸 가로 스트립.
+ * 달리기 8컷(img/mouse-run-v4.png) · 사망 3컷(img/mouse-sheet-v2.png) — 스타일시트에서 잘라 낸 가로 스트립.
  * 셀 폭은 늘 (그림 가로 ÷ 컷 수)로 나눠 쓰므로, 시트를 다시 뽑아 스트립만 갈아 끼워도 코드는 그대로다.
  */
-const MOB_STRIP = { run: 4, die: 3 };
+const MOB_STRIP = { run: 8, die: 3 };
+
+/**
+ * 달리기 8컷의 도약 높이(0=발이 땅, 1=가장 높이 떠 있음).
+ * 컷 그림의 무게중심 높이를 종류별로 재서 평균 낸 값이다 — 8컷 안에 도약이 두 번 들어 있다.
+ * 그림자와 발밑 먼지가 이 값을 따라가야 컷과 어긋나지 않는다. 몸의 오르내림은 그림이 이미 갖고
+ * 있으므로 코드로 또 띄우지 않는다 — 그러면 발이 땅에 안 붙고 둥둥 떠 보인다.
+ */
+const RUN_LIFT = [0.26, 0.48, 0.63, 0.25, 1.00, 0.29, 0, 0.18];
+
+/** 컷 사이를 이어 준 도약 높이. 컷은 뚝뚝 넘어가도 그림자와 먼지는 이어져야 눈에 안 걸린다.
+ *  @param {number} fp 소수점까지의 컷 번호 (정수부가 지금 컷, 소수부가 다음 컷까지의 진행도) */
+function liftAt(fp) {
+  const n = RUN_LIFT.length;
+  const i = Math.floor(fp), f = fp - i;
+  const at = (k) => RUN_LIFT[((k % n) + n) % n];
+  return at(i) + (at(i + 1) - at(i)) * f;
+}
 /** @type {Record<string,Record<string,HTMLImageElement>>} */
 const MOB_ANIM = { run: {}, die: {} };
 for (const kind in MOB_STRIP) {
@@ -2402,15 +2421,21 @@ function mobFrame(t, kind, i) {
 
 /**
  * 달리기 리듬. freq는 "이동 거리 1px당 걸음 위상"이라 빠른 쥐일수록 발이 저절로 빨라진다.
- * 위상 2π가 달리기 4컷 한 바퀴(= 두 걸음)이고, 같은 위상으로 몸 전체의 흔들림도 얹는다.
- * rise 도약 높이 · tilt 앞뒤로 까딱이는 각도 · squash 착지 순간 눌리는 정도 (전부 r 기준 비율)
+ * 위상 2π가 달리기 8컷 한 바퀴(= 두 걸음)이고, π/4마다 컷이 한 장 넘어간다.
+ * rise·tilt·squash는 달리기 컷이 아직 안 올라왔을 때 쓰는 벡터 실루엣용 흔들림이다 —
+ * 진짜 컷에는 도약이 이미 그려져 있어서 얹지 않는다.
  */
 const GAIT = {
   // freq는 보폭의 역수다 — π/freq 픽셀마다 한 걸음. 초당 걸음 수 = 이동속도 × freq ÷ π
-  copy: { freq: 0.100, rise: 0.28, tilt: 0.09, squash: 0.10, dust: 0.9 },  // 초당 4.3걸음
-  fast: { freq: 0.085, rise: 0.38, tilt: 0.13, squash: 0.12, dust: 1.3 },  // 전력질주 — 초당 6.3걸음, 크게 튄다
-  tank: { freq: 0.075, rise: 0.14, tilt: 0.05, squash: 0.08, dust: 1.1 },  // 묵직하게 쿵쿵 — 초당 2.3걸음
-  boss: { freq: 0.055, rise: 0.10, tilt: 0.04, squash: 0.06, dust: 1.5 },  // 초당 1.4걸음
+  //
+  // 보폭은 화면에 그려지는 몸길이에 맞춰 잡는다. 이게 짧으면 발이 땅을 스치며 헛돌아
+  // (한 걸음에 몸길이의 반도 못 가면 눈에 띄게 어색하다) 쳇바퀴 돌듯 보인다 —
+  // 예전에는 컷이 빨리 넘어가는 쪽만 보고 보폭을 0.3~0.6 몸길이로 줄여 놨던 게 그 꼴이었다.
+  // 지금은 한 걸음이 몸길이의 0.6~1.2배다. 그만큼 컷은 천천히 넘어가지만, 발이 땅을 붙잡는다.
+  copy: { freq: 0.065, rise: 0.28, tilt: 0.09, squash: 0.10, dust: 0.9 },  // 보폭 48px(몸 0.9배) · 초당 9컷
+  fast: { freq: 0.057, rise: 0.38, tilt: 0.13, squash: 0.12, dust: 1.3 },  // 전력질주 — 보폭 55px(1.2배) · 13컷
+  tank: { freq: 0.057, rise: 0.14, tilt: 0.05, squash: 0.08, dust: 1.1 },  // 묵직하게 — 보폭 55px(0.8배) · 6컷
+  boss: { freq: 0.051, rise: 0.10, tilt: 0.04, squash: 0.06, dust: 1.5 },  // 보폭 62px(0.6배) · 초당 4컷
 };
 const GAIT_DEFAULT = GAIT.copy;
 
@@ -2874,18 +2899,29 @@ function drawMonster(g, e, d, now) {
 
   // 실제로 나아가는 중일 때만 걸음을 굴린다 (가처분에 묶였으면 첫 컷에서 멈춰 선다)
   const moving = e.dist > 0 && !(e.freezeT > 0);
-  // 달리기 4컷 — 위상 2π가 한 바퀴, 즉 π/2마다 컷이 한 장 넘어간다.
-  // 위상이 이동 거리에서 나오므로 빠른 쥐일수록 컷도 저절로 빨리 넘어간다.
+  // 달리기 8컷 — 위상 2π가 한 바퀴, 즉 π/4마다 컷이 한 장 넘어간다.
+  // 위상이 이동 거리에서 나오므로 빠른 쥐일수록 컷도 저절로 빨리 넘어가고, 발이 헛돌지 않는다.
   const phase = e.dist * (GAIT[e.t] || GAIT_DEFAULT).freq;
-  const art = mobFrame(e.t, "run", moving ? Math.floor(phase / (Math.PI / 2)) : 0);
-  const framed = !!imgReady(MOB_ANIM.run[e.t]);   // 진짜 컷이 있으면 몸 흔들림은 절반만 얹는다
-  const mo = art && moving ? gaitOf(e, r, framed ? 0.5 : 1) : null;
+  const fp = phase / (Math.PI / 4);            // 소수점까지의 컷 번호
+  const cut = moving ? Math.floor(fp) : 0;
+  const art = mobFrame(e.t, "run", cut);
+  const framed = !!imgReady(MOB_ANIM.run[e.t]);
+  // 진짜 컷에는 도약이 그려져 있다 — 코드로 또 띄우면 발이 땅을 안 딛고 둥둥 떠 보인다.
+  // 그래서 흔들림은 컷이 없을 때(벡터 실루엣)만 얹고, 대신 그림자·먼지를 컷의 도약 높이에 맞춘다.
+  const mo = art && moving && !framed ? gaitOf(e, r, 1) : null;
+  const lift = !moving ? 0 : framed ? liftAt(fp) : mo ? mo.hop : 0;
+  // 컷은 뚝뚝 넘어가도 몸이 뜨고 내려앉는 것만은 이어 준다 — 컷 그림에 이미 들어 있는 도약 높이와
+  // 이어 준 높이의 차이만큼만 위아래로 옮긴다. 컷이 느린 큰 놈일수록 이게 있고 없고가 크다.
+  const tween = framed && moving
+    ? { hop: lift, rise: (lift - RUN_LIFT[((cut % RUN_LIFT.length) + RUN_LIFT.length) % RUN_LIFT.length]) * r * 0.2,
+        tilt: 0, squash: 0 }
+    : mo;
 
   // 바닥 그림자 — 캐릭터가 판 위에 실제로 서 있는 느낌.
   // 뛰어오른 만큼 작고 옅어져야 발이 땅에서 떨어진 게 보인다.
   g.save();
-  g.globalAlpha = 0.24 * (mo ? 1 - mo.hop * 0.45 : 1); g.fillStyle = "#0c1524";
-  const shk = mo ? 1 - mo.hop * 0.3 : 1;
+  g.globalAlpha = 0.24 * (1 - lift * 0.5); g.fillStyle = "#0c1524";
+  const shk = 1 - lift * 0.34;
   g.beginPath(); g.ellipse(0, r * 0.92, r * 0.5 * shk, r * 0.16 * shk, 0, 0, 7); g.fill();
   g.restore();
 
@@ -2903,23 +2939,25 @@ function drawMonster(g, e, d, now) {
   }
 
   if (art) {
-    // 발끝 먼지 — 착지하는 순간에만 뒤쪽으로 툭 피어오른다
-    if (mo && mo.hop < 0.35) {
-      const puff = (0.35 - mo.hop) / 0.35;
+    // 발끝 먼지 — 발이 땅에 닿는 컷에서만 뒤쪽으로 툭 피어오른다 (컷의 도약 높이를 따라간다)
+    if (moving && lift < 0.45) {
+      const puff = (0.45 - lift) / 0.45;
+      const dust = (GAIT[e.t] || GAIT_DEFAULT).dust;
       g.save();
-      g.globalAlpha = 0.34 * puff; g.fillStyle = "#a8977c";   // 통로 바닥(크림)에 묻히지 않게 한 톤 어둡게
+      // 컷 그림에도 흰 먼지가 그려져 있으므로 여기서는 옅게만 깔아 어두운 바닥에서의 접지감만 보탠다
+      g.globalAlpha = 0.22 * puff; g.fillStyle = "#a8977c";
       for (let i = 0; i < 2; i++) {
-        const px = -face * (r * (0.35 + i * 0.4) + puff * r * 0.5 * mo.dust);
-        g.beginPath(); g.ellipse(px, r * 0.86, r * (0.16 + i * 0.05) * mo.dust, r * 0.11 * mo.dust, 0, 0, 7); g.fill();
+        const px = -face * (r * (0.35 + i * 0.4) + puff * r * 0.5 * dust);
+        g.beginPath(); g.ellipse(px, r * 0.86, r * (0.16 + i * 0.05) * dust, r * 0.11 * dust, 0, 0, 7); g.fill();
       }
       g.restore();
     }
     // 원화가 올라왔으면 종류별 연출만 얹고 그림은 원화로 그린다
     if (e.t === "fast") {
-      // 잔상 + 속도선 — 전력질주 느낌
+      // 잔상 + 속도선 — 전력질주 느낌. 잔상은 한 컷 전 자세라 실제로 지나온 모습이 남는다.
       g.save();
       g.globalAlpha = 0.24; g.translate(-face * r * 0.75, 0);
-      drawMobArt(g, art, r * 0.95, slowed, face, mo);
+      drawMobArt(g, mobFrame(e.t, "run", cut - 1) || art, r * 0.95, slowed, face, tween);
       g.restore();
       g.strokeStyle = "rgba(12,21,36,.45)"; g.lineWidth = 1;
       for (let i = 0; i < 3; i++) {
@@ -2938,7 +2976,7 @@ function drawMonster(g, e, d, now) {
         g.restore();
       }
     }
-    drawMobArt(g, art, r, slowed, face, mo);
+    drawMobArt(g, art, r, slowed, face, tween);
   } else switch (e.t) {   // 원화 로딩 전 — 예전 벡터 실루엣으로 그린다
     case "copy": { // 도용업자 쥐 — 눈만 드러나는 마스크 + 훔친 설계도 두루마리
       drawLegs(g, r, legPhase);
@@ -4038,7 +4076,7 @@ function renderBestiary() {
   el.querySelectorAll(".beast-cv").forEach((cv) => {
     const t = /** @type {HTMLElement} */ (cv).dataset.t;
     paintBeast(/** @type {HTMLCanvasElement} */ (cv), t, null);
-    // 마우스를 올린 동안만 달리기 4컷을 돌린다 — 도감에서도 어떻게 뛰어오는지 눈으로 보인다
+    // 마우스를 올린 동안만 달리기 8컷을 돌린다 — 도감에서도 어떻게 뛰어오는지 눈으로 보인다
     let raf = 0;
     cv.addEventListener("mouseenter", () => {
       if (raf) return;
