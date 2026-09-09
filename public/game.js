@@ -1833,14 +1833,38 @@ promoSprite.src = "img/cat-promoted.png";
 const PROMO_CELL = 64;
 const promoReady = () => promoSprite.complete && promoSprite.naturalWidth > 0;
 
+/**
+ * 출원냥 전용 스프라이트 — 4프레임 256×64 한 줄 (tools/cut-cat-sheet.js 가 cat_1.png 에서 뽑는다).
+ * 0번 칸이 평상시 자세이고, 0→1→2→3 을 한 번 훑으면 제자리 공격 모션이 된다.
+ * 네 칸 모두 같은 배율·같은 바닥선으로 구워 두었으므로, 프레임이 넘어가도 발이 뜨지 않는다.
+ * 색보정(filter)은 걸지 않는다 — 원화 그대로의 흰 냥이가 출원냥의 얼굴이다.
+ */
+const specSprite = new Image();
+specSprite.src = "img/cat-spec.png";
+/** 출원냥 스프라이트 한 칸의 크기(px) */
+const SPEC_CELL = 64;
+/** 출원냥 공격 모션의 프레임 수 */
+const SPEC_FRAMES = 4;
+/**
+ * 프레임당 유지 시간(ms) — 4프레임 220ms.
+ * 출원냥의 실제 공속은 CATS.spec.rate(2.0) 가 아니라 거기에 stats.js 의 ATTACK_RATE_MULT(2.2)
+ * 가 곱해진 초당 4.4회다. 곧 227ms 마다 한 발이 나가므로, 프레임당 80ms(=320ms)로 잡으면
+ * 3번째 칸에서 다음 공격에 잘려 네 칸이 끝까지 돌지 못한다. 한 사격 안에 다 들어가도록 줄였다.
+ * (보좌·증강으로 더 빨라지면 남은 칸이 잘리고 1번 칸부터 다시 도는데, 이건 연타로 보여 자연스럽다.)
+ */
+const SPEC_FRAME_MS = 55;
+const specReady = () => specSprite.complete && specSprite.naturalWidth > 0;
+
 /** 로드 완료 시 콜백 (이미 로드됐으면 즉시) */
 function onSpriteReady(fn) {
   if (sprite.complete && sprite.naturalWidth) fn();
   else sprite.addEventListener("load", fn, { once: true });
   if (!promoReady()) promoSprite.addEventListener("load", fn, { once: true });
+  if (!specReady()) specSprite.addEventListener("load", fn, { once: true });
 }
 
-return { PROMO_CELL, onSpriteReady, promoReady, promoSprite, sprite };
+return { PROMO_CELL, SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS,
+         onSpriteReady, promoReady, promoSprite, specReady, specSprite, sprite };
 })();
 __mods["web/main.js"] = (function(){
 // @ts-check
@@ -1849,7 +1873,8 @@ const {CATS, ENEMIES, BAL, PASSIVES, PASSIVE_BY_KEY, SKILLS, SABOTAGE, AUGMENTS,
 const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {auraCells} = __req("core/stats.js");
-const {sprite, onSpriteReady, promoSprite, promoReady, PROMO_CELL} = __req("web/sprite.js");
+const {sprite, onSpriteReady, promoSprite, promoReady, PROMO_CELL,
+       specSprite, specReady, SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS} = __req("web/sprite.js");
 const $ = (s) => /** @type {HTMLElement} */ (document.querySelector(s));
 const CS = BAL.cellSize, GAP = BAL.cellGap;
 
@@ -2270,6 +2295,30 @@ function draw(now) {
   g.restore(); // 화면 흔들림 여기까지 — 이 아래는 화면에 고정된 UI라 흔들리지 않는다
 }
 
+/**
+ * 출원냥이 쓸 스프라이트인가 — 승진하면 승진냥 원화가 우선한다.
+ * @param {string} key @param {boolean} promoted
+ */
+const useSpecSheet = (key, promoted) => key === "spec" && !promoted && specReady();
+
+/**
+ * 출원냥의 현재 공격 프레임. 공격 중이 아니면 0(평상시 자세)이다.
+ *
+ * 총알은 combat.js 가 조준에 성공한 그 자리에서 바로 만든다 — 발사를 뒤로 미루면
+ * 사거리 밖으로 빠져나간 적을 향해 쏘거나, 판이 끝난 뒤에 총알이 남는 문제가 생긴다.
+ * 그래서 발사 로직은 그대로 두고, 모션만 발사 시각에 맞춰 1프레임부터 다시 시작한다.
+ * 발사 시각 = atkEnd − atkTotal (combat.js 가 atkEnd 를 그렇게 잡는다).
+ *
+ * 220ms 짜리라 출원냥 기본 공속(초당 4.4회 = 227ms)에서는 네 칸이 딱 다 재생되고,
+ * 보좌·증강으로 더 빨라지면 다 끝나기 전에 다음 공격이 들어와 1프레임부터 다시 돈다.
+ */
+function specFrame(cat, now) {
+  if (!cat.atkEnd || !game) return 0;
+  const t = now - (cat.atkEnd - game.atkTotal);   // 발사 뒤 흐른 시간(ms)
+  if (t < 0 || t >= SPEC_FRAMES * SPEC_FRAME_MS) return 0;
+  return Math.min(SPEC_FRAMES - 1, Math.floor(t / SPEC_FRAME_MS));
+}
+
 /** 냥타워 — 사거리 원과, 각 조각이 들고 있는 64×64 캔버스의 스프라이트 */
 function drawCats(g, now) {
   for (const c of B.cats(game)) {
@@ -2290,6 +2339,11 @@ function drawCats(g, now) {
       // 승진냥 — 선글라스 낀 흰 냥이 원화를 그대로 쓴다 (색보정 없음). 샷건만 위에 얹는다.
       cg.drawImage(promoSprite, fr * PROMO_CELL, 0, PROMO_CELL, PROMO_CELL, 0, 0, 64, 64);
       drawShotgun(cg, !!(c.atkEnd && now < c.atkEnd));
+    } else if (useSpecSheet(c.key, !!c.st.promoted)) {
+      // 출원냥 — cat_1.png 에서 뽑은 흰 냥이. 평상시 0번 칸, 공격하는 동안만 0→1→2→3.
+      // 네 칸이 같은 배율·같은 바닥선으로 구워져 있어 칸이 넘어가도 중심과 발끝이 그대로다.
+      const sf = specFrame(c, now);
+      cg.drawImage(specSprite, sf * SPEC_CELL, 0, SPEC_CELL, SPEC_CELL, 0, 0, 64, 64);
     } else if (sprite.complete) {
       cg.filter = CATS[c.key].filter || "none";
       cg.drawImage(sprite, fr * 64, row * 64, 64, 64, 0, 0, 64, 64);
@@ -3921,13 +3975,18 @@ function drawOpponent(now) {
     // 대기 애니메이션 프레임까지 같이 맞춘다 (uid 대신 좌표로 위상을 흩뿌린다)
     const [row, fr] = frameOf({ key: p.k, uid: p.x * 31 + p.y * 7, atkEnd: 0 }, now || 0);
     // 승진냥은 내 판과 같은 원화(선글라스 냥)로, 금빛 테두리까지 붙여 그린다
-    const img = (p.pr && promoReady()) ? null : catFrameCanvas(p.k, row, fr);
+    const spec = useSpecSheet(p.k, !!p.pr);
+    const img = (p.pr && promoReady()) || spec ? null : catFrameCanvas(p.k, row, fr);
     if (p.pr && promoReady()) {
       const sz = tile * 1.02;
       g.drawImage(promoSprite, fr * PROMO_CELL, 0, PROMO_CELL, PROMO_CELL,
                   cx - sz / 2, cy - sz / 2, sz, sz);
       g.strokeStyle = "#cda43a"; g.lineWidth = Math.max(1, cell * 0.06);
       g.strokeRect(cx - tile / 2, cy - tile / 2, tile, tile);
+    } else if (spec) {
+      // 출원냥 — 내 판과 같은 흰 냥이. 스냅샷에는 공격 시각이 없으니 평상시 자세(0번 칸)로 둔다
+      const sz = tile * 1.02;
+      g.drawImage(specSprite, 0, 0, SPEC_CELL, SPEC_CELL, cx - sz / 2, cy - sz / 2, sz, sz);
     } else if (img) {
       const sz = tile * 1.02;
       g.drawImage(img, cx - sz / 2, cy - sz / 2, sz, sz);
