@@ -428,11 +428,12 @@ const AUGMENTS = {
 };
 
 /**
- * 증강을 고르는 웨이브. 이 웨이브를 클리어하면 패시브 대신 증강 선택이 뜬다.
- * 2~3 웨이브 간격 — 판이 늘어지기 전에 규칙이 한 번씩 뒤집히도록 잡았다.
- * 증강 12종을 3장씩 4번 나눠 주므로, 한 판에서 같은 증강이 두 번 나오지 않는다.
+ * 증강을 고르는 웨이브 — 지금은 없다.
+ * 증강 선택은 걷어냈고, 모든 스테이지가 끝나면 스테이지 강화 효과만 고른다.
+ * (AUGMENTS 정의와 augSet 을 보는 계산식은 그대로 남겨 둔다 — 아무도 고를 수 없으니
+ *  전부 꺼진 상태로 동작하고, 되살릴 때는 이 배열에 웨이브 번호만 다시 채우면 된다.)
  */
-const AUGMENT_WAVES = [2, 4, 7, 10];
+const AUGMENT_WAVES = [];
 
 /**
  * 1:1 대전 라운드가 열리는 스테이지.
@@ -3097,6 +3098,13 @@ const btn = (s) => /** @type {HTMLButtonElement} */ ($(s));
 /** 지금 준비 버튼을 누를 수 있는 상태인가 (준비 단계 + 고를 것이 남아 있지 않음) */
 const canPrep = () => !!game && game.phase === "prep" && !game.awaitingPassive && !game.awaitingAugment;
 const online = () => !soloMode && !!ws && ws.readyState === 1;
+/**
+ * 이 웨이브를 상대와 맞춰서 시작해야 하는가.
+ * 첫 스테이지만 둘 다 준비를 눌러야 열리고, 그 뒤로는 각자 원할 때 개시한다 —
+ * 준비를 빨리 끝낸 쪽이 상대를 기다리며 멈춰 있을 이유가 없다.
+ * @param {number} wave 시작하려는 웨이브 번호
+ */
+const needsSync = (wave) => wave <= 1;
 
 /**
  * 준비 단계에 들어섰다는 사실을 서버에 한 번만 알린다.
@@ -3106,7 +3114,7 @@ const online = () => !soloMode && !!ws && ws.readyState === 1;
 function syncPrepState() {
   if (!game || soloMode) return;   // 솔로에는 맞춰야 할 상대가 없다
   const next = game.wave + 1;
-  if (canPrep() && prepSentWave !== next) {
+  if (canPrep() && needsSync(next) && prepSentWave !== next) {
     prepSentWave = next;
     // 상대 쪽 상태는 건드리지 않는다 — 서버가 곧바로 prepState 로 전체 상황을 다시 알려준다.
     // (내가 늦게 들어왔을 때 이미 준비를 마친 상대를 "대기 중"으로 지워버리면 안 된다)
@@ -3124,6 +3132,8 @@ function renderReadyBar() {
   if (!bar) return;
 
   const duelNext = game.nextIsDuel;
+  // 맞춰 시작하는 웨이브가 아니면 솔로와 똑같이 「개시」 버튼 하나로 끝난다
+  const sync = !soloMode && needsSync(next);
   if (game.phase === "duel") {
     b.disabled = true; b.textContent = "1:1 대전 중…";
   } else if (game.phase === "wave") {
@@ -3137,8 +3147,8 @@ function renderReadyBar() {
     // 솔로에서는 "준비"가 아니라 곧바로 개시다 — 기다릴 상대가 없다.
     // 다음이 대전 라운드면 무엇이 시작되는지 버튼에 그대로 적는다.
     b.textContent = duelNext
-      ? (soloMode ? `⚔ 스테이지 ${next} 1:1 대전 개시` : iReady ? "준비 취소" : `⚔ 스테이지 ${next} 1:1 대전 준비`)
-      : (soloMode ? `웨이브 ${next} 개시` : iReady ? "준비 취소" : `웨이브 ${next} 준비 완료`);
+      ? (!sync ? `⚔ 스테이지 ${next} 1:1 대전 개시` : iReady ? "준비 취소" : `⚔ 스테이지 ${next} 1:1 대전 준비`)
+      : (!sync ? `웨이브 ${next} 개시` : iReady ? "준비 취소" : `웨이브 ${next} 준비 완료`);
   } else {
     b.disabled = true;
   }
@@ -3151,9 +3161,10 @@ function renderReadyBar() {
     sp.disabled = lock;
     sp.textContent = lock ? "배속 없음" : "속도 ×" + speed;
   }
-  b.classList.toggle("waiting", !soloMode && iReady && game.phase === "prep");
+  b.classList.toggle("waiting", sync && iReady && game.phase === "prep");
 
-  if (soloMode) { bar.classList.add("hidden"); return; }
+  // 준비 표시줄은 서로를 기다리는 첫 스테이지에만 뜬다
+  if (!sync) { bar.classList.add("hidden"); return; }
   const show = game.phase === "prep";
   bar.classList.toggle("hidden", !show);
   if (!show) return;
@@ -3179,7 +3190,6 @@ function doStartWave() {
   // 스테이지 5·11 은 침입자가 아니라 상대와 붙는다
   if (game.nextIsDuel) { startDuelRound(); return; }
   if (!game.startWave()) { log("동선이 막혀 있습니다."); return; }
-  $("#phaseLbl").textContent = `웨이브 ${game.wave} 진행 중`;
   render();
 }
 
@@ -4282,7 +4292,6 @@ function startDuelRound() {
   const mine = makeRoster(game);
   duel = { wave: game.wave, sim: null, mine, theirs: null, foeMob: false, phase: "wait",
            waitT: 0, acc: 0, endT: 0, res: null, floats: [], verdictT: 0 };
-  $("#phaseLbl").textContent = `1:1 대전 · 스테이지 ${game.wave}`;
   $("#duelStage").classList.remove("hidden");
   $("#duelResult").classList.add("hidden");
   document.body.classList.add("dueling");
@@ -4474,7 +4483,6 @@ function closeDuelRound() {
   $("#duelStage").classList.add("hidden");
   document.body.classList.remove("dueling");
   $("#duelResult").classList.add("hidden");
-  if (game.phase === "prep") $("#phaseLbl").textContent = "준비 단계";
   render();
   // 대전 라운드도 한 라운드다 — 대전장을 접고 나서 이 스테이지의 선택지를 연다.
   // (결과 도장을 읽는 동안 모달이 덮치면 무엇을 보고 있었는지 알 수 없어진다)
@@ -4981,7 +4989,6 @@ function endMatch(iWon, reasonText) {
       <span>합성</span><b>${s.merged}회 (특수 ${s.crafted})</b>
       ${s.specials.length ? `<span>특수 냥타워</span><b>${[...new Set(s.specials)].map((k) => `${CATS[k].icon} ${CATS[k].name}`).join(" · ")}</b>` : ""}
       ${DUEL_WAVES.length ? `<span>1:1 대전</span><b>${s.duelRecord[0]}승 ${s.duelRecord[1]}무 ${s.duelRecord[2]}패</b>` : ""}
-      <span>증강</span><b>${s.augments.length ? s.augments.map((k) => `${AUGMENTS[k].icon} ${AUGMENTS[k].name}`).join(" · ") : "없음"}</b>
       <span>방해 공작</span><b>${s.sabotage.length ? s.sabotage.map((k) => `${SABOTAGE[k].icon} ${SABOTAGE[k].short}`).join(" · ") : "없음"}</b>
       </div>
     <button class="go" id="again" style="padding:10px 26px">로비로</button></div>`;
@@ -5341,7 +5348,6 @@ const choiceBarHtml = () => soloMode ? "" :
 function closeChoiceModal() {
   clearChoiceTimer();
   $("#modal").classList.remove("on");
-  $("#phaseLbl").textContent = "준비 단계";
   renderPassiveTags();
   renderAugTags();
   render();
@@ -5413,7 +5419,8 @@ function openAugmentModal() {
 function renderAugTags() {
   const mine = game.augments.map((k) => AUGMENTS[k])
     .map((d) => `<span class="aug"><b>${d.icon} ${d.name}</b><i>${d.desc}</i></span>`).join("");
-  $("#myAugTags").innerHTML = mine || `<span class="none">없음</span>`;
+  const my = $("#myAugTags");   // 증강을 걷어내면서 이 칸은 화면에서 빠졌다
+  if (my) my.innerHTML = mine || `<span class="none">없음</span>`;
   const theirs = oppAugs.map((k) => AUGMENTS[k]).filter(Boolean)
     .map((d) => `<span class="aug"><b>${d.icon} ${d.name}</b><i>${d.desc}</i></span>`).join("");
   const box = $("#oppAugTags");
@@ -5660,7 +5667,6 @@ function beginBattle() {
   $("#duelStage").classList.add("hidden");
   $("#duelResult").classList.add("hidden");
   document.body.classList.remove("dueling");
-  $("#phaseLbl").textContent = "준비 단계";
   stageTheme = null;        // 새 판이면 전장 원화도 1스테이지 것부터 다시 깐다
   applyStageTheme();
   preloadStageArt();
@@ -5669,7 +5675,6 @@ function beginBattle() {
     ? `<b>솔로 플레이</b> — 상대 없이 웨이브 ${BAL.waveCount}개를 혼자 막아냅니다.`
     : `<b>1v1 대전</b> — 상대와 같은 판·같은 웨이브를 동시에 치릅니다.`);
   log(`<b>${game.map.name}</b> 방위 개시 · ${game.map.desc}`);
-  log(`증강은 웨이브 <b>${AUGMENT_WAVES.join(" · ")}</b> 클리어 직후에 나옵니다.`);
   if (!soloMode) log(`<b>방해 공작</b>은 종류를 고르지 않습니다 — 특허료를 내고 <b>무작위로 하나를 뽑아</b> ` +
     `상대 판에 던집니다 (웨이브 주기마다 ${BAL.sabotageDraws}회).`);
   log(`같은 종류·같은 레벨 <b>${BAL.mergeNeed}명</b>이 모이면 판 우측 상단에 <b>합성</b> 단추가 뜹니다. ` +
@@ -5696,7 +5701,8 @@ function beginBattle() {
  */
 $("#btnGo").addEventListener("click", () => {
   if (!canPrep()) return;
-  if (!online()) { doStartWave(); return; }
+  // 서버가 없거나, 맞출 필요가 없는 웨이브(첫 스테이지 이후)라면 곧바로 시작한다
+  if (!online() || !needsSync(game.wave + 1)) { doStartWave(); return; }
   iReady = !iReady;
   sendWS({ t: "ready", ready: iReady, wave: game.wave + 1 });
   log(iReady ? "<b>준비 완료</b> — 상대가 준비하면 바로 개시됩니다." : "준비를 취소했습니다.");
@@ -5776,7 +5782,32 @@ function toggleBestiary(on) {
   const open = on === undefined ? pop.classList.contains("hidden") : on;
   pop.classList.toggle("hidden", !open);
   btn.setAttribute("aria-expanded", String(open));
+  if (open) placeBestiary();
 }
+
+/**
+ * 도감 말풍선을 물음표 바로 아래에 놓는다.
+ * 판 패널 안에 절대배치로 두면 오른쪽 칸 패널들에 덮여 가려지므로, 화면 기준(fixed)으로
+ * 띄우고 자리만 여기서 잡는다 — 화면 밖으로 넘치면 안쪽으로 끌어당긴다.
+ */
+function placeBestiary() {
+  const pop = /** @type {HTMLElement} */ ($("#beastPop"));
+  const btn = $("#btnBestiary");
+  if (!pop || !btn || pop.classList.contains("hidden")) return;
+  const r = btn.getBoundingClientRect();
+  const w = pop.offsetWidth;
+  const GAP = 10, EDGE = 8;
+  // 기본은 물음표에서 오른쪽 아래로. 다리(::before)가 물음표를 덮도록 살짝 왼쪽에서 시작한다.
+  let left = r.left - 22;
+  const flip = left + w > innerWidth - EDGE;
+  if (flip) left = innerWidth - w - EDGE;   // 넘치면 화면 오른쪽 끝에 붙인다
+  pop.classList.toggle("flip", flip);
+  pop.style.left = `${Math.max(EDGE, left)}px`;
+  pop.style.top = `${r.bottom + GAP}px`;
+}
+// 창이 움직이면 물음표도 움직인다 — 열려 있는 동안에는 따라간다
+addEventListener("resize", placeBestiary);
+addEventListener("scroll", placeBestiary, true);
 /* 마우스를 얹으면 펼쳐지고 물음표·말풍선 어느 쪽에서도 벗어나면 접힌다.
  * 벗어나자마자 접으면 물음표에서 말풍선으로 건너가는 짧은 사이에 꺼져 버리므로 잠깐 여유를 둔다. */
 let bestiaryHideT = 0;

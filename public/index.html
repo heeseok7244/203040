@@ -84,9 +84,9 @@
     <div class="panel">
       <h2><span id="mapName">청사 평면도</span>
         <span class="h2right">
-          <em id="phaseLbl">준비 단계</em>
+          <em id="phaseLbl">몬스터 정보</em>
           <!-- 침입자 도감은 늘 펼쳐 둘 만큼 자주 보는 것이 아니라, 물음표로 접어 두고
-               필요할 때만 꺼낸다. 단계 표시 바로 옆이라 판을 보다가 손이 닿는 자리다.
+               필요할 때만 꺼낸다. 「몬스터 정보」 바로 옆이라 판을 보다가 손이 닿는 자리다.
                제목표시줄(title)은 마우스를 얹으면 뜨는 도감과 겹쳐 버려서 쓰지 않는다. -->
           <button id="btnBestiary" class="qmark" type="button"
                   aria-expanded="false" aria-controls="beastPop" aria-label="침입자 도감">?</button>
@@ -156,11 +156,11 @@
           <div class="stat gold"><b id="sGold">85</b><span>특허료</span></div>
           <div class="stat"><b id="sWave">0/12</b><span>웨이브</span></div>
         </div>
-        <!-- 스테이지 강화 · 증강이 곧 내 덱이다. 둘 다 1:1 대전장까지 그대로 실린다.
-             상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다. -->
+        <!-- 스테이지 강화가 곧 내 덱이다. 1:1 대전장까지 그대로 실린다.
+             상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다.
+             (증강 선택은 걷어냈다 — 내증강 · 상대 증강 칸도 함께 뺐다) -->
         <div class="stat effects">
           <div class="efcol"><i>스테이지 강화</i><div class="passiveTags" id="myPassiveTags"></div></div>
-          <div class="efcol"><i>내증강</i><div class="passiveTags" id="myAugTags"></div></div>
         </div>
       </div>
     </div>
@@ -173,10 +173,6 @@
           <div class="stat"><b id="oppWave">0/12</b><span>웨이브</span></div>
         </div>
         <canvas id="oppCv" width="280" height="280"></canvas>
-        <div class="oppAugBox">
-          <i>상대 증강</i>
-          <div class="passiveTags" id="oppAugTags"></div>
-        </div>
       </div>
     </div>
   </div>
@@ -228,7 +224,7 @@
       <b>누를 것은 없습니다</b> — 이 라운드가 재는 것은 손이 아니라 <b>덱</b>입니다.
       진형은 <b>사거리 순</b>으로 서서, 짧은 냥이 앞을 막고 긴 냥이 뒤에서 쏩니다.<br>
       지금까지 쌓은 <b style="color:#7fbf6a">스테이지 강화</b> ·
-      <b style="color:var(--gold)">증강</b> · <b style="color:#6fe0d0">합성 레벨</b>이
+      <b style="color:#6fe0d0">합성 레벨</b>이
       <b>그대로 실려 있습니다</b> — 여기가 누구의 덱이 더 강한지 자웅을 가리는 자리입니다.
       혼자 할 때는 침입자 넷이 <b style="color:var(--gold)">무작위로 편성된 쥐 침입단</b>으로 나섭니다.
       <b>지는 쪽은 등록원부 내구 30을 잃습니다.</b></div>
