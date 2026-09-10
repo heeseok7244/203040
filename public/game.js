@@ -2650,37 +2650,146 @@ const PROMO_CELL = 64;
 const promoReady = () => promoSprite.complete && promoSprite.naturalWidth > 0;
 
 /**
- * 출원냥 전용 스프라이트 — 4프레임 256×64 한 줄 (tools/cut-cat-sheet.js 가 cat_1.png 에서 뽑는다).
+ * 냥 종류별 전용 스프라이트 — 각각 4프레임 한 줄 (tools/cut-cat-sheet.js 가 원화에서 뽑는다).
  * 0번 칸이 평상시 자세이고, 0→1→2→3 을 한 번 훑으면 제자리 공격 모션이 된다.
  * 네 칸 모두 같은 배율·같은 바닥선으로 구워 두었으므로, 프레임이 넘어가도 발이 뜨지 않는다.
- * 색보정(filter)은 걸지 않는다 — 원화 그대로의 흰 냥이가 출원냥의 얼굴이다.
+ *
+ * 색보정(filter)은 걸지 않는다 — 시트마다 이미 제 색으로 그려져 있다. 예전에는 냥 한 벌을
+ * `filter: hue-rotate(...)` 로 물들여 여섯 종을 만들었는데, 전용 시트가 있는 종류는 원화
+ * 그대로가 그 냥의 얼굴이다.
+ *
+ * 시트가 아직 없는(또는 못 읽은) 종류는 예전 공용 스프라이트 시트로 알아서 되돌아간다 —
+ * 파일을 하나씩 넣는 동안에도 판이 멀쩡히 돌아간다.
  */
-const specSprite = new Image();
-specSprite.src = "img/cat-spec.png";
-/** 출원냥 스프라이트 한 칸의 크기(px) */
-const SPEC_CELL = 64;
-/** 출원냥 공격 모션의 프레임 수 */
+const CAT_SHEET_SRC = {
+  spec:  "img/cat_attack1.png",   // 출원냥
+  claim: "img/cat_attack2.png",   // 특허범위냥
+  agent: "img/cat_attack3.png",   // 변리사냥
+  pct:   "img/cat_attack4.png",   // 국제출원냥
+  fast:  "img/cat_attack5.png",   // 우선심사냥
+  delay: "img/cat_attack6.png",   // 보정명령냥
+};
+/** 종류 → Image. 시트를 못 찾아도 판이 죽지 않게 로드 실패는 그냥 삼킨다 */
+const catSheets = {};
+for (const key of Object.keys(CAT_SHEET_SRC)) {
+  const im = new Image();
+  im.addEventListener("error", () => { catSheets[key] = null; }, { once: true });
+  im.src = CAT_SHEET_SRC[key];
+  catSheets[key] = im;
+}
+/**
+ * 점프 모션 시트 — 웨이브가 도는 동안 제자리에서 뛰는 냥만 여기에 적는다.
+ * 지금은 **변리사냥 하나뿐**이다. 비공격 보좌형이라 공격 모션이 돌 일이 거의 없어
+ * 판이 돌아가는 내내 0번 칸에 굳어 있었는데, 그 자리를 점프가 채운다.
+ *
+ * 파일은 `tools/cut-cat-jump-sheet.js` 가 굽고 여섯 종이 다 준비돼 있다
+ * (`cat_jump1`~`cat_jump6`). 여기에 한 줄 더 적으면 그 종류도 뛴다.
+ * 공격 시트와 **형식이 완전히 같아서**(160px 셀 × 4컷) 모션이 바뀌어도 크기가 변하지 않는다.
+ */
+const CAT_JUMP_SRC = {
+  agent: "img/cat_jump3.png",   // 변리사냥
+};
+/** 종류 → Image. 공격 시트와 같은 방식으로 로드 실패는 그냥 삼킨다 (그 냥은 안 뛴다) */
+const catJumps = {};
+for (const key of Object.keys(CAT_JUMP_SRC)) {
+  const im = new Image();
+  im.addEventListener("error", () => { catJumps[key] = null; }, { once: true });
+  im.src = CAT_JUMP_SRC[key];
+  catJumps[key] = im;
+}
+/**
+ * 점프 한 바퀴 — 4컷을 뛰고 나서 잠깐 쉰다.
+ *
+ * 쉬는 참(REST)이 없으면 한 번도 안 쉬고 계속 통통 튀어 판 위에서 눈에 거슬린다.
+ * 4컷 × 100ms(=400ms) 뛰고 520ms 쉬는 920ms 짜리다. 시트의 컷 순서는
+ * 앉은 자세(0) → 살짝 뜸(1) → 정점(2) → 착지(3) 라서, 쉬는 동안은 0번 칸에 앉아 있는다.
+ *
+ * 공격 모션(SPEC_FRAME_MS)과 달리 공속에 맞출 것이 없어 값을 따로 잡았다 —
+ * 이건 「판이 도는 동안 살아 있어 보이는가」만 보면 된다.
+ */
+const JUMP_FRAME_MS = 100;
+/** 한 번 뛴 뒤 0번 칸에 앉아 쉬는 시간(ms) */
+const JUMP_REST_MS = 520;
+/** 이 종류의 점프 시트를 지금 쓸 수 있는가 */
+const jumpOf = (key) => catJumps[key] || null;
+const jumpReady = (key) => {
+  const im = jumpOf(key);
+  return !!im && im.complete && im.naturalWidth > 0;
+};
+/** 전용 시트 한 칸의 크기(px) — 시트를 아직 못 읽었을 때만 쓰는 대비값 */
+const SPEC_CELL = 160;
+/** 전용 시트 공격 모션의 프레임 수 — 모든 종류가 가로 1행 4프레임으로 같다 */
 const SPEC_FRAMES = 4;
 /**
- * 프레임당 유지 시간(ms) — 4프레임 220ms.
+ * 프레임당 유지 시간(ms) — 4프레임 220ms. **종류에 상관없이 같은 값을 쓴다.**
+ * 공격 모션이 냥마다 다른 속도로 돌면 판 위에서 눈에 거슬리고, 아래처럼 「한 사격 안에
+ * 네 칸이 다 들어가는가」로 잡은 값이라 공속이 다른 냥에게도 그대로 통한다.
+ *
  * 출원냥의 실제 공속은 CATS.spec.rate(2.0) 가 아니라 거기에 stats.js 의 ATTACK_RATE_MULT(2.2)
  * 가 곱해진 초당 4.4회다. 곧 227ms 마다 한 발이 나가므로, 프레임당 80ms(=320ms)로 잡으면
  * 3번째 칸에서 다음 공격에 잘려 네 칸이 끝까지 돌지 못한다. 한 사격 안에 다 들어가도록 줄였다.
  * (보좌·증강으로 더 빨라지면 남은 칸이 잘리고 1번 칸부터 다시 도는데, 이건 연타로 보여 자연스럽다.)
  */
 const SPEC_FRAME_MS = 55;
-const specReady = () => specSprite.complete && specSprite.naturalWidth > 0;
+/** 이 종류의 전용 시트를 지금 쓸 수 있는가 */
+const sheetOf = (key) => catSheets[key] || null;
+const sheetReady = (key) => {
+  const im = sheetOf(key);
+  return !!im && im.complete && im.naturalWidth > 0;
+};
+/**
+ * 시트에서 실제로 잰 한 칸의 크기.
+ * 가로는 전체 너비를 프레임 수로 나눈 값, 세로는 시트 높이 그대로다 — 종류마다 원본 해상도가
+ * 달라도, 또 시트를 다른 크기로 다시 구워도 프레임 경계가 어긋나거나 옆 칸이 묻어 나오지 않는다.
+ */
+const cellW = (im) => (im && im.naturalWidth ? im.naturalWidth / SPEC_FRAMES : SPEC_CELL);
+const cellH = (im) => (im && im.naturalHeight ? im.naturalHeight : SPEC_CELL);
+const sheetCellW = (key) => cellW(sheetReady(key) ? sheetOf(key) : null);
+const sheetCellH = (key) => cellH(sheetReady(key) ? sheetOf(key) : null);
+
+/**
+ * 지금 이 냥이 그려야 할 칸 — [시트 이미지, 칸 번호].
+ * 점프 시트가 있고 뛰어도 되는 참이면 점프 시트에서, 아니면 공격 시트에서 가져온다
+ * (공격 시트의 0번 칸이 평상시 자세다).
+ *
+ * 뛰는 참을 냥마다 uid 로 어긋나게 둔다 — 변리사냥을 둘 이상 세웠을 때 똑같이 맞춰 뛰면
+ * 살아 있는 것보다 기계처럼 보인다.
+ *
+ * @param {string} key @param {number} uid
+ * @param {number} atkFrame 공격 모션의 현재 칸 (0 이면 평상시 자세)
+ * @param {boolean} canJump 지금 뛰어도 되는가 — 부르는 쪽이 판단한다 (웨이브 중 · 공격 중 아님)
+ * @param {number} now performance.now()
+ */
+function motionFrame(key, uid, atkFrame, canJump, now) {
+  if (canJump && jumpReady(key)) {
+    const hop = SPEC_FRAMES * JUMP_FRAME_MS;
+    const cycle = hop + JUMP_REST_MS;
+    const t = (now + (uid * 137) % cycle) % cycle;
+    // 쉬는 참에는 0번 칸에 앉아 있는다
+    return [jumpOf(key), t < hop ? Math.min(SPEC_FRAMES - 1, Math.floor(t / JUMP_FRAME_MS)) : 0];
+  }
+  return [sheetOf(key), atkFrame];
+}
 
 /** 로드 완료 시 콜백 (이미 로드됐으면 즉시) */
 function onSpriteReady(fn) {
   if (sprite.complete && sprite.naturalWidth) fn();
   else sprite.addEventListener("load", fn, { once: true });
   if (!promoReady()) promoSprite.addEventListener("load", fn, { once: true });
-  if (!specReady()) specSprite.addEventListener("load", fn, { once: true });
+  for (const key of Object.keys(CAT_SHEET_SRC)) {
+    const im = sheetOf(key);                       // 이미 로드에 실패한 종류는 null 이다
+    if (im && !sheetReady(key)) im.addEventListener("load", fn, { once: true });
+  }
+  for (const key of Object.keys(CAT_JUMP_SRC)) {
+    const im = jumpOf(key);
+    if (im && !jumpReady(key)) im.addEventListener("load", fn, { once: true });
+  }
 }
 
 return { PROMO_CELL, SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS,
-         onSpriteReady, promoReady, promoSprite, specReady, specSprite, sprite };
+         sheetOf, sheetReady, sheetCellW, sheetCellH, cellW, cellH,
+         jumpOf, jumpReady, motionFrame,
+         onSpriteReady, promoReady, promoSprite, sprite };
 })();
 __mods["web/main.js"] = (function(){
 // @ts-check
@@ -2692,7 +2801,9 @@ const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {auraCells} = __req("core/stats.js");
 const {sprite, onSpriteReady, promoSprite, promoReady, PROMO_CELL,
-       specSprite, specReady, SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS} = __req("web/sprite.js");
+       SPEC_FRAMES, SPEC_FRAME_MS,
+       sheetOf, sheetReady, sheetCellW, sheetCellH, cellW, cellH,
+       motionFrame} = __req("web/sprite.js");
 const $ = (s) => /** @type {HTMLElement} */ (document.querySelector(s));
 const CS = BAL.cellSize, GAP = BAL.cellGap;
 
@@ -2903,8 +3014,22 @@ function pieceEl(p, onBoard) {
   }
 
   const cv = document.createElement("canvas");
-  cv.width = 64; cv.height = 64;
+  /**
+   * 전용 시트를 쓰는 냥만 캔버스를 화면 픽셀 밀도만큼 크게 잡는다.
+   * 64px 캔버스를 배율 200% 화면에 그대로 얹으면 브라우저가 두 배로 늘리는데,
+   * 부드러운 일러스트라 그때 외곽선이 계단처럼 깨진다. **표시 크기는 64px 그대로**라
+   * 화면에서 보이는 크기·위치는 달라지지 않는다 — idle 과 공격 프레임이 같은 캔버스·같은
+   * 표시 크기를 쓰므로 공격이 시작돼도 크기나 선 두께가 변하지 않는다.
+   * (전용 시트가 없어 공용 스프라이트로 그리는 냥은 예전처럼 64×64 그대로 둔다.)
+   */
+  // 판정 기준을 drawCats 와 똑같이 맞춘다. 위의 `promoted`(= 레벨만 본다)를 쓰면 안 된다 —
+  // 쏘지 않는 변리사냥은 Lv3 이어도 승진하지 않아(computeStats) 전용 시트로 그려지는데,
+  // 여기서만 승진으로 치면 그 냥만 저해상도 캔버스에 pixelated 로 그려져 혼자 거칠어진다.
+  const smooth = useSpecSheet(p.key, !!(p.st && p.st.promoted));
+  const hi = smooth ? Math.min(3, Math.max(1, Math.ceil(window.devicePixelRatio || 1))) : 1;
+  cv.width = 64 * hi; cv.height = 64 * hi;
   cv.style.width = "64px"; cv.style.height = "64px";
+  if (smooth) cv.classList.add("smooth");   // 픽셀아트가 아니므로 pixelated 를 걷어 낸다
   catCanvas.set(p.uid, cv);        // 코어 객체를 오염시키지 않는다
   el.appendChild(cv);
 
@@ -3136,13 +3261,14 @@ function draw(now) {
 }
 
 /**
- * 출원냥이 쓸 스프라이트인가 — 승진하면 승진냥 원화가 우선한다.
+ * 이 냥이 전용 시트를 쓸 차례인가 — 승진하면 승진냥 원화가 우선하고,
+ * 전용 시트가 없는 종류(특수 냥타워 등)는 예전 공용 스프라이트로 되돌아간다.
  * @param {string} key @param {boolean} promoted
  */
-const useSpecSheet = (key, promoted) => key === "spec" && !promoted && specReady();
+const useSpecSheet = (key, promoted) => !promoted && sheetReady(key);
 
 /**
- * 출원냥의 현재 공격 프레임. 공격 중이 아니면 0(평상시 자세)이다.
+ * 그 냥의 현재 공격 프레임. 공격 중이 아니면 0(평상시 자세)이다.
  *
  * 총알은 combat.js 가 조준에 성공한 그 자리에서 바로 만든다 — 발사를 뒤로 미루면
  * 사거리 밖으로 빠져나간 적을 향해 쏘거나, 판이 끝난 뒤에 총알이 남는 문제가 생긴다.
@@ -3174,16 +3300,31 @@ function drawCats(g, now) {
     if (!cc) continue;
     const cg = cc.getContext("2d");
     const [row, fr] = frameOf(c, now);
+    // 캔버스를 화면 픽셀 밀도만큼 크게 잡은 조각(전용 시트를 쓰는 냥)은 그 배율만큼 확대해 그린다.
+    // 아래 그리는 코드는 예전처럼 64×64 좌표계 그대로 두면 된다.
+    const k = cc.width / 64;
+    cg.setTransform(k, 0, 0, k, 0, 0);
+    cg.imageSmoothingEnabled = true;          // 부드러운 일러스트라 NEAREST 로 늘리면 외곽선이 깨진다
+    cg.imageSmoothingQuality = "high";
     cg.clearRect(0, 0, 64, 64);
     if (c.st.promoted && promoReady()) {
       // 승진냥 — 선글라스 낀 흰 냥이 원화를 그대로 쓴다 (색보정 없음). 샷건만 위에 얹는다.
       cg.drawImage(promoSprite, fr * PROMO_CELL, 0, PROMO_CELL, PROMO_CELL, 0, 0, 64, 64);
       drawShotgun(cg, !!(c.atkEnd && now < c.atkEnd));
     } else if (useSpecSheet(c.key, !!c.st.promoted)) {
-      // 출원냥 — cat_1.png 에서 뽑은 흰 냥이. 평상시 0번 칸, 공격하는 동안만 0→1→2→3.
+      // 전용 시트를 가진 냥 — 평상시 0번 칸, 공격하는 동안만 0→1→2→3 (색보정 없이 원화 그대로).
       // 네 칸이 같은 배율·같은 바닥선으로 구워져 있어 칸이 넘어가도 중심과 발끝이 그대로다.
-      const sf = specFrame(c, now);
-      cg.drawImage(specSprite, sf * SPEC_CELL, 0, SPEC_CELL, SPEC_CELL, 0, 0, 64, 64);
+      //
+      // 점프 시트가 있는 냥(변리사냥)은 **웨이브가 도는 동안** 공격하지 않는 참에 제자리에서
+      // 뛴다. 두 시트가 같은 셀·같은 배율로 구워져 있어 시트를 갈아타도 크기가 튀지 않는다.
+      //
+      // 「공격 중이 아님」은 공격 프레임이 0인지가 아니라 atkEnd 로 본다 — 공격 프레임은 발사
+      // 직후 첫 55ms 동안에도 0이라, 그걸로 갈랐다면 쏘기 시작하는 순간 한 컷 떠올랐다가
+      // 공격 자세로 튀는 깜빡임이 생긴다 (「변리사 개업」으로 보좌형이 쏘게 되는 경우).
+      const canJump = game.phase === "wave" && !(c.atkEnd && now < c.atkEnd);
+      const [im, fi] = motionFrame(c.key, c.uid, specFrame(c, now), canJump, now);
+      const cw = cellW(im), ch = cellH(im);
+      cg.drawImage(im, fi * cw, 0, cw, ch, 0, 0, 64, 64);
     } else if (sprite.complete) {
       cg.filter = CATS[c.key].filter || "none";
       cg.drawImage(sprite, fr * 64, row * 64, 64, 64, 0, 0, 64, 64);
@@ -4014,6 +4155,22 @@ function consumeEvents() {
         break;
       case "expand":
         log(`<b>${ev.name}</b> ${ev.cells}칸 개방 (−${ev.cost})`);
+        break;
+      /*
+       * 웨이브가 끝나면 여기서 이 스테이지의 선택지를 연다.
+       * 이게 빠지면 core 는 awaitingPassive 를 세워 둔 채로 멈추고, 화면에는 「효과 선택 중」만
+       * 남은 채 아무 모달도 뜨지 않는다 — 그 상태에서는 임용·합성·개시가 전부 잠겨 판이 죽는다
+       * (canPrep 이 awaitingPassive 를 막는다). 모달을 여는 곳은 여기와 closeDuelRound 둘뿐이다.
+       */
+      case "wave_end":
+        log(ev.duel
+          ? `스테이지 ${ev.wave} 대전 종료 · 수입 <b>+${ev.income}</b>`
+          : `웨이브 ${ev.wave} 방어 완료 · 수입 <b>+${ev.income}</b>`);
+        // 대전 라운드라면 결과 화면을 읽는 동안은 모달을 띄우지 않는다 —
+        // 대전장을 접을 때(closeDuelRound) 이어서 연다.
+        if (duel) break;
+        if (game.awaitingAugment) openAugmentModal();
+        else if (game.awaitingPassive) openPassiveModal();
         break;
       case "merge": {
         log(ev.promoted
@@ -5394,9 +5551,10 @@ function drawOpponent(now) {
       g.strokeStyle = "#cda43a"; g.lineWidth = Math.max(1, cell * 0.06);
       g.strokeRect(cx - tile / 2, cy - tile / 2, tile, tile);
     } else if (spec) {
-      // 출원냥 — 내 판과 같은 흰 냥이. 스냅샷에는 공격 시각이 없으니 평상시 자세(0번 칸)로 둔다
+      // 전용 시트를 쓰는 냥 — 내 판과 같은 원화. 스냅샷에는 공격 시각이 없으니 평상시 자세(0번 칸)
       const sz = tile * 1.02;
-      g.drawImage(specSprite, 0, 0, SPEC_CELL, SPEC_CELL, cx - sz / 2, cy - sz / 2, sz, sz);
+      g.drawImage(sheetOf(p.k), 0, 0, sheetCellW(p.k), sheetCellH(p.k),
+                  cx - sz / 2, cy - sz / 2, sz, sz);
     } else if (img) {
       const sz = tile * 1.02;
       g.drawImage(img, cx - sz / 2, cy - sz / 2, sz, sz);

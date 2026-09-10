@@ -145,6 +145,8 @@ h1{font-family:var(--disp);font-size:27px;margin:0;letter-spacing:.18em;color:#f
 .piece .reg{position:absolute;left:2px;top:0;font-family:var(--mono);font-size:6.5px;color:#8a7c5e}
 .piece.cat{background:#f2ecdb;border-color:var(--seal);box-shadow:2px 3px 0 rgba(196,50,42,.28);z-index:4}
 .piece.cat canvas{image-rendering:pixelated;display:block}
+/* 출원냥은 픽셀아트가 아니라 부드러운 일러스트다 — pixelated 로 늘리면 외곽선이 계단처럼 깨진다 */
+.piece.cat canvas.smooth{image-rendering:auto}
 .piece.cat .nm{font-family:var(--disp);font-size:9px;letter-spacing:.06em;color:#3a2f1e;margin-top:-3px}
 .piece.admin{background:#efe6cd}
 .piece.off{opacity:.45}
