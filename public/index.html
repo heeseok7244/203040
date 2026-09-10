@@ -44,27 +44,9 @@
 
 <div id="gameRoot" class="wrap hidden">
 
-<header>
-  <div class="masthead">
-    <h1>묘한특허</h1>
-    <div class="sub">특허청 청사 방위전 · 등록번호 제10-<span id="regHead">1000</span>호</div>
-    <!-- 판을 접고 첫 화면으로 — 브라우저 뒤로가기는 탭 자체를 닫아버려서 나갈 길이 없었다.
-         1v1 은 나가면 상대가 빈 판을 붙들고 있게 되므로 솔로에서만 보인다 (style.css) -->
-    <button id="btnExit" type="button">나가기</button>
-  </div>
-  <div class="stats">
-    <div class="stat dmg"><b id="sHp">22</b><span>원부 내구</span></div>
-    <div class="stat gold"><b id="sGold">85</b><span>특허료</span></div>
-    <div class="stat"><b id="sWave">0/12</b><span>웨이브</span></div>
-    <!-- 스테이지 강화 · 증강이 곧 내 덱이다. 둘 다 1:1 대전장까지 그대로 실린다.
-         상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다. -->
-    <div class="stat effects">
-      <div class="efcol"><i>스테이지 강화</i><div class="passiveTags" id="myPassiveTags"></div></div>
-      <div class="efcol"><i>내증강</i><div class="passiveTags" id="myAugTags"></div></div>
-    </div>
-  </div>
-</header>
-
+<!-- 머릿글 패널(제목·등록번호)은 걷어냈다. 판이 세로로 큰 화면이라 그 한 줄이 통째로
+     스크롤을 만들었고, 정작 게임 중에는 볼 일이 없는 칸이었다. 거기 있던 나가기 단추는
+     「웨이브 진행」 칸 머리로, 내 덱(스테이지 강화·증강)은 「내 청사」 칸으로 옮겼다. -->
 <div class="cols">
   <div>
     <div class="panel">
@@ -96,17 +78,6 @@
         </div>
       </div>
     </div>
-    <div class="panel">
-      <h2>특허권 행사 <em>ACTIVE SKILLS</em></h2>
-      <div class="pad">
-        <div id="skillBar"></div>
-        <div style="font-size:10.5px;color:var(--muted);line-height:1.55;margin-top:8px">
-          웨이브가 <b style="color:var(--txt)">진행 중일 때만</b> 집행할 수 있습니다. 폐기명령은 버튼을 누른 뒤
-          판 위를 클릭해 범위를 지정합니다 (Esc·우클릭으로 취소).<br>
-          재사용 대기시간은 웨이브를 넘기면 초기화됩니다.
-        </div>
-      </div>
-    </div>
   </div>
 
   <div>
@@ -128,18 +99,39 @@
       <div class="floor">
         <!-- 스테이지 원화(map/*.png)를 깔고 그 위에 판을 얹는다. 여백은 원화마다 액자 두께가
              달라서 JS(STAGE_THEMES)가 테마별로 정해 넣는다 -->
-        <div class="arena" id="arena">
-          <!-- 합성 가능한 묶음 — 판 우측 상단. 원화 액자의 윗여백에 얹혀서 판을 가리지 않는다.
-               같은 종류·같은 레벨이 3명 모이면 저절로 뜨고, 누르면 그 자리에서 합쳐진다 -->
-          <div id="mergeDock" class="hidden"></div>
-          <div class="stage">
-            <div id="board"></div>
-            <canvas id="fx"></canvas>
+        <!-- 남는 높이에 판을 맞춰 넣는 칸. 판은 9×9 × 84px 고정이라 화면이 낮으면 그대로는
+             넘치므로, JS(fitArena)가 이 칸에 맞는 배율을 재서 아래 .arena 를 축소한다. -->
+        <div id="arenaFit">
+          <div class="arena" id="arena">
+            <!-- 합성 가능한 묶음 — 판 우측 상단. 원화 액자의 윗여백에 얹혀서 판을 가리지 않는다.
+                 같은 종류·같은 레벨이 3명 모이면 저절로 뜨고, 누르면 그 자리에서 합쳐진다 -->
+            <div id="mergeDock" class="hidden"></div>
+            <div class="stage">
+              <div id="board"></div>
+              <canvas id="fx"></canvas>
+            </div>
           </div>
         </div>
         <div id="tray"></div>
         <!-- 상대가 나에게 걸어 둔 방해 공작 (실시간 남은 시간 · 다음 웨이브 예약분) -->
         <div id="fxTags" class="hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 오른쪽 칸은 위에서부터 「개시 → 내 상태 → 상대 상태」 순이다.
+       판 아래에 있던 개시·배속과 머릿글에 있던 내 상태 숫자를 여기로 모아,
+       누를 것과 볼 것이 눈길 한 줄기 안에 들어오게 했다. -->
+  <div>
+    <div class="panel" id="ctlPanel">
+      <h2>웨이브 진행
+        <span class="h2right">
+          <em>WAVE</em>
+          <!-- 판을 접고 첫 화면으로 — 브라우저 뒤로가기는 탭 자체를 닫아버려서 나갈 길이 없었다.
+               1v1 은 나가면 상대가 빈 판을 붙들고 있게 되므로 솔로에서만 보인다 (style.css) -->
+          <button id="btnExit" type="button">나가기</button>
+        </span></h2>
+      <div class="pad">
         <div class="boardctl">
           <button id="btnGo" class="go">웨이브 1 준비 완료</button>
           <button id="btnSpeed">속도 ×1</button>
@@ -155,9 +147,24 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <div>
+    <div class="panel" id="mePanel">
+      <h2>내 청사 <em>YOUR OFFICE</em></h2>
+      <div class="pad">
+        <div class="meStats">
+          <div class="stat dmg"><b id="sHp">22</b><span>원부 내구</span></div>
+          <div class="stat gold"><b id="sGold">85</b><span>특허료</span></div>
+          <div class="stat"><b id="sWave">0/12</b><span>웨이브</span></div>
+        </div>
+        <!-- 스테이지 강화 · 증강이 곧 내 덱이다. 둘 다 1:1 대전장까지 그대로 실린다.
+             상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다. -->
+        <div class="stat effects">
+          <div class="efcol"><i>스테이지 강화</i><div class="passiveTags" id="myPassiveTags"></div></div>
+          <div class="efcol"><i>내증강</i><div class="passiveTags" id="myAugTags"></div></div>
+        </div>
+      </div>
+    </div>
+
     <div class="panel" id="oppPanel">
       <h2>상대 청사 <em id="oppLabel">OPPONENT</em></h2>
       <div class="pad">

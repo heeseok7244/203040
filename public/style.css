@@ -20,18 +20,27 @@ body{
   background-size:26px 26px;
 }
 .wrap{max-width:1460px;margin:0 auto;padding:14px 16px 40px}
-header{
-  border:1px solid var(--line); border-bottom-width:3px;
-  background:linear-gradient(180deg,var(--ink2),var(--ink));
-  padding:12px 16px; margin-bottom:14px; position:relative; overflow:hidden;
-}
-header::after{content:"";position:absolute;inset:5px;border:1px solid rgba(105,182,214,.18);pointer-events:none}
-.masthead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-/* 나가기는 머릿글 오른쪽 끝으로 밀어 둔다 — 자주 누를 것이 아니라서 눈에 먼저 띌 필요는 없다.
+/* ── 한 화면에 다 담는다 ──
+   판이 세로로 큰 데다 옆칸(냥타워·처방표)은 더 길어서, 예전에는 무엇을 보든 스크롤이 따라다녔다.
+   이제 게임 화면은 창 높이에 못을 박고, 넘치는 것은 칸 안에서만 흐르게 한다. */
+#gameRoot.wrap{height:100vh;height:100dvh;padding:10px 12px;display:flex;flex-direction:column;overflow:hidden}
+#gameRoot .cols{flex:1;min-height:0;align-items:stretch}
+/* 세 칸이 각자 자기 높이 안에서만 스크롤한다 — 판이 있는 가운데 칸은 넘칠 일이 없다 */
+#gameRoot .cols>div{min-height:0;height:100%;overflow-y:auto;overflow-x:hidden;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#gameRoot .cols>div::-webkit-scrollbar{width:8px}
+#gameRoot .cols>div::-webkit-scrollbar-thumb{background:var(--line)}
+/* 가운데 칸은 판 하나로 꽉 채운다 — 칸 높이에 맞춰 판이 줄어든다 (JS fitArena) */
+#gameRoot .cols>div:nth-child(2){overflow:hidden;display:flex;flex-direction:column}
+#gameRoot .cols>div:nth-child(2)>.panel{flex:1;min-height:0;display:flex;flex-direction:column;margin-bottom:0}
+#gameRoot .cols>div:nth-child(2)>.panel>.floor{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center}
+#arenaFit{flex:1;min-height:0;width:100%;display:flex;justify-content:center;align-items:flex-start;overflow:hidden}
+#arenaFit>.arena{transform-origin:top center;flex:none}
+/* 나가기는 「웨이브 진행」 칸 머리 오른쪽 끝 — 자주 누를 것이 아니라서 눈에 먼저 띌 필요는 없다.
    상대가 있는 판에서는 혼자 빠져나갈 수 없으므로 솔로에서만 내보낸다. */
-.masthead #btnExit{margin-left:auto;align-self:center;padding:5px 12px;font-size:11.5px}
-.masthead #btnExit:hover:not(:disabled){background:var(--seal);border-color:var(--seal);color:#fff}
-body:not(.solo) .masthead #btnExit{display:none}
+#ctlPanel #btnExit{padding:2px 9px;font-size:10.5px;letter-spacing:.02em}
+#ctlPanel #btnExit:hover:not(:disabled){background:var(--seal);border-color:var(--seal);color:#fff}
+body:not(.solo) #ctlPanel #btnExit{display:none}
 h1{font-family:var(--disp);font-size:27px;margin:0;letter-spacing:.18em;color:#f0f4f8;font-weight:700}
 .sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.14em}
 .stats{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
@@ -272,6 +281,14 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 
 /* ── 대전 추가분 ── */
 .hidden{display:none!important}
+/* 내 청사 — 원부 내구·특허료·웨이브. 상대 청사 바로 위에 같은 모양으로 놓아
+   내 상태와 상대 상태를 위아래로 견주게 한다. 칸이 좁으니 셋으로 고르게 나눠 담는다. */
+.meStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.meStats .stat{min-width:0;padding:5px 7px;text-align:center}
+.meStats .stat b{font-size:16px}
+.meStats .stat span{font-size:9.5px;letter-spacing:.06em}
+/* 개시·배속은 판 아래가 아니라 오른쪽 칸 맨 위다 — 칸 안쪽 여백이 이미 있어 위 여백은 뺀다 */
+#ctlPanel .boardctl{margin-top:0}
 .oppStats{display:flex;gap:10px;margin-bottom:10px}
 #oppCv{width:100%;background:var(--ink2,#0c1a2c);border:1px solid var(--line);border-radius:2px;display:block}
 .passiveTags{display:flex;flex-wrap:wrap;gap:4px;min-height:20px}
@@ -535,29 +552,6 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   #lobby .entry .go + .codehint{display:none}
 }
 
-/* ── 특허권 행사 (액티브 스킬) ── */
-#skillBar{display:flex;flex-direction:column;gap:6px}
-.skill{position:relative;display:flex;align-items:center;gap:9px;width:100%;text-align:left;
-  padding:8px 10px;overflow:hidden;line-height:1.35}
-.skill .cdfill{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(196,50,42,.28);
-  pointer-events:none;transition:width .1s linear}
-.skill>*{position:relative;z-index:1}
-.skill .ic{font-size:21px;flex:none}
-.skill .meta{min-width:0;flex:1}
-.skill .meta b{display:block;font-family:var(--disp);font-size:12.5px;color:#e8eef4;font-weight:700;
-  display:flex;align-items:center;gap:5px}
-.skill .meta i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;
-  color:var(--muted);letter-spacing:.02em;margin-top:2px}
-.skill .right{flex:none;text-align:right}
-.skill .cost{display:block;font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:700}
-.skill .state{display:block;font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px}
-.skill:not(:disabled){border-color:var(--seal)}
-.skill:not(:disabled) .state{color:var(--ok)}
-.skill.armed{background:var(--seal);border-color:var(--seal)}
-.skill.armed .state,.skill.armed .meta i{color:#ffe4c8}
-.skill.armed .cost{color:#fff}
-#board.aiming{cursor:crosshair}
-#board.aiming .piece{cursor:crosshair;pointer-events:none}
 
 /* ── 방해 공작 뽑기 ──
    내 판에 쓰는 것들(금색 계열)과 확실히 갈리도록 보랏빛으로 통일한다 —
@@ -714,6 +708,9 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 .prhint b{color:var(--gold);font-weight:400}
 
 /* ── 헤더: 웨이브 옆 효과칸 (내효과 | 상대효과 나란히) ── */
+/* 내 덱(스테이지 강화·증강) — 머릿글에 한 줄로 있던 것을 「내 청사」 칸으로 옮겨 두 줄로 쌓는다 */
+#mePanel .stat.effects{display:block;min-width:0;margin-top:9px;padding:6px 8px}
+#mePanel .stat.effects .efcol+.efcol{margin-top:6px}
 .stat.effects{display:flex;gap:14px;min-width:280px;flex:1;padding:4px 11px 5px}
 .stat.effects .efcol{flex:1;min-width:0}
 .stat.effects .efcol>i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;

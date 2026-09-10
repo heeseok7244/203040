@@ -294,33 +294,6 @@ const WAVES = [
 ];
 
 /**
- * 웨이브 진행 중에 특허료를 내고 즉시 쓰는 액티브 스킬.
- * 패시브(PASSIVES)가 웨이브 사이에 고르는 누적 보정이라면, 이쪽은 전투 중 한 번에 터뜨리는 카드다.
- *
- * cost    특허료 (스킬은 종류별 가격 상승이 없다 — 항상 정액)
- * cd      재사용 대기(초). 웨이브가 끝나면 초기화된다 — 웨이브 안에서의 타이밍 싸움이 되도록.
- * target  "global" 즉시 전체 적용 · "point" 판 위 한 지점을 찍어 그 반경에 적용
- * kind    "freeze" 이동정지 · "purge" 범위 제거
- * dur     freeze 지속(초) · radius purge 반경(px, 1칸 = 84px)
- * bossHp  purge 시 보스에게 주는 피해 (최대 체력 비율) — 보스는 즉사시키지 않는다
- * @type {Record<string,{key:string,name:string,short:string,icon:string,cost:number,cd:number,
- *   target:"global"|"point",kind:"freeze"|"purge",tag:string,desc:string,
- *   dur?:number,radius?:number,bossHp?:number}>}
- */
-const SKILLS = {
-  injunction: {
-    key: "injunction", name: "침해금지가처분", short: "가처분", icon: "🧊",
-    cost: 100, cd: 14, target: "global", kind: "freeze", dur: 3.2, tag: "이동정지",
-    desc: "본안 판결 전에 침해를 잠정적으로 멈춰 세우는 처분. 판 위 모든 침입자를 3.2초 동안 그 자리에 묶는다. 묶인 동안에도 피해는 그대로 들어간다.",
-  },
-  scrap: {
-    key: "scrap", name: "침해품 폐기명령", short: "폐기명령", icon: "💥",
-    cost: 100, cd: 20, target: "point", kind: "purge", radius: 148, bossHp: 0.5, tag: "범위제거",
-    desc: "침해를 조성한 물건을 폐기하도록 명하는 처분. 찍은 지점 반경 약 1.7칸 안의 침입자를 즉시 제거한다. 국제소송단(보스)만은 즉사하지 않고 최대 체력 50% 피해를 입는다.",
-  },
-};
-
-/**
  * 방해 공작(SABOTAGE) — 특허료를 내고 **상대 판에** 거는 훼방. 무엇이 나갈지는 뽑아 봐야 안다.
  *
  * 예전에는 다섯 종류를 늘어놓고 골라 질렀다. 이제는 **정액을 내고 무작위로 하나를 뽑는다** —
@@ -570,7 +543,7 @@ const BAL = {
 };
 
 return { AUGMENTS, AUGMENT_WAVES, BAL, CATS, CAT_WEIGHT_TOTAL, catDrawChance, DRAW_KEYS,
-         DUEL, DUEL_WAVES, ENEMIES, PASSIVES, PASSIVE_BY_KEY, RECIPES, SABOTAGE, SKILLS, WAVES };
+         DUEL, DUEL_WAVES, ENEMIES, PASSIVES, PASSIVE_BY_KEY, RECIPES, SABOTAGE, WAVES };
 })();
 __mods["core/maps.js"] = (function(){
 // @ts-check
@@ -1279,43 +1252,6 @@ function damage(g, e, amt, src) {
 }
 
 /**
- * 액티브 스킬의 실제 효과. 특허료 차감·쿨다운·이벤트는 Game 쪽이 맡고,
- * 여기서는 "적에게 무슨 일이 일어나는가"만 계산한다.
- * @param {any} g 게임 상태
- * @param {any} def SKILLS 의 정의
- * @param {number[]|null} pt purge 일 때 찍은 지점 [x,y] (픽셀)
- * @returns {{hit:number, killed:number}} 영향을 받은 수 / 그 중 처치한 수
- */
-function castSkill(g, def, pt) {
-  let hit = 0, killed = 0;
-
-  if (def.kind === "freeze") {
-    // 가처분 — 판 위 전체. 이미 걸려 있으면 남은 시간이 긴 쪽을 유지한다(중첩으로 늘어나지 않게).
-    for (const e of g.enemies) {
-      if (e.dead) continue;
-      e.freezeT = Math.max(e.freezeT || 0, def.dur);
-      hit++;
-    }
-    return { hit, killed };
-  }
-
-  // 폐기명령 — 찍은 지점 반경 안. 방어무시 100%로 처리해 방어력 높은 적도 확실히 정리된다.
-  if (!pt) return { hit, killed };
-  for (const e of g.enemies) {
-    if (e.dead) continue;
-    if (Math.hypot(e.x - pt[0], e.y - pt[1]) > def.radius) continue;
-    hit++;
-    const before = e.hp;
-    // 보스는 즉사시키지 않는다 — 100 특허료로 국제소송단을 지우는 건 너무 싸다
-    damage(g, e, e.t === "boss" ? e.max * (def.bossHp ?? 0.5) : before + 1, { pierce: 100 });
-    if (e.dead) killed++;
-    e.hitT = 0.22; e.hitCrit = true;
-    e.hitAng = Math.atan2(e.y - pt[1], e.x - pt[0]);
-  }
-  return { hit, killed };
-}
-
-/**
  * 전투 한 틱. 시간이 흐르는 유일한 곳.
  * @param {any} g
  * @param {number} dt 초
@@ -1478,7 +1414,7 @@ function step(g, dt, now) {
   g.waveTime += dt;
 }
 
-return { castSkill, damage, step };
+return { damage, step };
 })();
 __mods["core/duel.js"] = (function(){
 // @ts-check
@@ -1970,12 +1906,12 @@ return { DuelSim, baseX, dirOf, makeRoster, mobRoster, toCards };
 __mods["core/game.js"] = (function(){
 // @ts-check
 const {Rng} = __req("core/rng.js");
-const {WAVES, BAL, CATS, DRAW_KEYS, RECIPES, SKILLS, SABOTAGE, AUGMENTS, AUGMENT_WAVES,
+const {WAVES, BAL, CATS, DRAW_KEYS, RECIPES, SABOTAGE, AUGMENTS, AUGMENT_WAVES,
        DUEL, DUEL_WAVES} = __req("core/data.js");
 const {getMap, parseMap} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {computeStats} = __req("core/stats.js");
-const {step, castSkill} = __req("core/combat.js");
+const {step} = __req("core/combat.js");
 /** 대기 모션: 핑퐁 루프 */
 const IDLE_ORDER = [0,1,2,3,4,5,4,3,2,1];
 const IDLE_MS    = [170,110,100,100,110,190,110,100,100,110];
@@ -2061,12 +1997,6 @@ class Game {
     this.crafted = 0;                    // 그중 특수 냥타워를 만든 횟수
     /** 1:1 대전 라운드 전적 [승, 무, 패] */
     this.duelRecord = [0, 0, 0];
-
-    /** 액티브 스킬 재사용 대기(초). 웨이브가 끝나면 전부 0으로 돌아간다. */
-    this.skillCd = {};
-    /** 스킬을 몇 번 썼는지 (전적 요약용) */
-    this.skillUses = {};
-    for (const k in SKILLS) { this.skillCd[k] = 0; this.skillUses[k] = 0; }
 
     /* ── 방해 공작 ──
      * sabDrawn 이번 웨이브 주기(준비 + 그 웨이브)에 이미 뽑은 횟수 — 라운드가 끝나면 0으로 돌아간다
@@ -2494,50 +2424,6 @@ class Game {
     return true;
   }
 
-  // ── 액티브 스킬 ──
-  /** @param {string} key */
-  skillCost(key) { return SKILLS[key] ? SKILLS[key].cost : Infinity; }
-
-  /**
-   * 지금 이 스킬을 쓸 수 있는가. 못 쓰는 이유가 있으면 문자열로, 쓸 수 있으면 null.
-   * UI가 버튼에 그대로 띄울 수 있게 이유를 말로 돌려준다.
-   * @param {string} key
-   * @returns {string|null}
-   */
-  skillBlocked(key) {
-    const d = SKILLS[key];
-    if (!d) return "없는 스킬";
-    if (this.phase !== "wave") return "웨이브 중 사용";
-    if ((this.skillCd[key] || 0) > 0) return `대기 ${this.skillCd[key].toFixed(1)}s`;
-    if (this.gold < d.cost) return "특허료 부족";
-    return null;
-  }
-  /** @param {string} key */
-  canUseSkill(key) { return this.skillBlocked(key) === null; }
-
-  /**
-   * 스킬을 집행한다. 특허료를 내고 즉시 효과가 들어간다.
-   * @param {string} key
-   * @param {number[]|null} [pt] target 이 "point" 인 스킬에서 찍은 지점 [x,y] (보드 픽셀 좌표)
-   * @returns {boolean} 실제로 나갔는가
-   */
-  useSkill(key, pt) {
-    if (!this.canUseSkill(key)) return false;
-    const d = SKILLS[key];
-    if (d.target === "point" && !pt) return false;
-
-    this.gold -= d.cost;
-    this.skillCd[key] = d.cd;
-    this.skillUses[key] = (this.skillUses[key] || 0) + 1;
-    const { hit, killed } = castSkill(this, d, pt || null);
-
-    this.events.push({
-      t: "skill", key, name: d.name, kind: d.kind, cost: d.cost, hit, killed,
-      x: pt ? pt[0] : 0, y: pt ? pt[1] : 0, radius: d.radius || 0, dur: d.dur || 0,
-    });
-    return true;
-  }
-
   /** 부속 구역을 개방한다. 고정 구조물이 빈 칸이 된다. */
   expand() {
     const a = this.nextAnnex();
@@ -2668,8 +2554,6 @@ class Game {
     // 있었다 — step()이 phase==="wave"일 때만 돌아서 s.life가 더는 줄지 않기 때문. 웨이브가 끝나면
     // 무조건 정리한다.
     this.shots = [];
-    // 스킬 대기시간은 웨이브를 넘기면 초기화된다 — 웨이브 안에서 언제 쓸지가 판단 지점이 되도록
-    for (const k in this.skillCd) this.skillCd[k] = 0;
     const income = Math.round(this.bal.incomeBase + this.wave * this.bal.incomePerWave);
     this.gold += income;
     this.goldenUid = 0;        // 「직권보정」의 3배는 그 웨이브 안에서만 산다
@@ -2717,10 +2601,6 @@ class Game {
    */
   tick(dt, now) {
     if (this.phase !== "wave") return false;
-    // 스킬 재사용 대기는 전투 시간과 같이 흐른다 (배속을 걸면 그만큼 빨리 준다)
-    for (const k in this.skillCd) {
-      if (this.skillCd[k] > 0) this.skillCd[k] = Math.max(0, this.skillCd[k] - dt);
-    }
     step(this, dt, now);
     if (this.hp <= 0) {
       this.phase = "lost";
@@ -2752,8 +2632,6 @@ class Game {
       duelRecord: this.duelRecord.slice(),
       augments: this.augments.slice(),
       sabotage: this.sabSent.slice(),
-      skillUses: { ...this.skillUses },
-      skillTotal: Object.values(this.skillUses).reduce((a, b) => a + b, 0),
       reg: this.reg,
     };
   }
@@ -2823,7 +2701,7 @@ return { PROMO_CELL, SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS,
 __mods["web/main.js"] = (function(){
 // @ts-check
 const {Game, frameOf} = __req("core/game.js");
-const {CATS, ENEMIES, BAL, PASSIVES, PASSIVE_BY_KEY, SKILLS, SABOTAGE, AUGMENTS, AUGMENT_WAVES,
+const {CATS, ENEMIES, BAL, PASSIVES, PASSIVE_BY_KEY, SABOTAGE, AUGMENTS, AUGMENT_WAVES,
        DUEL, DUEL_WAVES, DRAW_KEYS, RECIPES, catDrawChance} = __req("core/data.js");
 const {DuelSim, baseX, makeRoster, mobRoster} = __req("core/duel.js");
 const {MAPS} = __req("core/maps.js");
@@ -2838,12 +2716,6 @@ const CS = BAL.cellSize, GAP = BAL.cellGap;
 let game = null;
 let speed = 1;
 let dragging = null;
-/** 범위 지정이 필요한 스킬을 고른 상태 (판을 찍기 전까지 유지) */
-let armedSkill = null;
-/** 조준 중인 마우스 위치 (보드 픽셀 좌표) */
-let aimPt = null;
-/** 스킬 연출 조각들 */
-let skillFx = [];
 /** 심사관 uid → 스프라이트 캔버스. 렌더러 소유 상태. @type {Map<number,HTMLCanvasElement>} */
 const catCanvas = new Map();
 
@@ -2991,6 +2863,7 @@ function buildBoardCells() {
   fx.height = game.rows * (CS + GAP) - GAP;
   fx.style.width = fx.width + "px";
   fx.style.height = fx.height + "px";
+  fitArena(true);        // 판을 새로 짰으니 화면 높이에 다시 맞춘다
 }
 
 /** 칸을 새로 만들지 않고, 칸 위에 붙는 클래스(인접 강조 / 부속 구역 개방)만 갱신한다 */
@@ -3027,6 +2900,7 @@ function render() {
   renderCatRoster();
   renderPromoteList();
   renderHud();
+  fitArena();      // 대기열이 생기거나 사라지면 판에 남는 높이가 달라진다 (크기가 그대로면 바로 빠진다)
 }
 
 function pieceEl(p, onBoard) {
@@ -3099,14 +2973,16 @@ function renderHud() {
   goldEl.style.color = game.gold < 0 ? "#e0574d" : "";
   goldEl.parentElement.querySelector("span").textContent = game.gold < 0 ? "특허료 (빚)" : "특허료";
   $("#sWave").textContent = `${game.wave}/${BAL.waveCount}`;
-  $("#regHead").textContent = String(game.reg);
+  // 등록번호 칸(머릿글)은 걷어냈다 — 남아 있는 판에만 찍는다.
+  // 없는 칸에 그대로 쓰면 renderHud 가 통째로 터져서 그 아래(전장 원화·개시 단추·합성 묶음)가
+  // 전부 멈춘다. 실제로 웨이브를 눌러도 침입자가 나오지 않던 원인이었다.
+  const regEl = $("#regHead");
+  if (regEl) regEl.textContent = String(game.reg);
 
   applyStageTheme();         // 스테이지 구간이 넘어가면 전장 원화도 같이 갈린다
   const prep = game.phase === "prep";
-  if (prep) disarmSkill();   // 웨이브가 끝나면 조준 상태는 자동으로 풀린다
   renderReadyBar();          // 개시 버튼의 상태는 이제 준비 상황이 정한다
   renderMergeDock();         // 합성 가능한 묶음이 생기면 판 우측 상단에 저절로 뜬다
-  updateSkillBar();
   updateSabotageBar();
 }
 const btn = (s) => /** @type {HTMLButtonElement} */ ($(s));
@@ -3274,7 +3150,7 @@ function draw(now) {
   // 시신은 살아 있는 침입자 아래에 깔린다 — 뒤따라오는 쥐가 시신에 가려지지 않도록
   safe("침입자 그리기", () => { drawCorpses(g); drawEnemies(g, now); });
   safe("탄환 그리기", () => { for (const s of game.shots) drawMissile(g, s); });
-  safe("연출 그리기", () => { drawCrumbs(g); drawSparks(g); drawSkillFx(g, now); drawFloaters(g); });
+  safe("연출 그리기", () => { drawCrumbs(g); drawSparks(g); drawFloaters(g); });
   g.restore(); // 화면 흔들림 여기까지 — 이 아래는 화면에 고정된 UI라 흔들리지 않는다
 }
 
@@ -4158,50 +4034,13 @@ function consumeEvents() {
       case "expand":
         log(`<b>${ev.name}</b> ${ev.cells}칸 개방 (−${ev.cost})`);
         break;
-      case "skill": {
-        const bb = $("#board").getBoundingClientRect();
-        if (ev.kind === "freeze") {
-          skillFx.push({ kind: "freeze", life: .6, max: .6, x: 0, y: 0, r: 0 });
-          stamp(bb.left + bb.width / 2, bb.top + bb.height / 2, "가처분", ev.name);
-          log(`<b style="color:#8fd8f0">${ev.name}</b> 집행 — 침입자 ${ev.hit}건 ${ev.dur}초 이동정지 (−${ev.cost})`);
-        } else {
-          skillFx.push({ kind: "purge", life: .5, max: .5, x: ev.x, y: ev.y, r: ev.radius });
-          spawnSparks(ev.x, ev.y, true);
-          addShake(6, .26);
-          addFloater(ev.x, ev.y, `폐기 ${ev.killed}`, "#ffd782", { life: .9 });
-          stamp(bb.left + ev.x, bb.top + ev.y, "폐 기", ev.name);
-          log(`<b style="color:#e0574d">${ev.name}</b> 집행 — 범위 내 ${ev.hit}건 중 ${ev.killed}건 제거 (−${ev.cost})`);
-        }
-        break;
-      }
-      case "wave_start": {
-        log(`<b>웨이브 ${ev.wave}</b> 개시 · 침입 ${ev.count}건 · 동선 ${ev.path}칸 (제압 ${ev.covered}칸)`);
-        // 상대가 이 웨이브에 걸어 둔 공작이 있으면 개시와 함께 알려 준다
-        const sab = [];
-        if (ev.hpMod > 1) sab.push(`체력 +${Math.round((ev.hpMod - 1) * 100)}%`);
-        if (ev.countMod > 1) sab.push(`물량 +${Math.round((ev.countMod - 1) * 100)}%`);
-        if (ev.elite) sab.push(`정예 ${ev.elite}마리 추가`);
-        if (sab.length) log(`<b class="warn">상대 공작이 실린 웨이브</b> — ${sab.join(" · ")}`);
-        break;
-      }
-      case "wave_end":
-        log(ev.duel
-          ? `스테이지 ${ev.wave} 대전 종료 · 수입 <b>+${ev.income}</b>`
-          : `웨이브 ${ev.wave} 방어 완료 · 수입 <b>+${ev.income}</b>`);
-        // 대전 라운드라면 결과 화면을 읽는 동안은 모달을 띄우지 않는다 —
-        // 대전장을 접을 때(closeDuelRound) 이어서 연다.
-        if (duel) break;
-        if (game.awaitingAugment) openAugmentModal();
-        else if (game.awaitingPassive) openPassiveModal();
-        break;
       case "merge": {
         log(ev.promoted
           ? `<b style="color:#cda43a">합성 · 승진</b> ${ev.icon} ${ev.name} <b>Lv${ev.lv}</b> — 선글라스·샷건, 방사 피해가 붙습니다`
           : `<b style="color:#cda43a">합성</b> ${ev.icon} ${ev.name} ${ev.used}명 → <b>Lv${ev.lv}</b>`);
         if (ev.placed) {
           const [mx, my] = B.cellCenter(ev.x, ev.y);
-          const bb = $("#board").getBoundingClientRect();
-          stamp(bb.left + mx, bb.top + my, ev.promoted ? "승 진" : "합 성", `${ev.name} Lv${ev.lv}`);
+          stamp(...boardToScreen(mx, my), ev.promoted ? "승 진" : "합 성", `${ev.name} Lv${ev.lv}`);
           addFloater(mx, my - 24, ev.promoted ? "승진!" : `Lv${ev.lv}!`, "#cda43a",
                      { big: true, life: 1.1, rise: 28 });
         }
@@ -4212,8 +4051,7 @@ function consumeEvents() {
         log(`<b style="color:#6fe0d0">이종 합성</b> ${mats} → <b>${ev.icon} ${ev.name}</b> — ${ev.desc}`);
         if (ev.placed) {
           const [cx2, cy2] = B.cellCenter(ev.x, ev.y);
-          const bb = $("#board").getBoundingClientRect();
-          stamp(bb.left + cx2, bb.top + cy2, "특 수", ev.name);
+          stamp(...boardToScreen(cx2, cy2), "특 수", ev.name);
           addFloater(cx2, cy2 - 24, ev.name, "#6fe0d0", { big: true, life: 1.3, rise: 30 });
         }
         break;
@@ -4863,7 +4701,6 @@ function loop() {
   stepCorpses(dt);
   stepCrumbs(dt);
   stepShake(dt);
-  stepSkillFx(dt);
 
   // 각 단계를 따로 감싼다 — 한 군데가 터져도 나머지 화면은 계속 살아 있어야 한다
   safe("이벤트 처리", () => consumeEvents());
@@ -4913,9 +4750,9 @@ function startDrag(e, p, srcEl) {
 }
 const cellEl = (x, y) => $(`#board .cell[data-x="${x}"][data-y="${y}"]`);
 function dropTarget(e) {
-  const bb = $("#board").getBoundingClientRect();
-  const x = Math.floor((e.clientX - bb.left) / (CS + GAP));
-  const y = Math.floor((e.clientY - bb.top) / (CS + GAP));
+  const [bx, by] = boardPoint(e);            // 판이 줄어 있어도 원래 크기 기준 좌표로 돌려받는다
+  const x = Math.floor(bx / (CS + GAP));
+  const y = Math.floor(by / (CS + GAP));
   // 판 밖으로 끌어내면 대기열로 회수한다. (대기열이 비어 있을 때는 상자를 숨기므로,
   //  예전처럼 대기열 사각형 안에 정확히 떨어뜨리게 하면 회수할 방법이 없어진다.)
   if (x < 0 || y < 0 || x >= game.cols || y >= game.rows) return { type: "tray" };
@@ -5042,183 +4879,46 @@ function endMatch(iWon, reasonText) {
       ${DUEL_WAVES.length ? `<span>1:1 대전</span><b>${s.duelRecord[0]}승 ${s.duelRecord[1]}무 ${s.duelRecord[2]}패</b>` : ""}
       <span>증강</span><b>${s.augments.length ? s.augments.map((k) => `${AUGMENTS[k].icon} ${AUGMENTS[k].name}`).join(" · ") : "없음"}</b>
       <span>방해 공작</span><b>${s.sabotage.length ? s.sabotage.map((k) => `${SABOTAGE[k].icon} ${SABOTAGE[k].short}`).join(" · ") : "없음"}</b>
-      <span>특허권 행사</span><b>${s.skillTotal}회 (가처분 ${s.skillUses.injunction} · 폐기 ${s.skillUses.scrap})</b></div>
+      </div>
     <button class="go" id="again" style="padding:10px 26px">로비로</button></div>`;
   $("#modal").classList.add("on");
   $("#again").addEventListener("click", () => location.reload());
 }
 
-/* ═══════ 특허권 행사 (액티브 스킬) ═══════ */
+/* ═══════ 판을 화면 높이에 맞추기 ═══════ */
 /**
- * 스킬 버튼은 판이 시작될 때 한 번만 만든다.
- * 남은 대기시간처럼 매 프레임 바뀌는 것만 updateSkillBar()가 손본다 —
- * 60fps로 innerHTML을 다시 그리면 마우스 오버가 계속 끊기기 때문이다.
+ * 판이 화면에 들어가도록 줄여 놓은 배율 (1 = 원래 크기).
+ * 판은 9×9 × 84px 고정이라 낮은 화면에서는 그대로 두면 넘친다. 칸 수나 픽셀 좌표를 건드리는 대신
+ * 액자째 CSS 로 축소하고, 화면 좌표를 판 좌표로 되돌릴 때만 이 값으로 나눈다 —
+ * 전투 계산은 언제나 원래 크기 그대로다.
  */
-function buildSkillBar() {
-  const el = $("#skillBar");
-  if (!el) return;
-  el.innerHTML = Object.keys(SKILLS).map((k, i) => {
-    const d = SKILLS[k];
-    return `<button class="skill" data-k="${k}" type="button">
-      <span class="cdfill"></span>
-      <span class="ic">${d.icon}</span>
-      <span class="meta">
-        <b>${d.name}<span class="tag">${d.tag}</span></b>
-        <i>${d.target === "point" ? "범위 지정" : "즉시 · 전체"} · 대기 ${d.cd}s · 단축키 ${i + 1}</i>
-      </span>
-      <span class="right">
-        <span class="cost">₩${d.cost}</span>
-        <span class="state">웨이브 중 사용</span>
-      </span>
-    </button>`;
-  }).join("");
-
-  el.querySelectorAll(".skill").forEach((b) => {
-    const key = /** @type {HTMLElement} */ (b).dataset.k;
-    b.addEventListener("click", () => onSkillClick(key));
-    b.addEventListener("pointerenter", (e) => showSkillTip(e, SKILLS[key]));
-    b.addEventListener("pointerleave", hideTip);
-  });
-  updateSkillBar();
+let boardScale = 1;
+let fitKey = "";
+/** @param {boolean} [force] 액자 두께가 바뀌었을 때(전장 원화 교체)는 크기가 같아 보여도 다시 잰다 */
+function fitArena(force) {
+  const box = $("#arenaFit"), a = $("#arena");
+  if (!box || !a) return;
+  const key = `${box.clientWidth}x${box.clientHeight}`;
+  if (!force && key === fitKey) return;
+  fitKey = key;
+  a.style.transform = "none";                       // 원래 크기를 재려면 배율을 먼저 풀어야 한다
+  const w = a.offsetWidth, h = a.offsetHeight;
+  if (!w || !h || !box.clientHeight) return;
+  boardScale = Math.min(1, box.clientWidth / w, box.clientHeight / h);
+  if (boardScale < 1) a.style.transform = `scale(${boardScale})`;
 }
+addEventListener("resize", () => fitArena(true));
 
-function updateSkillBar() {
-  if (!game) return;
-  for (const k in SKILLS) {
-    const b = /** @type {HTMLButtonElement} */ ($(`#skillBar .skill[data-k="${k}"]`));
-    if (!b) continue;
-    const d = SKILLS[k];
-    const cd = game.skillCd[k] || 0;
-    const blocked = game.skillBlocked(k);
-    b.disabled = !!blocked;
-    b.classList.toggle("armed", armedSkill === k);
-    b.querySelector(".state").textContent = blocked || (d.target === "point" ? "판을 찍으세요" : "사용 가능");
-    /** @type {HTMLElement} */ (b.querySelector(".cdfill")).style.width =
-      cd > 0 ? `${Math.min(100, (cd / d.cd) * 100)}%` : "0%";
-  }
-}
-
-function showSkillTip(e, d) {
-  if (dragging) return;
-  const t = $("#tip");
-  t.innerHTML = `<b>${d.name}</b> — ${d.tag}<i>${d.desc}</i>
-    <i>특허료 ${d.cost} · 재사용 대기 ${d.cd}초 (웨이브가 끝나면 초기화)</i>`;
-  t.style.display = "block";
-  t.style.left = Math.min(e.clientX + 14, innerWidth - 264) + "px";
-  t.style.top = Math.min(e.clientY + 14, innerHeight - 150) + "px";
-}
-
-/** 버튼을 눌렀을 때 — 전체 스킬은 즉시, 범위 스킬은 조준 상태로 들어간다 */
-function onSkillClick(key) {
-  const d = SKILLS[key];
-  if (!d) return;
-  const blocked = game.skillBlocked(key);
-  if (blocked) { log(`<b>${d.name}</b> 사용 불가 — ${blocked}`); return; }
-
-  if (d.target === "point") {
-    armedSkill = armedSkill === key ? null : key;
-    aimPt = null;
-    $("#board").classList.toggle("aiming", !!armedSkill);
-    if (armedSkill) log(`<b>${d.name}</b> 범위를 지정하세요 — 판 위를 클릭 (Esc / 우클릭 취소)`);
-    updateSkillBar();
-    return;
-  }
-  fireSkill(key, null);
-}
-
-function disarmSkill() {
-  if (!armedSkill) return;
-  armedSkill = null; aimPt = null;
-  $("#board").classList.remove("aiming");
-  updateSkillBar();
-}
-
-function fireSkill(key, pt) {
-  if (!game.useSkill(key, pt)) return false;
-  disarmSkill();
-  renderHud();
-  return true;
+/** 판 좌표(px) → 화면 좌표. 판이 줄어 있으면 그만큼 곱해야 도장이 제자리에 찍힌다. */
+function boardToScreen(cx, cy) {
+  const bb = $("#board").getBoundingClientRect();
+  return [bb.left + cx * boardScale, bb.top + cy * boardScale];
 }
 
 /** 보드 기준 픽셀 좌표 — fx 캔버스와 좌표계가 정확히 같다 */
 function boardPoint(e) {
   const bb = $("#board").getBoundingClientRect();
-  return [e.clientX - bb.left, e.clientY - bb.top];
-}
-
-/** 판 위 조준·발사 입력을 건다. 판을 만든 뒤 한 번만 부른다. */
-function bindSkillAiming() {
-  const b = $("#board");
-  b.addEventListener("pointermove", (e) => { if (armedSkill) aimPt = boardPoint(e); });
-  b.addEventListener("pointerleave", () => { aimPt = null; });
-  // 캡처 단계에서 잡는다 — 조준 중에는 아래에 있는 심사관 타일이 드래그로 반응하지 않도록
-  b.addEventListener("pointerdown", (e) => {
-    if (!armedSkill) return;
-    if (e.button === 2) { e.preventDefault(); disarmSkill(); return; }
-    e.preventDefault(); e.stopPropagation();
-    fireSkill(armedSkill, boardPoint(e));
-  }, true);
-  b.addEventListener("contextmenu", (e) => { if (armedSkill) { e.preventDefault(); disarmSkill(); } });
-
-  window.addEventListener("keydown", (e) => {
-    if (!game) return;
-    if (e.key === "Escape") { disarmSkill(); return; }
-    const keys = Object.keys(SKILLS);
-    const i = Number(e.key) - 1;
-    if (Number.isInteger(i) && i >= 0 && i < keys.length) onSkillClick(keys[i]);
-  });
-}
-
-/** 스킬 연출 진행 */
-function stepSkillFx(dt) {
-  for (const f of skillFx) f.life -= dt;
-  skillFx = skillFx.filter((f) => f.life > 0);
-}
-
-/** 조준 원 + 스킬 연출을 판 위에 그린다 */
-function drawSkillFx(g, now) {
-  for (const f of skillFx) {
-    const p = 1 - f.life / f.max;              // 0 → 1
-    if (f.kind === "freeze") {
-      const { w, h } = fxCanvasSize();
-      g.save();
-      g.globalAlpha = (1 - p) * 0.34;
-      g.fillStyle = "#9fdcf2"; g.fillRect(0, 0, w, h);
-      g.globalAlpha = (1 - p) * 0.8;
-      g.strokeStyle = "#e8fbff"; g.lineWidth = 3;
-      g.strokeRect(2, 2, w - 4, h - 4);
-      g.restore();
-    } else {
-      // 폐기명령 — 안쪽이 차오르고 테두리가 퍼지는 충격파
-      g.save();
-      g.globalAlpha = (1 - p) * 0.5;
-      g.fillStyle = "#c4322a";
-      g.beginPath(); g.arc(f.x, f.y, f.r * (1 - p * 0.25), 0, 7); g.fill();
-      g.globalAlpha = 1 - p;
-      g.strokeStyle = "#ffd782"; g.lineWidth = 3 * (1 - p) + 1;
-      g.beginPath(); g.arc(f.x, f.y, f.r * (0.55 + p * 0.6), 0, 7); g.stroke();
-      g.restore();
-    }
-  }
-
-  if (armedSkill && aimPt) {
-    const d = SKILLS[armedSkill];
-    const pulse = 1 + Math.sin(now * 0.006) * 0.02;
-    g.save();
-    g.globalAlpha = 0.9;
-    g.strokeStyle = "#c4322a"; g.lineWidth = 2; g.setLineDash([7, 5]);
-    g.beginPath(); g.arc(aimPt[0], aimPt[1], (d.radius || 60) * pulse, 0, 7); g.stroke();
-    g.setLineDash([]);
-    g.fillStyle = "rgba(196,50,42,.12)";
-    g.beginPath(); g.arc(aimPt[0], aimPt[1], (d.radius || 60) * pulse, 0, 7); g.fill();
-    // 십자선
-    g.strokeStyle = "rgba(196,50,42,.85)"; g.lineWidth = 1.4;
-    g.beginPath();
-    g.moveTo(aimPt[0] - 10, aimPt[1]); g.lineTo(aimPt[0] + 10, aimPt[1]);
-    g.moveTo(aimPt[0], aimPt[1] - 10); g.lineTo(aimPt[0], aimPt[1] + 10);
-    g.stroke();
-    g.restore();
-  }
+  return [(e.clientX - bb.left) / boardScale, (e.clientY - bb.top) / boardScale];
 }
 
 /* ═══════ 방해 공작 (상대 판에 거는 훼방) ═══════ */
@@ -5410,8 +5110,7 @@ function renderCatRoster() {
       render();
       if (p.x >= 0) {
         const [cx, cy] = B.pieceCenter(p);
-        const bb = $("#board").getBoundingClientRect();
-        stamp(bb.left + cx, bb.top + cy, "임 용", CATS[key].name);
+        stamp(...boardToScreen(cx, cy), "임 용", CATS[key].name);
       } else {
         log(`<b>심사관 임용</b> ${CATS[key].name} — 판이 가득 차서 대기열에 놓였습니다. 드래그해서 배치하세요.`);
       }
@@ -5825,6 +5524,7 @@ function applyStageTheme() {
   a.style.setProperty("--map-pad", th.pad.map((v) => v + "px").join(" "));
   a.dataset.stage = th.id;
   $("#mapName").textContent = th.name;
+  fitArena(true);        // 원화마다 액자 두께가 달라 판 전체 크기가 바뀐다
   if (!first) log(`<b>전장 변경</b> — 스테이지 ${stageNo()}부터는 <b>${th.name}</b>입니다.`);
 }
 /** 원화가 장당 2MB 남짓이라, 전환하는 순간 빈 판이 보이지 않도록 미리 한 장씩 받아 둔다 */
@@ -5848,8 +5548,6 @@ function beginBattle() {
   errShown.clear();     // 새 판에서는 오류 보고도 새로 시작한다
   sparks = [];
   corpses = []; crumbs = [];
-  skillFx = [];
-  armedSkill = null; aimPt = null;
   shakeT = 0; shakeMag = 0;
   iReady = false; oppReady = false; oppInPrep = false;
   prepEndsAt = 0; prepSentWave = 0; oppAugs = [];
@@ -5878,8 +5576,6 @@ function beginBattle() {
   if (!soloMode) log(`<b>방해 공작</b>으로 상대 판에 기름·연막·정예 투입을 걸 수 있습니다 (웨이브 주기마다 종류별 1회).`);
   log(`전장은 스테이지 <b>1~5 ${STAGE_THEMES[0].name}</b> · <b>6~10 ${STAGE_THEMES[1].name}</b> · <b>11~ ${STAGE_THEMES[2].name}</b> 순으로 바뀝니다.`);
   buildBoardCells();
-  bindSkillAiming();
-  buildSkillBar();
   buildSabotageBar();
   render();
   renderPassiveTags();
