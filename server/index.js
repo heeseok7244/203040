@@ -131,16 +131,17 @@ function leaveRoom(conn) {
 }
 
 // 방(room) 안에서 상대에게 그대로 중계하는 메시지 타입 → 상대가 받을 때의 타입
-// 스테이지 5·11 의 1:1 대전(냥코식 레인 전투)에서 오가는 것 셋.
-//   duel        전투 시작 전 서로에게 보내는 「내 냥타워 명세」
-//   duelDeploy  전투 중 출격 카드를 냈다는 알림 (상대 화면에 그 유닛이 걸어 나온다)
-//   duelResult  p1 이 내린 판정. 실시간 출격이라 두 화면이 어긋날 수 있어, 승패는 한쪽 계산을
-//               정본으로 삼는다 — 서버는 여기서도 판정하지 않고 그대로 넘기기만 한다
-// (스테이지 강화 효과는 넷 다 자기 냥타워를 키우는 것이라 상대에게 걸 것이 없다 —
-//  중계할 일이 없어져 예전의 passive 는 뺐다)
+// 스테이지 5·11 의 1:1 대전(오토배틀러)에서 오가는 것 둘.
+//   duel        전투 시작 전 서로에게 보내는 「내 냥타워 명세」. 오토배틀러라 이것 하나면
+//               양쪽 화면이 같은 싸움을 굴린다 — 전투 중에는 오갈 것이 없다
+//   duelResult  p1 이 내린 판정. 시뮬레이션은 결정적이지만 브라우저마다 부동소수점 끝자리가
+//               다를 수 있어 승패는 한쪽 계산을 정본으로 삼는다 — 서버는 여기서도 판정하지
+//               않고 그대로 넘기기만 한다
+// (예전의 duelDeploy 는 특허료를 내고 카드를 내던 시절의 것이라 이제 없다.
+//  스테이지 강화 효과는 넷 다 자기 냥타워를 키우는 것이라 상대에게 걸 것이 없어 passive 도 없다)
 const RELAY = {
   state: 'oppState', sabotage: 'oppSabotage',
-  duel: 'oppDuel', duelDeploy: 'oppDuelDeploy', duelResult: 'oppDuelResult',
+  duel: 'oppDuel', duelResult: 'oppDuelResult',
   won: 'oppWon', lost: 'oppLost',
 };
 

@@ -183,41 +183,53 @@
 </div>
 </div>
 
-<!-- ── 1:1 대전장 (스테이지 5·11) ──
-     청사 판을 접어 두고 옆에서 본 한 줄짜리 전장으로 옮겨 온다. 왼쪽이 늘 내 성채,
-     오른쪽이 상대 성채다. 아래 출격 카드로 냥타워를 내보내 상대 성채를 무너뜨린다.
+<!-- ── 1:1 대전장 (스테이지 5·11) — 오토배틀러 ──
+     청사 판을 접어 두고 옆에서 본 한 줄짜리 전장으로 옮겨 온다. 왼쪽이 늘 내 진영,
+     오른쪽이 상대 진영이다. 지금까지 만든 냥타워가 전부 진형을 짜고 저절로 진군하며,
+     아래 줄에는 조작 대신 **양쪽 덱**이 나란히 놓인다 — 누를 것이 하나도 없다.
+     성채 같은 건물은 없다. 두들길 것은 서로의 냥타워뿐이고 먼저 전멸하는 쪽이 진다.
      여기에는 배속이 없다 — 양쪽이 같은 속도로 봐야 같은 판이 된다. -->
 <div id="duelStage" class="hidden">
   <div class="duelbox">
     <div class="duelhead">
-      <span class="dside me"><i>내 성채</i><b id="duelMine">-</b></span>
+      <!-- 성채가 없다 — 지켜볼 숫자는 남은 병력 하나다. 막대는 시작 병력 대비 체력 비율이고,
+           시간이 다 됐을 때 승패를 가르는 잣대가 바로 그 비율이다. -->
+      <span class="dside me"><i>내 병력</i><b id="duelMine">-</b>
+        <span class="dhp"><i id="duelMineFill"></i></span></span>
       <span class="duelmid">
         <em>⚔ 1:1 대전 <span>DUEL ROUND</span></em>
         <span class="dtime" id="duelTimer">90.0초</span>
         <span class="dtrack"><i id="duelFill"></i></span>
       </span>
       <!-- 솔로에서는 상대가 사람이 아니라 무작위로 편성된 쥐 침입단이다 (JS가 이름을 바꿔 넣는다) -->
-      <span class="dside foe"><i id="duelFoeLabel">상대 성채</i><b id="duelTheirs">대기</b></span>
+      <span class="dside foe"><i id="duelFoeLabel">상대 병력</i><b id="duelTheirs">대기</b>
+        <span class="dhp"><i id="duelTheirsFill"></i></span></span>
     </div>
     <div class="duelfield">
       <canvas id="duelCv" width="1000" height="420"></canvas>
       <div id="duelResult" class="hidden"></div>
     </div>
-    <!-- 출격 줄 — 냥코의 그 줄이다. 특허료 게이지 + 내가 만든 냥타워 카드 -->
+    <!-- 덱 줄 — 조작이 없는 라운드라, 이 자리에는 양쪽이 무엇을 데려왔는지를 나란히 놓는다 -->
     <div class="duelbottom">
-      <div class="dmoney">
-        <b id="duelMoney">0/0원</b>
-        <span class="dmtrack"><i id="duelMoneyFill"></i></span>
+      <div id="duelPower" class="even">—</div>
+      <div class="ddeck">
+        <span class="dlbl me">내 덱</span>
+        <div id="duelDeckMine" class="dchips"></div>
       </div>
-      <div id="duelCards"></div>
+      <div class="ddeck">
+        <span class="dlbl foe" id="duelDeckFoeLbl">상대 덱</span>
+        <div id="duelDeckFoe" class="dchips"></div>
+      </div>
     </div>
-    <div class="duelnote">카드를 눌러 냥타워를 내보내면 상대 쪽으로 걸어가 마주친 적과 싸우고,
-      길이 뚫리면 성채를 두들깁니다. <b>먼저 상대 성채를 무너뜨리는 쪽이 이깁니다.</b>
-      특허료는 시간이 지나면 차오르고, 카드에 적힌 <b>×숫자</b>가 남은 출격 횟수입니다 —
-      청사 판에 세워 둔 만큼만 낼 수 있습니다.<br>
+    <div class="duelnote">양쪽 냥타워가 <b>전부</b> 진형을 짜고 저절로 진군해 마주친 적과 싸웁니다.
+      <b>성채는 없습니다</b> — 두들길 것은 서로의 냥타워뿐이고,
+      <b>상대를 먼저 전멸시키는 쪽이 이깁니다.</b> 시간이 다 되면 <b>남은 병력 비율</b>이
+      높은 쪽이 이깁니다.
+      <b>누를 것은 없습니다</b> — 이 라운드가 재는 것은 손이 아니라 <b>덱</b>입니다.
+      진형은 <b>사거리 순</b>으로 서서, 짧은 냥이 앞을 막고 긴 냥이 뒤에서 쏩니다.<br>
       지금까지 쌓은 <b style="color:#7fbf6a">스테이지 강화</b> ·
       <b style="color:var(--gold)">증강</b> · <b style="color:#6fe0d0">합성 레벨</b>이
-      <b>그대로 실려 있습니다</b> — 여기가 내 덱을 확인하는 자리입니다.
+      <b>그대로 실려 있습니다</b> — 여기가 누구의 덱이 더 강한지 자웅을 가리는 자리입니다.
       혼자 할 때는 침입자 넷이 <b style="color:var(--gold)">무작위로 편성된 쥐 침입단</b>으로 나섭니다.
       <b>지는 쪽은 등록원부 내구 30을 잃습니다.</b></div>
   </div>

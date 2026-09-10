@@ -444,42 +444,44 @@ const AUGMENT_WAVES = [2, 4, 7, 10];
 const DUEL_WAVES = [5, 11];
 
 /**
- * 1:1 대전(DUEL) — 냥코대전쟁식 레인 전투.
+ * 1:1 대전(DUEL) — **오토배틀러**. 서로의 덱을 통째로 맞대 본다.
  *
  * 판(9×9 청사)이 아니라 별도의 대전장으로 옮겨 간다. 화면은 옆에서 본 한 줄짜리 전장이고,
- * 양쪽 끝에 **성채(등록원부 출장소)** 가 하나씩 선다. 아래쪽 출격 카드에서 지금까지 만든
- * 냥타워를 특허료를 내고 한 명씩 내보내면, 그 냥이 상대 쪽으로 걸어가 마주친 적과 싸우고
- * 길이 뚫리면 성채를 두들긴다. **먼저 상대 성채를 무너뜨리는 쪽이 이긴다.**
+ * 양끝에 진영 깃발이 하나씩 선다. 시작하면 **지금까지 만든 냥타워가 한 명도 빠짐없이**
+ * 진형을 짜고 서서 저절로 진군한다 — 특허료도, 출격 카드도, 누를 것도 없다.
  *
- * 청사 판과 다른 점은 「무엇을 만들었는가」뿐 아니라 「언제 내보내는가」가 승부를 가른다는 것이다.
- * 특허료는 시간이 지나면 저절로 차오르므로, 싼 냥을 계속 흘려보내 앞을 막을지 모아서 센 냥을
- * 한 번에 낼지가 매 순간의 판단이 된다.
+ * **성채는 없다. 두들길 것은 서로의 냥타워뿐이고, 먼저 전멸하는 쪽이 진다.**
+ * 지킬 건물이 따로 있으면 「무엇을 만들었는가」가 아니라 「누가 먼저 벽을 뚫었는가」로
+ * 승부가 새기 때문이다. 여기서는 덱과 덱만 남는다.
+ *
+ * 그래서 이 라운드에서 승부를 가르는 것은 **오직 「무엇을 만들었는가」** 하나다.
+ * 증강 · 스테이지 강화 · 합성 레벨이 전부 실린 내 덱과 상대 덱을 그대로 붙여 자웅을 가린다.
+ * 손이 빠른 쪽이 아니라 잘 키운 쪽이 이긴다.
  *
  * w/h        대전장 크기(px). 캔버스 좌표계 그대로다
  * ground     지면선 y — 유닛의 발이 닿는 높이
- * baseX      성채 중심 x (반대편은 w - baseX). spawnPad 만큼 앞에서 유닛이 걸어 나온다
+ * campX      진영 기준선 x (반대편은 w - campX). spawnPad 만큼 앞에서 진형이 시작되고,
+ *            유닛이 이 선 너머로 걸어 나가지 않게 붙잡는 벽 노릇도 한다
  * rangeMul   청사 판(84px 간격) 사거리를 대전장으로 옮기는 배율
  * moveSpd    걷는 속도(px/s)
  * hp*        유닛 체력 = (hpBase + 임용가 × hpPerCost) × hpLv^(레벨-1) × (승진이면 hpPromo)
  * aide*      비전투 변리사냥이 대전장에서 맡는 역할 — 가장 다친 아군을 회복시킨다
- * baseSecs   성채 내구를 정하는 기준 — 「양쪽 평균 화력으로 이 초만큼 두들기면 무너진다」.
- *            숫자를 못 박지 않고 실제 명세에서 뽑는 이유는, 잘 키운 판끼리 붙든 빈약한 판끼리
- *            붙든 싸움 길이가 비슷해지도록 하기 위해서다
- * moneySecs  특허료 회복 속도의 기준 — 「이 초 동안 모으면 내 군대를 통째로 낼 수 있다」
- * moneyStart 시작 특허료 = 가장 싼 카드 × 이 배율
- * deployCd*  같은 카드를 다시 낼 때까지의 대기 = deployCdBase + 임용가 / deployCdPer (초)
- * timeLimit  이 시간을 넘기면 성채 내구 비율이 높은 쪽이 이긴다
+ * rows       진형의 줄 수. 한 칸(열)에 이만큼씩 세로로 쌓아 세운다
+ * rowGap     줄 사이의 세로 간격(px). 뒷줄이 조금 위에 서서 겹쳐도 다 보인다
+ * colGap     열 사이의 가로 간격(px). 덱이 크면 이 값을 줄여 진형을 formDepth 안에 욱여넣는다
+ * formDepth  진형이 차지하는 최대 깊이(px). 앞줄은 양쪽 다 **같은 자리**에서 시작하고
+ *            덱이 클수록 뒤로(진영 쪽으로) 늘어난다 — 덱 크기가 시작 거리를 바꾸면 불공평해진다
+ * timeLimit  이 시간을 넘겨도 양쪽이 살아 있으면 **남은 병력 비율**이 높은 쪽이 이긴다
  * prize      승리 보상(특허료) · drawPrize 무승부 보상
  * leak*      패배 시 등록원부 내구 손실 = leakBase + 살아남은 상대 유닛 수 × leakPer.
  *            30 은 시작 내구 80의 3할이 넘는다 — 대전 라운드는 한 판의 향방을 가르는 자리이고,
  *            두 번 다 지면 다음 웨이브를 버티기 어려워지도록 일부러 무겁게 잡았다.
  * solo*      솔로 플레이에서 붙는 쥐 침입단의 세기 배율
- * aiGap      쥐 침입단(AI)이 출격을 재는 간격(초). 사람처럼 뚝뚝 끊어 내보낸다
  */
 const DUEL = {
   w: 1000, h: 420,
   ground: 322,
-  baseX: 76, spawnPad: 34,
+  campX: 76, spawnPad: 34,
   rangeMul: 0.76,
   moveSpd: 46,
   timeLimit: 90,
@@ -487,11 +489,7 @@ const DUEL = {
   dt: 1 / 60,             // 고정 시간간격 — 프레임이 흔들려도 싸움의 속도는 같다
   hpBase: 60, hpPerCost: 1.1, hpLv: 1.9, hpPromo: 1.3,
   aideHeal: 7, aideHealR: 150,
-  baseSecs: 6,
-  baseMinHp: 900,
-  moneySecs: 24, moneyStart: 1.6, moneyMaxSecs: 16,
-  deployCdBase: 1.2, deployCdPer: 220,
-  aiGap: 0.55,
+  rows: 4, rowGap: 13, colGap: 34, formDepth: 170,
   prize: 90, drawPrize: 40,
   leakBase: 30, leakPer: 0,
   soloBase: 0.95, soloPerWave: 0.015,
@@ -1419,22 +1417,30 @@ return { damage, step };
 __mods["core/duel.js"] = (function(){
 // @ts-check
 /**
- * 1:1 대전(DUEL) — 냥코대전쟁식 레인 전투.
+ * 1:1 대전(DUEL) — **오토배틀러**. 덱 대 덱.
  *
  * ── 어떤 싸움인가 ──
- * 옆에서 본 한 줄짜리 전장이다. 양끝에 성채가 하나씩 서 있고, 아래 출격 카드에서 특허료를 내고
- * 냥타워를 한 명씩 내보내면 그 냥이 상대 쪽으로 걸어간다. 마주친 적이 사거리에 들어오면 멈춰
- * 서서 쏘고, 앞이 비면 계속 걸어가 성채를 두들긴다. **먼저 상대 성채를 무너뜨리는 쪽이 이긴다.**
+ * 옆에서 본 한 줄짜리 전장이다. 양끝에 진영 깃발이 하나씩 서 있고, 시작하면 양쪽이 지금까지
+ * 만든 냥타워가 **한 명도 빠짐없이** 진형을 짜고 서서 저절로 진군한다. 마주친 적이 사거리에
+ * 들어오면 멈춰 서서 쏜다.
  *
- * 특허료는 시간이 지나면 저절로 차오른다. 그래서 「무엇을 만들었는가」만이 아니라
- * 「싼 냥으로 앞을 막을지, 모아서 센 냥을 한 번에 낼지」가 매 순간의 판단이 된다.
+ * **성채는 없다.** 두들길 것은 서로의 냥타워뿐이고, **먼저 전멸하는 쪽이 진다.**
+ * 지킬 건물이 따로 있으면 「무엇을 만들었는가」가 아니라 「누가 먼저 벽을 뚫었는가」로
+ * 승부가 새기 때문이다. 여기서는 덱과 덱만 남는다.
+ *
+ * 손댈 것이 아무것도 없다 — 특허료도 없고 출격 카드도 없다. 그래서 승부를 가르는 것은
+ * **오직 「무엇을 만들었는가」** 하나다: 증강 · 스테이지 강화 · 합성 레벨이 전부 실린
+ * 두 덱을 그대로 붙여 자웅을 가리는 자리다.
+ *
+ * 진형은 **사거리 순**으로 선다 — 짧은 냥이 앞에서 몸으로 막고, 긴 냥이 뒤에서 쏘고,
+ * 비전투 변리사냥은 맨 뒤에서 다친 아군을 손본다. 그래서 무엇을 얼마나 뽑았는지뿐 아니라
+ * **덱의 구성**(앞을 세울 것이 있는지, 뒤에서 때릴 것이 있는지)도 그대로 승부에 실린다.
  *
  * ── 결과를 어떻게 맞추나 ──
- * 서버는 전투를 계산하지 않는다(중계만 한다). 그런데 이제는 양쪽이 실시간으로 출격을 지르므로,
- * 지연이 조금만 있어도 두 화면이 어긋난다. 그래서 **승패는 p1 쪽 계산을 정본으로 삼는다**:
- *   · 양쪽 다 자기 화면에서 시뮬레이션을 돌리고, 출격 명령은 서로에게 중계한다 (보이는 것)
- *   · 싸움이 끝나면 p1 이 결과를 보내고, p2 는 그 결과를 따른다 (판에 반영되는 것)
- * 화면이 조금 어긋날 수는 있어도 「나는 이겼는데 상대도 이겼다」는 절대 생기지 않는다.
+ * 서버는 전투를 계산하지 않는다(중계만 한다). 이제는 사람이 손댈 일이 없어 시뮬레이션이 완전히
+ * 결정적이므로, 같은 명세 · 같은 시드를 넣은 두 화면은 원래 같은 결과에 닿는다. 그래도
+ * **승패는 p1 쪽 계산을 정본으로 삼는다** — 브라우저마다 Math.pow 같은 초월함수의 끝자리가
+ * 다를 수 있어, 「나는 이겼는데 상대도 이겼다」가 만에 하나라도 생기지 않게 못 박아 둔다.
  * (솔로에서는 붙을 사람이 없으니 내 계산이 곧 정본이다.)
  *
  * 시간간격은 여전히 고정(DUEL.dt)이다 — 프레임이 끊겨도 싸움의 속도가 달라지지 않도록.
@@ -1444,8 +1450,8 @@ const {CATS, ENEMIES, BAL, DUEL} = __req("core/data.js");
 const {cats} = __req("core/board.js");
 
 const W = DUEL.w, DT = DUEL.dt;
-/** 성채 중심 x. a 는 왼쪽, b 는 오른쪽. */
-const baseX = (side) => (side === "a" ? DUEL.baseX : W - DUEL.baseX);
+/** 진영 기준선 x. a 는 왼쪽, b 는 오른쪽. 진형이 여기서부터 앞으로 서고, 벽 노릇도 한다. */
+const campX = (side) => (side === "a" ? DUEL.campX : W - DUEL.campX);
 /** 그 편이 나아가는 방향 (+1 오른쪽 / −1 왼쪽) */
 const dirOf = (side) => (side === "a" ? 1 : -1);
 
@@ -1470,7 +1476,8 @@ function makeRoster(game) {
     const r3 = (v) => +(+v).toFixed(3);
     return {
       k: c.key, lv, pr: !!s.promoted, hp,
-      // 출격료 — 청사에서의 임용가에 합성 레벨을 얹은 값. 센 냥일수록 자주 못 낸다.
+      // 값어치 — 청사에서의 임용가에 합성 레벨을 얹은 값. 싸움에는 쓰이지 않고,
+      // 「내 덱이 얼마짜리인가」를 덱 표시줄에 적는 데만 쓴다.
       cost: Math.round(d.cost * Math.pow(BAL.mergeNeed, lv - 1)),
       dmg: r3(s.dmg * (1 + (s.pierce || 0) / 200)),
       rate: r3(s.rate),
@@ -1528,9 +1535,11 @@ function mobRoster(mine, wave, seed, forceBoss) {
   if (dpsSum <= 0) dpsSum = 90 * (1 + 0.3 * wave);
   const hpTotal = hpSum * mul, dpsTotal = dpsSum * mul;
 
-  // ── 몇 마리로 나눌 것인가 ── 내 인원 언저리에서 흔들리게 둔다
+  // ── 몇 마리로 나눌 것인가 ── 내 인원 언저리에서 흔들리게 둔다.
+  // 총량이 같다면 **적은 수로 나눌수록 유리하다** — 덩치가 커서 늦게 죽고, 그만큼 화력이
+  // 오래 남는다. 그래서 인원을 내 쪽에 바짝 붙여 잡는다. 세기 조절은 mul 로만 한다.
   const base = Math.max(4, mine.length || 5);
-  const n = Math.max(4, Math.min(16, base + rng.int(4) - 1));
+  const n = Math.max(4, Math.min(24, base + rng.int(5) - 2));
   const squad = [];
   if (forceBoss) squad.push("boss");
   while (squad.length < n) squad.push(pick());
@@ -1545,7 +1554,7 @@ function mobRoster(mine, wave, seed, forceBoss) {
     const dps = dpsTotal * d.dpsS / dpsShare;
     return {
       k, mob: true, lv: 1, pr: false, hp,
-      // 침입자에게는 임용가가 없다 — 덩치에서 출격료를 뽑는다
+      // 침입자에게는 임용가가 없다 — 덩치에서 값어치를 뽑는다 (덱 표시줄에만 쓴다)
       cost: Math.round(40 + hp * 0.32),
       dmg: r3(Math.max(1, dps / d.rate)),
       rate: r3(d.rate), range: d.range, tg: 1,
@@ -1558,30 +1567,43 @@ function mobRoster(mine, wave, seed, forceBoss) {
 }
 
 /**
- * 명세를 출격 카드로 묶는다. 같은 종류·같은 레벨은 한 장으로 합쳐지고, 그 수가 재고가 된다.
- * (판에 세 명을 세워 뒀으면 대전장에서도 세 번 낼 수 있다 — 무한히 뽑아 쓰는 게 아니라
- *  「지금까지 만든 것」으로 싸운다는 원래 규칙을 그대로 지킨다.)
+ * 명세를 **덱 표시줄**용으로 묶는다. 같은 종류·같은 레벨은 한 칸으로 합쳐지고 그 수가 적힌다.
+ * 싸움에는 쓰이지 않는다 — 유닛은 명세 그대로 전부 판에 서고, 이건 「무엇을 데려왔는지」를
+ * 양쪽 다 한눈에 보라고 화면 아래에 늘어놓는 용도다.
  */
-function toCards(roster) {
+function deckGroups(roster) {
   /** @type {Record<string, any>} */
   const by = {};
   roster.forEach((u, i) => {
     const id = `${u.k}:${u.lv || 1}`;
-    if (!by[id]) by[id] = { id, k: u.k, lv: u.lv || 1, mob: !!u.mob, cost: u.cost, u, n: 0, order: i };
+    if (!by[id]) by[id] = { id, k: u.k, lv: u.lv || 1, mob: !!u.mob, cost: u.cost, n: 0, order: i };
     by[id].n++;
   });
-  return Object.values(by)
-    .sort((a, b) => a.cost - b.cost || a.order - b.order)
-    .map((c) => ({ ...c, cd: 0, cdMax: DUEL.deployCdBase + c.cost / DUEL.deployCdPer }));
+  return Object.values(by).sort((a, b) => b.cost - a.cost || a.order - b.order);
+}
+
+/**
+ * 덱의 세기를 한 숫자로 잰다 — 「총 체력 × 총 화력」의 제곱근.
+ *
+ * 오토배틀러에서 군대의 값어치는 체력과 화력의 **곱**에 가깝다(란체스터). 한쪽만 높은 덱은
+ * 실제로도 약하고, 이 식은 그걸 그대로 반영한다. 제곱근을 씌우는 것은 눈에 익은 자릿수로
+ * 내리기 위해서일 뿐이다. 화면의 「덱 지수」와 시작 로그에 쓴다 — 판정에는 관여하지 않는다.
+ */
+function deckPower(roster) {
+  let hp = 0, dps = 0;
+  for (const u of roster) {
+    hp += u.hp;
+    if (u.atk) dps += u.dmg * u.rate * (u.tg || 1) * (1 + (u.cc || 0) * ((u.cm || 1) - 1));
+  }
+  return Math.round(Math.sqrt(hp * dps));
 }
 
 class DuelSim {
   /**
    * @param {any[]} rosterA p1 의 명세 @param {any[]} rosterB p2 의 명세
-   * @param {number} seed 공유 시드 (쥐 침입단 AI 의 출격 타이밍에 쓴다)
-   * @param {{aiSides?:string[]}} [opts] AI가 대신 출격시켜 줄 편 (솔로의 쥐 침입단)
+   * @param {number} seed 공유 시드 (치명타·정지 판정에 쓴다 — 양쪽 화면이 같아야 한다)
    */
-  constructor(rosterA, rosterB, seed, opts = {}) {
+  constructor(rosterA, rosterB, seed) {
     this.rng = new Rng(seed >>> 0);
     this.t = 0;
     this._id = 0;
@@ -1592,112 +1614,102 @@ class DuelSim {
     /** @type {"a"|"b"|null} */ this.winner = null;
     this.reason = "";
 
-    this.cards = { a: toCards(rosterA), b: toCards(rosterB) };
-    this.ai = { a: opts.aiSides ? opts.aiSides.includes("a") : false,
-                b: opts.aiSides ? opts.aiSides.includes("b") : false };
-    this.aiNext = { a: 0.8, b: 0.8 };
+    /** 화면 아래 덱 표시줄에 쓰는 요약 (싸움에는 관여하지 않는다) */
+    this.deck = { a: deckGroups(rosterA), b: deckGroups(rosterB) };
+    /** 덱 지수 — 두 덱의 세기를 한 숫자로 비교해 보여 주는 값 */
+    this.power = { a: deckPower(rosterA), b: deckPower(rosterB) };
 
-    /* ── 성채 내구와 특허료를 명세에서 뽑는다 ──
-     * 숫자를 못 박으면 잘 키운 판끼리 붙었을 때는 순식간에 끝나고, 빈약한 판끼리 붙었을 때는
-     * 시간 초과로 흐지부지된다. 실제 화력·값어치에서 뽑으면 어느 쪽이든 싸움 길이가 비슷해진다. */
-    const dps = (r) => r.reduce((a, u) =>
-      a + (u.atk ? u.dmg * u.rate * (u.tg || 1) * (1 + (u.cc || 0) * ((u.cm || 1) - 1)) : 0), 0);
-    const worth = (r) => r.reduce((a, u) => a + u.cost, 0);
-    const hp = Math.max(DUEL.baseMinHp, Math.round((dps(rosterA) + dps(rosterB)) / 2 * DUEL.baseSecs));
-    this.base = { a: { hp, max: hp }, b: { hp, max: hp } };
+    // ── 전군 배치 ── 오토배틀러라 여기서 한 번에 다 세우고, 그 뒤로는 손댈 것이 없다
+    this.form(rosterA, "a");
+    this.form(rosterB, "b");
 
-    const rate = (r) => Math.max(20, worth(r) / DUEL.moneySecs);
-    const cheapest = (r) => (r.length ? Math.min(...r.map((u) => u.cost)) : 60);
-    this.money = {
-      a: { v: cheapest(rosterA) * DUEL.moneyStart, rate: rate(rosterA),
-           max: Math.max(600, rate(rosterA) * DUEL.moneyMaxSecs) },
-      b: { v: cheapest(rosterB) * DUEL.moneyStart, rate: rate(rosterB),
-           max: Math.max(600, rate(rosterB) * DUEL.moneyMaxSecs) },
-    };
-    for (const s of ["a", "b"]) this.money[s].v = Math.min(this.money[s].v, this.money[s].max);
+    /* 시작 병력 — 「남은 병력 비율」의 분모다. 덱이 크든 작든 같은 잣대로 재려면
+     * 절대량이 아니라 **자기 시작 병력 대비 얼마가 남았는가**로 봐야 한다. */
+    this.startHp = { a: this.armyHp("a"), b: this.armyHp("b") };
+    this.startN = { a: this.alive("a").length, b: this.alive("b").length };
+  }
+
+  /**
+   * 한 편의 진형을 짠다 — 명세에 있는 **전부**를 판에 세운다.
+   *
+   * 서는 순서는 **사거리 순**이다. 짧은 냥이 앞줄에서 몸으로 막고, 긴 냥이 뒷줄에서 쏘고,
+   * 비전투 변리사냥은 맨 뒤에서 다친 아군을 손본다. 그래서 「무엇을 뽑았는가」만이 아니라
+   * 「앞을 세울 것이 있는가」까지 덱의 성적에 들어온다.
+   *
+   * 이 줄 세우기는 시작 모양일 뿐이고, 진군하는 동안 **저절로 다시 정렬된다** —
+   * 사거리에 든 유닛은 멈추고 아직 못 닿는 유닛은 계속 걸으므로, 긴 냥은 뒤에서 멈추고
+   * 짧은 냥은 앞까지 걸어 나간다. 그래서 진형이 조금 깊어도 싸움 모양은 흐트러지지 않는다.
+   *
+   * 앞줄은 **양쪽 다 같은 자리**에서 시작하고, 덱이 클수록 뒤(진영 쪽)로 늘어난다.
+   * 앞줄을 덱 크기에 따라 움직이면 큰 덱이 그만큼 먼저 닿아 두 번 유리해지기 때문이다.
+   * 열이 많아 진형이 formDepth 를 넘칠 것 같으면 열 간격을 좁혀 그 안에 욱여넣는다.
+   *
+   * @param {any[]} roster @param {"a"|"b"} side
+   */
+  form(roster, side) {
+    const dir = dirOf(side);
+    // 비전투(변리사냥)를 맨 뒤로 밀고, 나머지는 사거리 오름차순. 동률은 명세 순서로 못 박는다.
+    const order = roster.map((u, i) => ({ u, i })).sort((p, q) =>
+      (p.u.atk === q.u.atk ? 0 : p.u.atk ? -1 : 1) ||
+      ((p.u.range || 0) - (q.u.range || 0)) || (p.i - q.i));
+
+    const rows = DUEL.rows;
+    const cols = Math.max(1, Math.ceil(order.length / rows));
+    const gap = cols > 1 ? Math.min(DUEL.colGap, DUEL.formDepth / (cols - 1)) : 0;
+    const frontX = campX(side) + dir * (DUEL.spawnPad + DUEL.formDepth);
+
+    order.forEach((o, n) => {
+      const col = Math.floor(n / rows), row = n % rows;
+      const u = o.u;
+      this.units.push({
+        id: this._id++, side, k: u.k, lv: u.lv || 1, pr: !!u.pr, mob: !!u.mob,
+        x: frontX - dir * col * gap, dir, row,
+        hp: u.hp, max: u.hp,
+        dmg: u.dmg, rate: u.rate, range: u.range, tg: u.tg || 1,
+        cc: u.cc || 0, cm: u.cm || 1, sl: u.sl || 0,
+        sp: u.sp || 0, spf: u.spf || 0, atk: !!u.atk,
+        ch: u.ch || null, stC: u.stC || 0, stD: u.stD || 0, ex: u.ex || 0,
+        // 뒷줄일수록 첫 발이 아주 조금 늦다 — 한 틱에 전군이 동시에 쏘면 화면이 번쩍이기만 한다
+        cd: col * 0.05, slowT: 0, slowPct: 0, hitT: 0, atkT: 0, healT: 0, freezeT: 0,
+        dead: false, walking: true,
+      });
+    });
   }
 
   alive(side) { return this.units.filter((u) => u.side === side && !u.dead); }
-  /** 성채 내구 비율 (0~1). 시간이 다 됐을 때의 승패 기준이다. */
-  ratio(side) { return this.base[side].max ? Math.max(0, this.base[side].hp) / this.base[side].max : 0; }
-
-  // ── 출격 ──
-  /** 지금 이 카드를 낼 수 있는가. 못 내면 이유를 문자열로, 되면 null. */
-  deployBlocked(side, id) {
-    if (this.over) return "종료";
-    const c = this.cards[side].find((x) => x.id === id);
-    if (!c) return "없는 카드";
-    if (c.n <= 0) return "소진";
-    if (c.cd > 0) return `대기 ${c.cd.toFixed(1)}s`;
-    if (this.money[side].v < c.cost) return "특허료 부족";
-    return null;
+  /** 아직 판에 남아 있는 병력의 체력 합 */
+  armyHp(side) { return this.alive(side).reduce((a, u) => a + Math.max(0, u.hp), 0); }
+  /**
+   * 남은 병력 비율 (0~1) — 자기 시작 병력 대비 지금 얼마가 남았는가.
+   * 시간이 다 됐을 때의 승패 기준이다. 절대량이 아니라 비율로 재야 큰 덱과 작은 덱을
+   * 같은 잣대로 볼 수 있다 (큰 덱은 남은 체력의 절대량도 그냥 크다).
+   */
+  ratio(side) {
+    const s = this.startHp ? this.startHp[side] : 0;
+    return s > 0 ? this.armyHp(side) / s : 0;
   }
 
   /**
-   * 카드 한 장을 낸다 — 특허료를 내고 재고를 하나 줄이고, 내 성채 앞에 유닛을 세운다.
-   * @returns {boolean} 실제로 나갔는가
+   * 지금 상태로 승패가 갈렸는지 본다.
+   *
+   * **성채가 없다** — 이기는 길은 상대를 전멸시키는 것 하나뿐이다.
+   * 시간 안에 결판이 안 나면 **남은 병력 비율**이 높은 쪽을 올린다.
    */
-  deploy(side, id) {
-    if (this.deployBlocked(side, id)) return false;
-    const c = this.cards[side].find((x) => x.id === id);
-    this.money[side].v -= c.cost;
-    c.n--;
-    c.cd = c.cdMax;
-    const u = c.u;
-    const dir = dirOf(side);
-    // 같은 자리에 겹쳐 서지 않도록 앞뒤로 조금씩 흩어 놓는다 (냥코처럼 줄지어 걸어 나간다)
-    const x = baseX(side) + dir * (DUEL.spawnPad + this.rng.int(18));
-    this.units.push({
-      id: this._id++, side, k: u.k, lv: u.lv || 1, pr: !!u.pr, mob: !!u.mob,
-      x, dir, row: this._id % 3,
-      hp: u.hp, max: u.hp,
-      dmg: u.dmg, rate: u.rate, range: u.range, tg: u.tg || 1,
-      cc: u.cc || 0, cm: u.cm || 1, sl: u.sl || 0,
-      sp: u.sp || 0, spf: u.spf || 0, atk: !!u.atk,
-      ch: u.ch || null, stC: u.stC || 0, stD: u.stD || 0, ex: u.ex || 0,
-      cd: 0, slowT: 0, slowPct: 0, hitT: 0, atkT: 0, healT: 0, freezeT: 0,
-      dead: false, walking: true,
-    });
-    this.events.push({ t: "deploy", side, k: u.k, lv: u.lv || 1, x });
-    return true;
-  }
-
-  /**
-   * 쥐 침입단(AI)의 출격 판단.
-   * 사람처럼 뚝뚝 끊어 내보낸다 — 낼 수 있는 것 중 **가장 비싼 것**을 고르되, 가끔 아껴서
-   * 넘긴다. 매 프레임 지르게 두면 특허료가 차는 족족 쏟아져 나와 전선이 뭉개진다.
-   */
-  aiStep(side) {
-    if (this.aiNext[side] > 0) { this.aiNext[side] -= DT; return; }
-    this.aiNext[side] = DUEL.aiGap;
-    const ready = this.cards[side].filter((c) => !this.deployBlocked(side, c.id));
-    if (!ready.length) return;
-    // 성채가 위험하면 무조건 낸다. 여유가 있으면 4번에 한 번쯤은 모으고 넘어간다.
-    const urgent = this.ratio(side) < 0.5 || this.alive(side).length < 2;
-    if (!urgent && this.rng.next() < 0.25) return;
-    const best = ready.reduce((a, c) => (c.cost > a.cost ? c : a));
-    this.deploy(side, best.id);
-  }
-
-  /** 지금 상태로 승패가 갈렸는지 본다 */
   settle() {
-    if (this.base.a.hp <= 0 && this.base.b.hp <= 0) { this.finish(null, "양쪽 성채 붕괴"); return; }
-    if (this.base.a.hp <= 0) { this.finish("b", "성채 붕괴"); return; }
-    if (this.base.b.hp <= 0) { this.finish("a", "성채 붕괴"); return; }
-    // 양쪽 다 낼 것도 없고 판에 남은 유닛도 없으면 더 볼 것이 없다
-    const spentA = !this.alive("a").length && this.cards.a.every((c) => c.n <= 0);
-    const spentB = !this.alive("b").length && this.cards.b.every((c) => c.n <= 0);
-    if (spentA && spentB) {
-      const ra = this.ratio("a"), rb = this.ratio("b");
-      if (Math.abs(ra - rb) < 1e-9) this.finish(null, "양쪽 소진 · 성채 내구 동일");
-      else this.finish(ra > rb ? "a" : "b", "양쪽 소진 · 성채 내구 우세");
-      return;
-    }
-    if (this.t >= DUEL.timeLimit) {
-      const ra = this.ratio("a"), rb = this.ratio("b");
-      if (Math.abs(ra - rb) < 1e-9) this.finish(null, "시간 종료 · 성채 내구 동일");
-      else this.finish(ra > rb ? "a" : "b", "시간 종료 · 성채 내구 우세");
-    }
+    const na = this.alive("a").length, nb = this.alive("b").length;
+    if (!na && !nb) { this.finish(null, "양쪽 전멸"); return; }
+    if (!na) { this.finish("b", "전멸"); return; }
+    if (!nb) { this.finish("a", "전멸"); return; }
+    if (this.t >= DUEL.timeLimit) this.judge("시간 종료");
+  }
+
+  /** 남은 병력 비율 → 남은 체력 순으로 우열을 가린다 */
+  judge(why) {
+    const ra = this.ratio("a"), rb = this.ratio("b");
+    if (Math.abs(ra - rb) > 1e-9) { this.finish(ra > rb ? "a" : "b", `${why} · 남은 병력 우세`); return; }
+    const ha = this.armyHp("a"), hb = this.armyHp("b");
+    if (Math.abs(ha - hb) > 1e-9) { this.finish(ha > hb ? "a" : "b", `${why} · 남은 체력 우세`); return; }
+    this.finish(null, `${why} · 완전히 대등`);
   }
   finish(winner, reason) {
     if (this.over) return;
@@ -1734,14 +1746,6 @@ class DuelSim {
     void fromX;
   }
 
-  /** 성채를 두들긴다 */
-  hitBase(side, amt) {
-    const b = this.base[side];
-    if (b.hp <= 0) return;
-    b.hp = Math.max(0, b.hp - amt);
-    this.events.push({ t: "basehit", side, x: baseX(side), hp: b.hp, max: b.max });
-  }
-
   /**
    * 고정 시간간격 한 걸음.
    *
@@ -1753,17 +1757,8 @@ class DuelSim {
     if (this.over) return;
     this.t += DT;
 
-    // 특허료가 차오르고, 카드 대기시간이 줄고, AI 편은 알아서 출격한다
-    for (const s of ["a", "b"]) {
-      const m = this.money[s];
-      m.v = Math.min(m.max, m.v + m.rate * DT);
-      for (const c of this.cards[s]) if (c.cd > 0) c.cd = Math.max(0, c.cd - DT);
-      if (this.ai[s]) this.aiStep(s);
-    }
-
     /** @type {any[]} [유닛, dx] */ const moves = [];
     /** @type {any[]} [유닛, 피해, 치명타, 발사 x, 즉사기준] */ const hits = [];
-    /** @type {any[]} [편, 피해] */ const baseHits = [];
     /** @type {any[]} [유닛, 둔화율] */ const slows = [];
     /** @type {any[]} [유닛, 정지시간] */ const stuns = [];
     /** @type {any[]} [유닛, 회복량] */ const heals = [];
@@ -1808,12 +1803,9 @@ class DuelSim {
       foes.sort((p, q) => (p[0] - q[0]) || (p[1].id - q[1].id));
 
       const near = foes.length ? foes[0][0] : Infinity;
-      const foeBaseGap = Math.abs(baseX(u.side === "a" ? "b" : "a") - u.x);
-      // 앞이 비었으면 성채가 사거리에 들어오는지 본다
-      const canHitBase = this.base[u.side === "a" ? "b" : "a"].hp > 0 && foeBaseGap <= u.range;
 
-      if (near > u.range && !canHitBase) {
-        // 아직 아무것도 못 닿는다 — 계속 걸어간다
+      if (near > u.range) {
+        // 아직 아무에게도 못 닿는다 — 계속 걸어간다 (두들길 성채 같은 것은 없다)
         moves.push([u, DUEL.moveSpd * slow * DT * u.dir]);
         u.walking = true;
         continue;
@@ -1824,15 +1816,6 @@ class DuelSim {
       if (u.cd > 0) continue;
       u.cd = 1 / u.rate;
       u.atkT = 0.42;
-
-      // 앞이 비었으면 성채를 두들긴다
-      if (near > u.range) {
-        const crit = this.rng.next() < u.cc;
-        baseHits.push([u.side === "a" ? "b" : "a", u.dmg * (crit ? u.cm : 1)]);
-        this.shots.push({ x1: u.x, row1: u.row, x2: baseX(u.side === "a" ? "b" : "a"), row2: -1,
-                          side: u.side, crit, life: 0.13, max: 0.13 });
-        continue;
-      }
 
       const n = Math.min(u.tg, foes.length);
       for (let i = 0; i < n; i++) {
@@ -1881,8 +1864,10 @@ class DuelSim {
     // ── 적용 ── 이 순간까지는 아무도 죽지 않았다. 같은 틱에 서로를 눕히는 것도 그래서 가능하다.
     for (const [u, dx] of moves) {
       u.x += dx;
-      // 상대 성채를 지나쳐 화면 밖으로 걸어 나가지 않게 붙잡는다
-      const lim = baseX(u.side === "a" ? "b" : "a");
+      // 상대 진영선을 지나쳐 화면 밖으로 걸어 나가지 않게 붙잡는다.
+      // (표적은 방향을 가리지 않고 가장 가까운 적이라, 적이 살아 있는 한 여기까지 올 일은
+      //  거의 없다 — 화면 밖으로 새는 것만 막는 안전장치다.)
+      const lim = campX(u.side === "a" ? "b" : "a");
       u.x = u.dir > 0 ? Math.min(u.x, lim) : Math.max(u.x, lim);
     }
     for (const [u, amt] of heals) { u.hp = Math.min(u.max, u.hp + amt);
@@ -1890,7 +1875,6 @@ class DuelSim {
     for (const [u, pct] of slows) { u.slowT = 1.6; u.slowPct = pct; }
     for (const [u, d] of stuns) u.freezeT = Math.max(u.freezeT, d);
     for (const [u, amt, crit, fx, ex] of hits) this.hurt(u, amt, crit, fx, ex);
-    for (const [side, amt] of baseHits) this.hitBase(side, amt);
 
     for (const s of this.shots) s.life -= DT;
     this.shots = this.shots.filter((s) => s.life > 0);
@@ -1901,7 +1885,7 @@ class DuelSim {
   drainEvents() { const e = this.events; this.events = []; return e; }
 }
 
-return { DuelSim, baseX, dirOf, makeRoster, mobRoster, toCards };
+return { DuelSim, campX, dirOf, makeRoster, mobRoster, deckGroups, deckPower };
 })();
 __mods["core/game.js"] = (function(){
 // @ts-check
@@ -2703,7 +2687,7 @@ __mods["web/main.js"] = (function(){
 const {Game, frameOf} = __req("core/game.js");
 const {CATS, ENEMIES, BAL, PASSIVES, PASSIVE_BY_KEY, SABOTAGE, AUGMENTS, AUGMENT_WAVES,
        DUEL, DUEL_WAVES, DRAW_KEYS, RECIPES, catDrawChance} = __req("core/data.js");
-const {DuelSim, baseX, makeRoster, mobRoster} = __req("core/duel.js");
+const {DuelSim, campX, makeRoster, mobRoster, deckPower} = __req("core/duel.js");
 const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {auraCells} = __req("core/stats.js");
@@ -2798,9 +2782,6 @@ function onServerMessage(msg) {
       break;
     case "oppDuel":      // 상대의 대전 명세 — 이게 도착해야 대전장을 굴릴 수 있다
       receiveDuelRoster(msg.wave, msg.roster);
-      break;
-    case "oppDuelDeploy":   // 상대가 출격 카드를 냈다 — 내 화면의 상대 편에 그대로 세운다
-      receiveDuelDeploy(msg.wave, msg.id);
       break;
     case "oppDuelResult":   // p1 이 내린 판정 (p2 는 이것을 따른다)
       receiveDuelResult(msg.wave, msg.outcome, msg.foeAlive, msg.reason);
@@ -4063,7 +4044,7 @@ function consumeEvents() {
         addFloater(ev.x, ev.y - 18, "무효!", "#e0574d", { big: true, life: .8, rise: 24 });
         break;
       case "duel_start":
-        log(`<b style="color:#cda43a">⚔ 1:1 대전</b> 스테이지 ${ev.wave} — 침입자 대신 상대의 냥타워와 붙습니다. (배속 없음)`);
+        log(`<b style="color:#cda43a">⚔ 1:1 대전</b> 스테이지 ${ev.wave} — 침입자 대신 <b>내 덱 전부</b>가 상대 덱과 붙습니다. (자동 진행 · 배속 없음)`);
         break;
       case "duel_end":
         log(ev.outcome === "win"
@@ -4109,24 +4090,24 @@ function consumeEvents() {
   }
 }
 
-/* ═══════ 1:1 대전 라운드 (냥코대전쟁식 레인 전투) ═══════
+/* ═══════ 1:1 대전 라운드 (오토배틀러) ═══════
  * 스테이지 5·11 은 침입자가 오지 않는다. 대신 청사 판을 접어 두고 별도의 대전장으로 옮겨,
- * 지금까지 만든 냥타워를 **직접 출격시켜** 상대 성채를 무너뜨리는 싸움을 한다.
+ * 지금까지 만든 냥타워를 **통째로** 상대 덱과 맞붙인다.
  *
  * 진행은 세 마디다.
  *   1) 명세 교환 — 내 냥타워의 완성된 스탯을 뽑아 서버로 보내고 상대 것을 기다린다 (최대 12초)
- *   2) 전투 — 아래 출격 카드로 특허료를 내고 한 명씩 내보낸다. 출격 명령은 서로에게 중계된다
+ *   2) 전투 — 양쪽 전군이 진형을 짜고 저절로 진군한다. **누를 것이 하나도 없다**
  *   3) 정산 — 진 쪽이 등록원부 내구를 잃고, 이긴 쪽은 특허료를 받는다. 그리고 준비 단계로.
  * 배속(×2·×3)은 여기서 잠긴다 — 양쪽이 같은 속도로 봐야 같은 판이 된다.
  *
  * ── 승패는 왜 p1 이 정하나 ──
- * 실시간으로 양쪽이 출격을 지르므로, 지연이 조금만 있어도 두 화면이 어긋난다. 그래서
- * **p1 쪽 계산을 정본으로 삼는다**: 양쪽 다 자기 화면에서 굴리되(보이는 것), 끝나면 p1 이
- * 결과를 보내고 p2 는 그것을 따른다(판에 반영되는 것). 화면이 조금 어긋날 수는 있어도
- * 「나는 이겼는데 상대도 이겼다」는 생기지 않는다. 솔로에서는 내 계산이 곧 정본이다.
+ * 사람이 손댈 일이 없어 시뮬레이션은 완전히 결정적이다 — 같은 명세 · 같은 시드면 두 화면은
+ * 원래 같은 결과에 닿는다. 그래도 **p1 쪽 계산을 정본으로 삼는다**: 브라우저마다 Math.pow
+ * 같은 초월함수의 끝자리가 다를 수 있어, 만에 하나라도 「둘 다 이겼다」가 나오지 않게
+ * 못 박아 두는 장치다. 솔로에서는 내 계산이 곧 정본이다.
  */
 /** @type {{wave:number, sim:any, mine:any[], theirs:any[]|null, foeMob:boolean, phase:string,
- *          waitT:number, acc:number, endT:number, res:any, floats:any[], deployed:number,
+ *          waitT:number, acc:number, endT:number, res:any, floats:any[],
  *          verdictT:number}|null} */
 let duel = null;
 /** 상대 명세가 내가 라운드에 들어서기 전에 먼저 도착하는 경우가 있어 따로 받아 둔다 */
@@ -4143,12 +4124,12 @@ function startDuelRound() {
   if (!game.startDuel()) { log("대전 라운드를 열지 못했습니다."); return; }
   const mine = makeRoster(game);
   duel = { wave: game.wave, sim: null, mine, theirs: null, foeMob: false, phase: "wait",
-           waitT: 0, acc: 0, endT: 0, res: null, floats: [], deployed: 0, verdictT: 0 };
+           waitT: 0, acc: 0, endT: 0, res: null, floats: [], verdictT: 0 };
   $("#phaseLbl").textContent = `1:1 대전 · 스테이지 ${game.wave}`;
   $("#duelStage").classList.remove("hidden");
   $("#duelResult").classList.add("hidden");
   document.body.classList.add("dueling");
-  buildDuelCards();
+  clearDuelDecks();
   render();
 
   if (soloMode) {
@@ -4191,15 +4172,13 @@ function beginDuelSim(theirs, isMob) {
   duel.theirs = theirs;
   duel.foeMob = !!isMob;
   // 편을 p1 → p2 로 못 박는다. 화면에서 내가 왼쪽에 보이는 것은 그리기 단계의 일이다.
-  const me = mySide(), foe = me === "a" ? "b" : "a";
+  const me = mySide();
   const [a, b] = me === "a" ? [duel.mine, theirs] : [theirs, duel.mine];
-  duel.sim = new DuelSim(a, b, ((matchSeed || game.seed) ^ (duel.wave * 0x9e3779b1)) >>> 0,
-                         // 쥐 침입단은 사람이 아니다 — 그쪽 출격은 AI 가 알아서 낸다
-                         { aiSides: isMob ? [foe] : [] });
+  duel.sim = new DuelSim(a, b, ((matchSeed || game.seed) ^ (duel.wave * 0x9e3779b1)) >>> 0);
   duel.phase = "fight";
   duel.acc = 0;
-  duelCardSig = "";
-  $("#duelFoeLabel").textContent = isMob ? "쥐 침입단 성채" : "상대 성채";
+  $("#duelFoeLabel").textContent = isMob ? "쥐 침입단" : "상대 병력";
+  renderDuelDecks();
   if (isMob) {
     // 어떤 조합이 나왔는지 로그에 남긴다 — 조합이 매번 다른 것이 이 라운드의 재미다
     const tally = {};
@@ -4210,8 +4189,14 @@ function beginDuelSim(theirs, isMob) {
   } else {
     log(`<b style="color:#cda43a">1:1 대전 개시</b> — 내 냥타워 ${duel.mine.length}명 대 상대 ${theirs.length}명`);
   }
-  log(`아래 <b>출격 카드</b>로 냥타워를 내보내세요 — 특허료는 시간이 지나면 차오릅니다. ` +
-      `<b>먼저 상대 성채를 무너뜨리는 쪽이 이깁니다.</b>`);
+  // 붙기 전에 두 덱의 지수를 나란히 적어 준다 — 이 라운드가 재는 것이 그것이기 때문이다
+  const mp = deckPower(duel.mine), tp = deckPower(theirs);
+  log(`<b>덱 지수</b> 내 <b style="color:var(--blue)">${mp}</b> 대 ` +
+      `${isMob ? "침입단" : "상대"} <b style="color:var(--seal-soft)">${tp}</b> — ` +
+      (mp > tp ? "내 덱이 우세합니다." : mp < tp ? "내 덱이 열세입니다." : "팽팽합니다.") +
+      ` <i style="font-style:normal;color:var(--muted)">체력과 화력을 함께 잰 값입니다.</i>`);
+  log(`전군이 저절로 진군합니다 — <b>누를 것은 없습니다.</b> ` +
+      `<b>상대 냥타워를 먼저 전멸시키는 쪽이 이깁니다.</b>`);
 }
 
 /** 매 프레임. 대전장을 진행하고 그린다. */
@@ -4267,7 +4252,8 @@ function consumeDuelEvent(ev) {
   if (ev.t === "crit") duelFloat(ev.x, y, "Critical!", "#e0574d", true);
   else if (ev.t === "heal") duelFloat(ev.x, y, `+${ev.amt}`, "#7fbf6a", false);
   else if (ev.t === "exec") duelFloat(ev.x, y, "무효!", "#e0574d", true);
-  else if (ev.t === "basehit" && ev.side === mySide() && Math.random() < 0.12) addShake(3, .12);
+  // 내 냥이 쓰러지면 화면이 살짝 흔들린다 — 전멸이 곧 패배라 한 명 한 명이 무겁다
+  else if (ev.t === "die" && ev.side === mySide()) addShake(3, .12);
 }
 
 function duelFloat(x, y, txt, col, big) {
@@ -4339,13 +4325,13 @@ function closeDuelRound() {
   else if (game.awaitingPassive) openPassiveModal();
 }
 
-/* ── 대전장 그리기 (냥코대전쟁식 레인) ──
- * 옆에서 본 한 줄짜리 전장이다. 하늘 · 잔디 · 흙 세 겹을 깔고, 양끝에 성채를 세우고,
- * 그 사이를 유닛이 걸어 다닌다. 내가 늘 왼쪽에 보이도록 좌표만 뒤집고(계산은 p1/p2 순서 그대로),
- * 그래서 「내 성채는 늘 왼쪽, 내 냥은 오른쪽으로 걸어간다」가 판마다 변하지 않는다. */
+/* ── 대전장 그리기 (2D 레인) ──
+ * 옆에서 본 한 줄짜리 전장이다. 하늘 · 잔디 · 흙 세 겹을 깔고, 양끝에 진영 깃발을 꽂고,
+ * 그 사이를 진형이 걸어 다닌다. 내가 늘 왼쪽에 보이도록 좌표만 뒤집고(계산은 p1/p2 순서 그대로),
+ * 그래서 「내 진영은 늘 왼쪽, 내 냥은 오른쪽으로 걸어간다」가 판마다 변하지 않는다. */
 const duelX = (x) => (mySide() === "a" ? x : DUEL.w - x);
-/** 유닛이 서는 높이 — row 로 조금씩 어긋나게 해서 겹쳐도 뒤엣것이 보이도록 */
-const duelY = (row) => DUEL.ground - (row || 0) * 9;
+/** 유닛이 서는 높이 — 진형의 줄(row)마다 조금씩 위로 올려 겹쳐도 뒤엣것이 보이도록 */
+const duelY = (row) => DUEL.ground - (row || 0) * DUEL.rowGap;
 
 /** 하늘·잔디·흙. 매 프레임 다시 그리지만 도형 몇 개라 부담이 없다. */
 function drawDuelField(g) {
@@ -4379,60 +4365,45 @@ function drawDuelField(g) {
 }
 
 /**
- * 성채 하나. 내 쪽은 청사 톤(푸른 기와), 상대 쪽은 붉은 기와로 그려 한눈에 갈린다.
- * 머리 위에 내구 막대를 얹는다 — 이 판에서 지켜야 할 것이 그것 하나다.
+ * 진영 깃발 하나 — 양끝에 꽂힌 표식이다.
+ *
+ * **두들길 수 있는 물건이 아니다.** 성채가 있던 자리지만, 지킬 건물이 있으면 승부가
+ * 「누가 먼저 벽을 뚫었는가」로 새기 때문에 전부 걷어냈다. 남은 것은 여기가 누구 진영인지
+ * 알려 주는 깃대 하나뿐이다 — 내 쪽은 청사 톤(푸른 기), 상대 쪽은 붉은 기.
  */
-function drawDuelBase(g, side) {
-  if (!duel || !duel.sim) return;
+function drawDuelCamp(g, side) {
   const mine = side === mySide();
-  const x = duelX(baseX(side));
+  const x = duelX(campX(side));
   const GY = DUEL.ground;
-  const b = duel.sim.base[side];
-  const w = 74, h = 104;
   const main = mine ? "#5b8fb0" : "#c4322a";
   const dark = mine ? "#3c6a8a" : "#8a2a24";
+  // 깃발이 안쪽(전장 쪽)을 향해 날리도록 — 화면에서 내 진영은 늘 왼쪽이다
+  const face = mine ? 1 : -1;
+  const t = duel && duel.sim ? duel.sim.t : 0;
 
   g.save();
   g.translate(x, GY);
-  // 몸통
-  g.fillStyle = "#f2ecdb";
-  g.fillRect(-w / 2, -h, w, h);
-  g.strokeStyle = "#2b2418"; g.lineWidth = 2.5;
-  g.strokeRect(-w / 2, -h, w, h);
-  // 지붕 (기와 두 단)
-  for (let i = 0; i < 2; i++) {
-    const ry = -h - 4 - i * 17, rw = w / 2 + 16 - i * 9;
-    g.fillStyle = i ? dark : main;
-    g.beginPath();
-    g.moveTo(-rw, ry); g.lineTo(rw, ry); g.lineTo(rw - 11, ry - 15); g.lineTo(-rw + 11, ry - 15);
-    g.closePath(); g.fill();
-    g.strokeStyle = "#2b2418"; g.lineWidth = 2; g.stroke();
-  }
-  // 대문
-  g.fillStyle = dark;
+  // 깃대 밑동 — 흙무더기
+  g.fillStyle = "rgba(43,36,24,.22)";
+  g.beginPath(); g.ellipse(0, 1, 22, 6, 0, 0, 7); g.fill();
+  // 깃대
+  g.fillStyle = "#7a6a44";
+  g.fillRect(-3, -118, 6, 118);
+  g.strokeStyle = "#2b2418"; g.lineWidth = 1.5; g.strokeRect(-3, -118, 6, 118);
+  // 깃면 — 바람에 아주 조금 물결친다
+  const wave = Math.sin(t * 2.2) * 4;
   g.beginPath();
-  g.moveTo(-17, 0); g.lineTo(-17, -34); g.quadraticCurveTo(0, -52, 17, -34); g.lineTo(17, 0);
-  g.closePath(); g.fill();
+  g.moveTo(0, -114);
+  g.lineTo(face * 58, -108 + wave);
+  g.lineTo(face * 58, -74 + wave);
+  g.lineTo(0, -68);
+  g.closePath();
+  g.fillStyle = main; g.fill();
   g.strokeStyle = "#2b2418"; g.lineWidth = 2; g.stroke();
-  // 창문 두 짝
-  g.fillStyle = main;
-  g.fillRect(-w / 2 + 9, -h + 12, 16, 16);
-  g.fillRect(w / 2 - 25, -h + 12, 16, 16);
+  // 인장 — 깃면 가운데의 붉은/푸른 점
+  g.fillStyle = dark;
+  g.beginPath(); g.arc(face * 30, -91 + wave * .6, 9, 0, 7); g.fill();
   g.restore();
-
-  // 내구 막대
-  const bw = 96, by = GY - h - 54;
-  const ratio = Math.max(0, b.hp / b.max);
-  g.fillStyle = "rgba(24,16,10,.7)"; g.fillRect(x - bw / 2 - 2, by - 2, bw + 4, 12);
-  g.fillStyle = "#2b2418"; g.fillRect(x - bw / 2, by, bw, 8);
-  g.fillStyle = ratio > .5 ? "#7fbf6a" : ratio > .25 ? "#cda43a" : "#e0574d";
-  g.fillRect(x - bw / 2, by, bw * ratio, 8);
-  g.font = "bold 11px ui-monospace,'D2Coding',Menlo,monospace";
-  g.textAlign = "center"; g.textBaseline = "alphabetic";
-  g.fillStyle = "#fff";
-  g.strokeStyle = "rgba(24,16,10,.9)"; g.lineWidth = 3; g.lineJoin = "round";
-  const label = `${Math.ceil(Math.max(0, b.hp))}/${b.max}`;
-  g.strokeText(label, x, by - 6); g.fillText(label, x, by - 6);
 }
 
 /** 유닛 하나 — 내 냥은 스프라이트, 쥐 침입단은 청사에서 보던 그 원화 그대로 */
@@ -4528,7 +4499,7 @@ function drawDuel(now) {
     return;
   }
 
-  drawDuelBase(g, "a"); drawDuelBase(g, "b");
+  drawDuelCamp(g, "a"); drawDuelCamp(g, "b");
 
   // 유닛 — 뒤쪽 줄부터 그려 앞줄이 위에 오게 한다
   const ms = duel.sim.t * 1000;
@@ -4548,7 +4519,7 @@ function drawDuel(now) {
     g.lineWidth = s.crit ? 3 : 1.8;
     g.beginPath();
     g.moveTo(duelX(s.x1), duelY(s.row1) - 26);
-    g.lineTo(duelX(s.x2), s.row2 < 0 ? DUEL.ground - 60 : duelY(s.row2) - 26);
+    g.lineTo(duelX(s.x2), duelY(s.row2) - 26);
     g.stroke();
   }
   g.globalAlpha = 1;
@@ -4570,90 +4541,66 @@ function drawDuel(now) {
   void now;
 }
 
-/* ── 출격 카드 (화면 아래 줄) ──
- * 냥코의 그 줄이다. 내가 만든 냥타워가 종류·레벨별로 한 장씩 놓이고, 카드에는 남은 수와
- * 출격료가 적힌다. 누르면 성채 앞에서 걸어 나간다. 특허료가 모자라거나 대기 중이면 눌리지 않는다.
+/* ── 덱 표시줄 (화면 아래) ──
+ * 누를 것이 없는 라운드다. 그래서 이 자리에는 조작 대신 **양쪽이 무엇을 데려왔는지**를
+ * 나란히 놓는다 — 종류·레벨별로 한 칸씩, 몇 명인지와 함께. 위에는 덱 지수를 적어
+ * 지금 붙고 있는 두 덱의 우열이 한눈에 보이게 한다.
+ * 싸움이 시작될 때 한 번만 그린다 (구성이 도중에 바뀌지 않는다).
  */
-let duelCardSig = "";
-function buildDuelCards() {
-  duelCardSig = "";
-  const bar = $("#duelCards");
-  if (bar) bar.innerHTML = "";
-}
-
-function renderDuelCards() {
-  const bar = $("#duelCards");
-  if (!bar || !duel) return;
-  const me = mySide();
-  const cards = duel.sim ? duel.sim.cards[me] : [];
-  // 카드 구성(종류·남은 수)이 바뀔 때만 다시 그린다. 대기 막대는 아래에서 style 로만 손본다.
-  const sig = cards.map((c) => `${c.id}x${c.n}`).join("|");
-  if (sig !== duelCardSig) {
-    duelCardSig = sig;
-    bar.innerHTML = cards.map((c) => {
-      const d = CATS[c.k];
-      return `<button class="dcard" type="button" data-id="${c.id}">
-        <span class="cdfill"></span>
-        <span class="ic">${d ? d.icon : "🐭"}</span>
-        <span class="nm">${d ? d.name : c.k}${c.lv > 1 ? ` <em>Lv${c.lv}</em>` : ""}</span>
-        <span class="cost">₩${c.cost}</span>
-        <span class="left">×<b>${c.n}</b></span>
-      </button>`;
-    }).join("");
-    bar.querySelectorAll(".dcard").forEach((b) => {
-      b.addEventListener("click", () => deployFromCard(/** @type {HTMLElement} */ (b).dataset.id));
-    });
+function clearDuelDecks() {
+  for (const id of ["#duelDeckMine", "#duelDeckFoe"]) {
+    const el = $(id);
+    if (el) el.innerHTML = "";
   }
-  // 상태(대기 막대·잠김)는 매 프레임 손본다 — innerHTML 을 다시 쓰면 마우스가 계속 끊긴다
-  bar.querySelectorAll(".dcard").forEach((el) => {
-    const h = /** @type {HTMLButtonElement} */ (el);
-    const c = cards.find((x) => x.id === h.dataset.id);
-    if (!c) return;
-    const why = duel.sim ? duel.sim.deployBlocked(me, c.id) : "대기";
-    h.disabled = !!why;
-    h.classList.toggle("out", c.n <= 0);
-    const fill = /** @type {HTMLElement} */ (h.querySelector(".cdfill"));
-    if (fill) fill.style.width = `${Math.round((c.cd / c.cdMax) * 100)}%`;
-    const left = h.querySelector(".left b");
-    if (left) left.textContent = String(c.n);
-  });
+  const pw = $("#duelPower");
+  if (pw) pw.textContent = "—";
 }
 
-/** 카드를 눌렀다 — 내 화면에서 즉시 내보내고, 상대에게도 알린다 */
-function deployFromCard(id) {
-  if (!duel || !duel.sim || duel.sim.over) return;
-  const me = mySide();
-  const why = duel.sim.deployBlocked(me, id);
-  if (why) return;
-  duel.sim.deploy(me, id);
-  duel.deployed++;
-  sendWS({ t: "duelDeploy", wave: duel.wave, id });
+/** 한 편의 덱을 칸으로 늘어놓는다 */
+function deckChips(groups) {
+  if (!groups.length) return `<span class="dempty">비어 있음</span>`;
+  return groups.map((c) => {
+    const d = c.mob ? ENEMIES[c.k] : CATS[c.k];
+    const nm = d ? (c.mob ? d.nm : d.name) : c.k;
+    const ic = d ? d.icon : "🐭";
+    return `<span class="dchip${c.lv > 1 ? " lv" : ""}">
+      <b>${ic}</b><i>${nm}${c.lv > 1 ? ` Lv${c.lv}` : ""}</i><em>×${c.n}</em></span>`;
+  }).join("");
 }
 
-/** 상대가 카드를 냈다는 소식 — 내 화면의 상대 편에 그대로 세운다 */
-function receiveDuelDeploy(wave, id) {
-  if (!duel || duel.wave !== wave || !duel.sim) return;
-  duel.sim.deploy(mySide() === "a" ? "b" : "a", id);
+function renderDuelDecks() {
+  if (!duel || !duel.sim) return;
+  const me = mySide(), foe = me === "a" ? "b" : "a";
+  const sim = duel.sim;
+  $("#duelDeckMine").innerHTML = deckChips(sim.deck[me]);
+  $("#duelDeckFoe").innerHTML = deckChips(sim.deck[foe]);
+  $("#duelDeckFoeLbl").textContent = duel.foeMob ? "쥐 침입단" : "상대 덱";
+  const mp = sim.power[me], fp = sim.power[foe];
+  const pw = $("#duelPower");
+  pw.innerHTML = `<b class="me">${mp}</b><span>덱 지수</span><b class="foe">${fp}</b>`;
+  pw.className = mp > fp ? "up" : mp < fp ? "down" : "even";
 }
 
-/** 대전장 위쪽 표시줄 — 특허료 · 남은 시간 · 양쪽 성채 */
+/**
+ * 대전장 위쪽 표시줄 — 남은 시간 · 양쪽 병력.
+ *
+ * 성채가 없으니 지켜볼 숫자는 **남은 병력** 하나다. 머릿수와 함께 체력 막대를 얹는데,
+ * 막대는 자기 시작 병력 대비 비율이다 — 시간이 다 됐을 때 승패를 가르는 잣대가 그것이라
+ * 화면에 보이는 것과 판정 기준이 같아야 한다.
+ */
 function renderDuelBar() {
   if (!duel) return;
   const me = mySide(), foe = me === "a" ? "b" : "a";
   const sim = duel.sim;
-  const alive = (side) => sim ? sim.alive(side).filter((u) => !u.dead).length : 0;
-  $("#duelMine").textContent = sim
-    ? `${Math.ceil(sim.base[me].hp)}/${sim.base[me].max}` : `-`;
-  $("#duelTheirs").textContent = sim
-    ? `${Math.ceil(sim.base[foe].hp)}/${sim.base[foe].max}` : "대기";
+  const show = (side) => sim ? `${sim.alive(side).length}/${sim.startN[side]}` : "-";
+  $("#duelMine").textContent = show(me);
+  $("#duelTheirs").textContent = sim ? show(foe) : "대기";
+  for (const [id, side] of [["#duelMineFill", me], ["#duelTheirsFill", foe]]) {
+    /** @type {HTMLElement} */ ($(id)).style.width = sim ? `${sim.ratio(side) * 100}%` : "100%";
+  }
   const left = sim ? Math.max(0, DUEL.timeLimit - sim.t) : DUEL.timeLimit;
-  $("#duelTimer").textContent = `${left.toFixed(1)}초 · 판 위 ${alive(me)} 대 ${alive(foe)}`;
+  $("#duelTimer").textContent = `${left.toFixed(1)}초`;
   /** @type {HTMLElement} */ ($("#duelFill")).style.width = `${(left / DUEL.timeLimit) * 100}%`;
-
-  const m = sim ? sim.money[me] : null;
-  $("#duelMoney").textContent = m ? `${Math.floor(m.v)}/${Math.round(m.max)}원` : "—";
-  /** @type {HTMLElement} */ ($("#duelMoneyFill")).style.width = m ? `${(m.v / m.max) * 100}%` : "0%";
-  renderDuelCards();
 }
 
 function renderDuelResult() {
@@ -5572,7 +5519,8 @@ function beginBattle() {
   log(`<b style="color:#6fe0d0">다른 종류끼리도 합성</b>됩니다 — 처방 ${RECIPES.length}가지로 ` +
       `연쇄·정지·즉사·징수 같은 <b>특수 냥타워</b>를 만들 수 있습니다 (뽑기로는 나오지 않습니다).`);
   log(`스테이지 <b>${DUEL_WAVES.join(" · ")}</b>는 침입자 대신 <b>1:1 대전</b>입니다 — ` +
-      `별도의 대전장에서 서로의 냥타워가 붙고, 지는 쪽은 등록원부 내구 <b>${DUEL.leakBase}</b>을 잃습니다.`);
+      `별도의 대전장에서 <b>내 냥타워 전부</b>가 상대 덱과 저절로 붙습니다 (누를 것 없음). ` +
+      `지는 쪽은 등록원부 내구 <b>${DUEL.leakBase}</b>을 잃습니다.`);
   if (!soloMode) log(`<b>방해 공작</b>으로 상대 판에 기름·연막·정예 투입을 걸 수 있습니다 (웨이브 주기마다 종류별 1회).`);
   log(`전장은 스테이지 <b>1~5 ${STAGE_THEMES[0].name}</b> · <b>6~10 ${STAGE_THEMES[1].name}</b> · <b>11~ ${STAGE_THEMES[2].name}</b> 순으로 바뀝니다.`);
   buildBoardCells();
