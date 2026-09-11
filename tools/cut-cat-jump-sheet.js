@@ -5,7 +5,7 @@
  *   node tools/cut-cat-jump-sheet.js                    # cat1_jump..cat6_jump 중 있는 것을 전부 굽는다
  *   node tools/cut-cat-jump-sheet.js [시트경로] [출력경로]   # 한 장만 굽는다
  *
- * 원화 `public/img/catN_jump.png` → 게임용 `public/img/cat_jumpN.png` 가 기본 짝이다.
+ * 원화 `public/img/src/catN_jump.png` → 게임용 `public/img/game/cat_jumpN.png` 가 기본 짝이다.
  * 번호는 공격 시트와 같은 번호를 쓴다 — `cat1_jump.png` 는 `cat_1.png`(출원냥) 와 같은 냥이다.
  * 나온 시트는 `cat_attackN.png` 와 **완전히 같은 형식**이다: 160px 셀 × 4컷 가로 한 줄,
  * 같은 배율·같은 셀 크기라 모션이 바뀌어도 판 위에서 냥 크기가 변하지 않는다.

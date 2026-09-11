@@ -2,8 +2,8 @@
 /**
  * 사망 3컷 원화(mob{n}_die.png) → 게임용 투명 스트립(mob-{종류}-die.png).
  *
- *   node tools/cut-die-sheet.js [입력폴더] [출력폴더]
- *   (기본값: public/img → public/img)
+ *   node tools/cut-die-sheet.js [원화폴더] [출력폴더]
+ *   (기본값: public/img/src → public/img/game. 키를 맞출 달리기 시트 mob{n}.png 는 늘 public/img/game 에서 읽는다)
  *
  * 원화는 흰 배경에 컷 3장이 가로로 놓인 한 장(2172×724)이다. 여기서
  *   1. 배경을 지워 투명하게 만들고 (sprite.js cutout — 테두리에서 번져 들어가며 지운다),
@@ -21,8 +21,10 @@ const path = require("path");
 const { decode, encode } = require("./png");
 const { cutout, bbox, clusters } = require("./sprite");
 
-const IN = process.argv[2] || path.join(__dirname, "../public/img");
-const OUT = process.argv[3] || path.join(__dirname, "../public/img");
+const IN = process.argv[2] || path.join(__dirname, "../public/img/src");
+const OUT = process.argv[3] || path.join(__dirname, "../public/img/game");
+/** 달리기 시트가 있는 곳 — 사망 컷의 키·칸 너비를 여기 맞춘다 */
+const RUN_DIR = path.join(__dirname, "../public/img/game");
 
 /** 1단계→copy, 2단계→fast, 3단계→tank, 4단계→boss */
 const TYPES = ["copy", "fast", "tank", "boss"];
@@ -69,7 +71,7 @@ function resize(img, s) {
 
 TYPES.forEach((t, i) => {
   const n = i + 1;
-  const run = decode(path.join(IN, `mob${n}.png`));
+  const run = decode(path.join(RUN_DIR, `mob${n}.png`));
   const src = decode(path.join(IN, `mob${n}_die.png`));
 
   const cut = cutout(src);

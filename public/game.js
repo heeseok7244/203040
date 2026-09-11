@@ -3430,7 +3430,7 @@ sprite.src = INLINE.startsWith("__") ? "./sprite.png" : "data:image/png;base64,"
  * 최고 레벨에 닿으면 원화가 통째로 그 그림으로 갈아 끼워졌는데, **내가 키운 그 냥이 아니게**
  * 보이는 것이 문제였다 — 여섯 종을 애써 갈라 놓고 마지막에 전부 같은 흰 냥으로 수렴했다.
  * 지금은 레벨이 올라도 **기본 1단계 원화를 그대로** 쓰고, 금빛 테두리와 Lv 딱지로만 갈린다.
- * (파일은 저장소에 그대로 남아 있으니 되살리려면 이 자리에 다시 넣으면 된다.) */
+ * (파일도 지웠다 — 되살리려면 git 이력에서 꺼내 이 자리에 다시 넣으면 된다.) */
 
 /**
  * 냥 종류별 전용 스프라이트 — 각각 4프레임 한 줄 (tools/cut-cat-sheet.js 가 원화에서 뽑는다).
@@ -3445,12 +3445,12 @@ sprite.src = INLINE.startsWith("__") ? "./sprite.png" : "data:image/png;base64,"
  * 파일을 하나씩 넣는 동안에도 판이 멀쩡히 돌아간다.
  */
 const CAT_SHEET_SRC = {
-  spec:  "img/cat_attack1.png",   // 출원냥
-  claim: "img/cat_attack2.png",   // 특허범위냥
-  agent: "img/cat_attack3.png",   // 변리사냥
-  pct:   "img/cat_attack4.png",   // 국제출원냥
-  fast:  "img/cat_attack5.png",   // 우선심사냥
-  delay: "img/cat_attack6.png",   // 보정명령냥
+  spec:  "img/game/cat_attack1.png",   // 출원냥
+  claim: "img/game/cat_attack2.png",   // 특허범위냥
+  agent: "img/game/cat_attack3.png",   // 변리사냥
+  pct:   "img/game/cat_attack4.png",   // 국제출원냥
+  fast:  "img/game/cat_attack5.png",   // 우선심사냥
+  delay: "img/game/cat_attack6.png",   // 보정명령냥
 
   /* ── 특수(합성) 냥타워도 **기본 냥 원화를 그대로** 쓴다 ──
    * 예전에는 전용 원화가 없어 공용 스프라이트에 hue-rotate 를 걸어 물들였는데, 그 결과
@@ -3459,11 +3459,11 @@ const CAT_SHEET_SRC = {
    * 청록 테두리와 Lv 딱지로만 한다 — 판에서 구분이 되면 그걸로 충분하고,
    * 없는 원화를 색으로 지어내는 것보다 있는 원화를 쓰는 편이 언제나 낫다.
    * 다섯이 서로 다른 원화를 쓰도록 갈라 두어 한 판에 여럿을 세워도 헷갈리지 않는다. */
-  panel:    "img/cat_attack4.png",   // ⚖️ 심판합의체냥 ← 🌐 국제출원냥 (다중조준을 물려받았다)
-  invalid:  "img/cat_attack3.png",   // ☠️ 무효사유냥   ← 💼 변리사냥
-  citation: "img/cat_attack2.png",   // 🔗 인용문헌냥   ← 📐 특허범위냥
-  rush:     "img/cat_attack5.png",   // ⏱️ 조기공개냥   ← ⚡ 우선심사냥
-  fee:      "img/cat_attack1.png",   // 💰 수수료징수냥 ← 📄 출원냥
+  panel:    "img/game/cat_attack4.png",   // ⚖️ 심판합의체냥 ← 🌐 국제출원냥 (다중조준을 물려받았다)
+  invalid:  "img/game/cat_attack3.png",   // ☠️ 무효사유냥   ← 💼 변리사냥
+  citation: "img/game/cat_attack2.png",   // 🔗 인용문헌냥   ← 📐 특허범위냥
+  rush:     "img/game/cat_attack5.png",   // ⏱️ 조기공개냥   ← ⚡ 우선심사냥
+  fee:      "img/game/cat_attack1.png",   // 💰 수수료징수냥 ← 📄 출원냥
 };
 /** 종류 → Image. 시트를 못 찾아도 판이 죽지 않게 로드 실패는 그냥 삼킨다 */
 const catSheets = {};
@@ -3483,7 +3483,7 @@ for (const key of Object.keys(CAT_SHEET_SRC)) {
  * 공격 시트와 **형식이 완전히 같아서**(160px 셀 × 4컷) 모션이 바뀌어도 크기가 변하지 않는다.
  */
 const CAT_JUMP_SRC = {
-  agent: "img/cat_jump3.png",   // 변리사냥
+  agent: "img/game/cat_jump3.png",   // 변리사냥
 };
 /** 종류 → Image. 공격 시트와 같은 방식으로 로드 실패는 그냥 삼킨다 (그 냥은 안 뛴다) */
 const catJumps = {};
@@ -4483,25 +4483,13 @@ function drawLegs(g, r, phase) {
   g.stroke();
 }
 
-/** 침입자 원화 — 종류마다 투명 배경 PNG 한 장. 아직 안 올라왔으면 아래 벡터 실루엣으로 대체한다. */
-const MOB_SRC = { copy: "img/mob-copy.png", fast: "img/mob-fast.png", tank: "img/mob-tank.png", boss: "img/mob-boss.png" };
-/** @type {Record<string,HTMLImageElement>} */
-const MOB_IMG = {};
-for (const t in MOB_SRC) { const im = new Image(); im.src = MOB_SRC[t]; MOB_IMG[t] = im; }
-
 /**
- * 달리기 8컷(img/mouse-run-v4.png) · 사망 3컷(img/mouse-sheet-v2.png) — 스타일시트에서 잘라 낸 가로 스트립.
- * 셀 폭은 늘 (그림 가로 ÷ 컷 수)로 나눠 쓰므로, 시트를 다시 뽑아 스트립만 갈아 끼워도 코드는 그대로다.
+ * 사망 3컷(img/game/mob-{종류}-die.png) — tools/cut-die-sheet.js 가 원화(img/src/mob{n}_die.png)에서 뽑은 가로 스트립.
+ * 셀 폭은 늘 (그림 가로 ÷ 컷 수)로 나눠 쓰므로, 원화를 다시 뽑아 스트립만 갈아 끼워도 코드는 그대로다.
+ * 침입자 그림은 이 스트립과 아래 4방향 달리기 시트(MOB_SHEET) 두 가지가 전부다 — 옛 쥐 스타일시트에서
+ * 뽑던 서 있는 원화(mob-{종류}.png)와 8컷 달리기 스트립(mob-{종류}-run.png)은 시트로 갈아탄 뒤 지웠다.
  */
-const MOB_STRIP = { run: 8, die: 3 };
-
-/**
- * 달리기 8컷의 도약 높이(0=발이 땅, 1=가장 높이 떠 있음).
- * 컷 그림의 무게중심 높이를 종류별로 재서 평균 낸 값이다 — 8컷 안에 도약이 두 번 들어 있다.
- * 그림자와 발밑 먼지가 이 값을 따라가야 컷과 어긋나지 않는다. 몸의 오르내림은 그림이 이미 갖고
- * 있으므로 코드로 또 띄우지 않는다 — 그러면 발이 땅에 안 붙고 둥둥 떠 보인다.
- */
-const RUN_LIFT = [0.26, 0.48, 0.63, 0.25, 1.00, 0.29, 0, 0.18];
+const MOB_STRIP = { die: 3 };
 
 /** 진행 방향 — 4방향 시트의 줄 번호와 같다 */
 const DIR = { right: 0, down: 1, left: 2, up: 3 };
@@ -4512,19 +4500,19 @@ const DIR = { right: 0, down: 1, left: 2, up: 3 };
  * 옆모습을 억지로 쓰지 않아도 되고, 왼쪽으로 갈 때도 뒤집힌 그림이 아니라 제대로 그린 왼쪽 모습이 나온다.
  * rowOf 는 DIR 순서([→, ↓, ←, ↑])로 "그 방향이 몇째 줄인지" — 시트의 줄 순서가 다르면 여기만 바꾼다
  * (mob1~4.png 전부 [→, ↓, ←, ↑]).
- * lift는 컷별 도약 높이(RUN_LIFT 와 같은 뜻). 이 시트들은 네 컷 전부 발이 바닥선에 붙어 있고 몸 높이도
+ * lift는 컷별 도약 높이(0=발이 땅, 1=가장 높이 떠 있음). 이 시트들은 네 컷 전부 발이 바닥선에 붙어 있고 몸 높이도
  * 같다(컷별로 재 봐도 위아래 5px 안쪽) — 그래서 전부 0이다. 여기에 추정값을 넣으면 컷마다 몸이 튕기고
  * 그림자·먼지가 깜빡여 진동처럼 보인다. 도약이 그려진 시트를 쓰게 되면 그때 실제로 재서 넣는다.
  * scale은 그림 배율. 그림 크기는 r(피격 반지름)에 비례하는데 네 시트의 쥐가 칸 안에서 똑같은 크기라
  * r 차이(16·18·24·34)가 그대로 드러난다 — 3단계·보스가 유독 커 보여서 그림만 줄인다. 피격 판정(r)은 그대로다.
- * 침입자 네 종(copy·fast·tank·boss) 전부 이 형식이다. 가로 스트립(mob-*-run.png)은 시트가 안 올라왔을 때의 대역.
+ * 침입자 네 종(copy·fast·tank·boss) 전부 이 형식이다. 시트가 아직 안 올라왔으면 벡터 실루엣으로 그린다.
  * @type {Record<string,{src:string,cols:number,rows:number,rowOf:number[],lift:number[],scale?:number}>}
  */
 const MOB_SHEET = {
-  copy: { src: "img/mob1.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0] },
-  fast: { src: "img/mob2.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0] },
-  tank: { src: "img/mob3.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0], scale: 0.8 },
-  boss: { src: "img/mob4.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0], scale: 0.7 },
+  copy: { src: "img/game/mob1.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0] },
+  fast: { src: "img/game/mob2.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0] },
+  tank: { src: "img/game/mob3.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0], scale: 0.8 },
+  boss: { src: "img/game/mob4.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0], scale: 0.7 },
 };
 /** @type {Record<string,HTMLImageElement>} */
 const MOB_SHEET_IMG = {};
@@ -4602,42 +4590,39 @@ function mipsOf(im) {
   return mips;
 }
 
-/** 이 종류의 달리기가 몇 컷짜리인지 — 4방향 시트면 그 줄의 컷 수, 아니면 가로 스트립 컷 수 */
-function runCuts(t) { return MOB_SHEET[t] ? MOB_SHEET[t].cols : MOB_STRIP.run; }
+/** 이 종류의 달리기가 몇 컷짜리인지 — 4방향 시트 한 줄의 컷 수 */
+function runCuts(t) { return (MOB_SHEET[t] || MOB_SHEET.copy).cols; }
 /** 이 종류의 컷별 도약 높이표 */
-function runLift(t) { return MOB_SHEET[t] ? MOB_SHEET[t].lift : RUN_LIFT; }
+function runLift(t) { return (MOB_SHEET[t] || MOB_SHEET.copy).lift; }
 
 /** 컷 사이를 이어 준 도약 높이. 컷은 뚝뚝 넘어가도 그림자와 먼지는 이어져야 눈에 안 걸린다.
  *  @param {number} fp 소수점까지의 컷 번호 (정수부가 지금 컷, 소수부가 다음 컷까지의 진행도)
- *  @param {number[]} [tbl] 도약 높이표 — 생략하면 8컷 스트립의 RUN_LIFT */
-function liftAt(fp, tbl = RUN_LIFT) {
+ *  @param {number[]} tbl 도약 높이표 (runLift) */
+function liftAt(fp, tbl) {
   const n = tbl.length;
   const i = Math.floor(fp), f = fp - i;
   const at = (k) => tbl[((k % n) + n) % n];
   return at(i) + (at(i + 1) - at(i)) * f;
 }
 /** @type {Record<string,Record<string,HTMLImageElement>>} */
-const MOB_ANIM = { run: {}, die: {} };
+const MOB_ANIM = { die: {} };
 for (const kind in MOB_STRIP) {
-  for (const t in MOB_SRC) {
-    const im = new Image(); im.src = `img/mob-${t}-${kind}.png`;
+  for (const t in MOB_SHEET) {
+    const im = new Image(); im.src = `img/game/mob-${t}-${kind}.png`;
     MOB_ANIM[kind][t] = im;
   }
 }
 /** 아직 안 올라온 그림은 쓰지 않는다 (반쯤 그려진 채로 캔버스에 올라가지 않도록) */
 function imgReady(im) { return im && im.complete && im.naturalWidth ? im : null; }
 
-/** 그릴 준비가 끝난 원화만 돌려준다 (로딩 중이면 null → 벡터 실루엣으로 폴백) */
-function mobArt(t) { return imgReady(MOB_IMG[t]); }
-
-/** 달리기 그림이 컷 단위로 올라와 있는가 — 4방향 시트든 가로 스트립이든. 아니면 서 있는 원화 한 장뿐이다. */
-function runFramed(t) { return !!(imgReady(MOB_SHEET_IMG[t]) || imgReady(MOB_ANIM.run[t])); }
+/** 달리기 시트가 올라와 있는가 — 아니면 벡터 실루엣으로 그린다 */
+function runFramed(t) { return !!imgReady(MOB_SHEET_IMG[t]); }
 
 /**
  * 이번에 그릴 컷 하나.
- * kind가 "run"·"die"면 그 스트립의 i번째 컷을, 그 밖(예: "hero")이면 서 있는 원화 한 장을 돌려준다.
- * 스트립이 아직 안 올라왔을 때도 원화로 흘러가므로, 화면이 비는 순간은 없다.
- * 4방향 시트가 있는 종류는 "run"일 때 dir(DIR.*) 줄의 컷을 돌려준다 — 이 컷은 이미 그 방향을 보고 있으니
+ * kind가 "run"이면 4방향 시트에서 dir(DIR.*) 줄의 i번째 컷을, "die"면 사망 스트립의 i번째 컷을,
+ * "hero"(도감 초상화)면 시트 정면(↓)의 첫 컷을 돌려준다. 그림이 아직 안 올라왔으면 null — 그리는 쪽이 벡터 실루엣으로 간다.
+ * 시트에서 온 컷은 이미 그 방향을 보고 있으니
  * 그리는 쪽에서 좌우 반전을 얹으면 안 된다 (dirs 로 알려 준다).
  * scale은 시트별 그림 배율(MOB_SHEET[t].scale) — drawMobArt 가 r 기준 크기에 곱한다.
  * mips 는 시트의 축소 단계들(mipsOf) — 좌표는 늘 원본 기준이고, drawMobArt 가 단계에 맞춰 나눈다.
@@ -4645,8 +4630,7 @@ function runFramed(t) { return !!(imgReady(MOB_SHEET_IMG[t]) || imgReady(MOB_ANI
  *   mips?:(HTMLImageElement|HTMLCanvasElement)[]}|null}
  */
 function mobFrame(t, kind, i, dir = DIR.right) {
-  // 4방향 시트가 있는 종류는 서 있는 원화(hero)도 시트의 정면(↓) 첫 컷으로 대신한다 —
-  // 달리기와 다른 그림체의 원화가 도감에 섞이지 않도록.
+  // 도감 초상화(hero)도 시트의 정면(↓) 첫 컷이다 — 달리기와 같은 그림체를 쓰도록.
   const sheet = kind === "run" || kind === "hero" ? MOB_SHEET[t] : null;
   const img = sheet ? imgReady(MOB_SHEET_IMG[t]) : null;
   if (img) {
@@ -4672,13 +4656,12 @@ function mobFrame(t, kind, i, dir = DIR.right) {
     return { im: st, sx: cw * (((i % n) + n) % n), sy: 0, sw: cw, sh: st.naturalHeight,
       scale: sheet ? sheet.scale || 1 : 1, mips: mipsOf(st) };
   }
-  const im = mobArt(t);
-  return im ? { im, sx: 0, sy: 0, sw: im.naturalWidth, sh: im.naturalHeight } : null;
+  return null;
 }
 
 /**
  * 달리기 리듬. freq는 "이동 거리 1px당 걸음 위상"이라 빠른 쥐일수록 발이 저절로 빨라진다.
- * 위상 2π가 달리기 8컷 한 바퀴(= 두 걸음)이고, π/4마다 컷이 한 장 넘어간다.
+ * 위상 2π가 달리기 한 바퀴(= 두 걸음)이고, 4방향 시트의 4컷이면 π/2마다 컷이 한 장 넘어간다.
  * rise·tilt·squash는 달리기 컷이 아직 안 올라왔을 때 쓰는 벡터 실루엣용 흔들림이다 —
  * 진짜 컷에는 도약이 이미 그려져 있어서 얹지 않는다.
  */
@@ -4715,8 +4698,8 @@ function gaitOf(e, r, k = 1) {
 }
 
 /** 원화 컷 하나(mobFrame 결과)를 반지름 r 기준 크기로, 발이 바닥 그림자에 닿도록 (0,0) 중심에 그린다.
- *  스트립의 컷은 전부 바닥선을 공유하도록 잘라 놨으므로, 셀 아래쪽을 지면에 맞추면 컷이 넘어가도 발이 뜨지 않는다.
- *  원화는 전부 오른쪽을 보고 있어서 왼쪽으로 갈 때는 face=-1로 뒤집는다 — 단, 4방향 시트에서 온 컷(fr.dirs)은
+ *  컷은 전부 바닥선을 공유하도록 잘라 놨으므로, 셀 아래쪽을 지면에 맞추면 컷이 넘어가도 발이 뜨지 않는다.
+ *  사망 스트립은 오른쪽을 보고 있어서 왼쪽으로 갈 때는 face=-1로 뒤집는다 — 단, 4방향 시트에서 온 컷(fr.dirs)은
  *  이미 제 방향을 보고 있으므로 뒤집지 않는다.
  *  mo(gaitOf 결과)를 주면 도약·착지 스쿼시까지 얹어 달리는 모션이 된다.
  *  slowed면 얼음빛으로 물들여 둔화 상태를 표시한다 (벡터 실루엣의 푸른 톤과 같은 역할). */
@@ -5160,7 +5143,7 @@ function drawMonster(g, e, d, now) {
 
   // 실제로 나아가는 중일 때만 걸음을 굴린다 (가처분에 묶였으면 첫 컷에서 멈춰 선다)
   const moving = e.dist > 0 && !(e.freezeT > 0);
-  // 달리기 컷 — 위상 2π가 한 바퀴(8컷 스트립이면 π/4마다, 4방향 시트의 4컷이면 π/2마다 한 장 넘어간다).
+  // 달리기 컷 — 위상 2π가 한 바퀴(4방향 시트의 4컷이면 π/2마다 한 장 넘어간다).
   // 위상이 이동 거리에서 나오므로 빠른 쥐일수록 컷도 저절로 빨리 넘어가고, 발이 헛돌지 않는다.
   const nCut = runCuts(e.t), liftTbl = runLift(e.t);
   const phase = e.dist * (GAIT[e.t] || GAIT_DEFAULT).freq;
@@ -7381,7 +7364,16 @@ $("#btnSpeed").addEventListener("click", (e) => {
   /** @type {HTMLElement} */ (e.target).textContent = "속도 ×" + speed;
 });
 
-// 침입자 도감 — 이모지 대신 실제 인게임 몬스터 디자인을 미니 초상화로 그린다
+/**
+ * 침입자 도감 초상화 — 달리기 시트와 별개의 정면 일러스트(img/game/mob-{종류}-info.png).
+ * tools/cut-info-portrait.js 가 원화(img/src/mob{n}_info.png)의 흰 배경을 지우고 정사각형으로 오려 둔 것이라
+ * 칸에 맞춰 그대로 그리면 된다. 아직 안 올라왔으면 벡터 쥐 실루엣으로 대신한다.
+ * @type {Record<string,HTMLImageElement>}
+ */
+const MOB_INFO_IMG = {};
+for (const t in ENEMIES) { const im = new Image(); im.src = `img/game/mob-${t}-info.png`; MOB_INFO_IMG[t] = im; }
+
+// 침입자 도감 — 이모지 대신 정면 초상화 일러스트를 그린다
 function renderBestiary() {
   const PORT = 72;
   const el = $("#bestiary");
@@ -7395,51 +7387,33 @@ function renderBestiary() {
     </div>`;
   }).join("");
   el.querySelectorAll(".beast-cv").forEach((cv) => {
-    const t = /** @type {HTMLElement} */ (cv).dataset.t;
-    paintBeast(/** @type {HTMLCanvasElement} */ (cv), t, null);
-    // 마우스를 올린 동안만 달리기 8컷을 돌린다 — 도감에서도 어떻게 뛰어오는지 눈으로 보인다
-    let raf = 0;
-    cv.addEventListener("mouseenter", () => {
-      if (raf) return;
-      const t0 = performance.now();
-      const spin = () => {
-        paintBeast(/** @type {HTMLCanvasElement} */ (cv), t, Math.floor((performance.now() - t0) / 110));
-        raf = requestAnimationFrame(spin);
-      };
-      raf = requestAnimationFrame(spin);
-    });
-    cv.addEventListener("mouseleave", () => {
-      if (raf) cancelAnimationFrame(raf);
-      raf = 0;
-      paintBeast(/** @type {HTMLCanvasElement} */ (cv), t, null);
-    });
+    paintBeast(/** @type {HTMLCanvasElement} */ (cv), /** @type {HTMLElement} */ (cv).dataset.t);
   });
 }
 
 /** 도감 초상화 한 칸. frame이 null이면 서 있는 원화, 숫자면 그 번호의 달리기 컷을 그린다. */
-function paintBeast(cv, t, frame) {
+function paintBeast(cv, t) {
   const d = ENEMIES[t];
   const ctx = cv.getContext("2d");
-  const PORT = cv.width, cx = PORT / 2, cy = PORT / 2 + 6;
+  const PORT = cv.width, cx = PORT / 2, cy = PORT / 2;
   ctx.clearRect(0, 0, PORT, PORT);
-  ctx.beginPath(); ctx.arc(cx, cy - 4, PORT * 0.42, 0, 7);
+  ctx.beginPath(); ctx.arc(cx, cy, PORT * 0.42, 0, 7);
   ctx.fillStyle = d.col + "26"; ctx.fill();
-  // 초상화 칸(72px)에 맞게 반지름을 눌러 담는다 — 특허괴물(r 34)은 원화 그대로면 잘린다
-  const r = Math.min(d.r, 21);
-  const fr = mobFrame(t, frame === null ? "hero" : "run", frame || 0);
+  const im = imgReady(MOB_INFO_IMG[t]);
+  if (im) {
+    // 정사각형 초상화를 배경 원(지름 0.84) 안에 여유를 두고 담는다 — 원 밖으로 안 나가야 도감 줄이 답답하지 않다
+    const side = PORT * 0.76;
+    ctx.drawImage(im, cx - side / 2, cy - side / 2, side, side);
+    return;
+  }
   ctx.save();
-  ctx.translate(cx, cy);
-  ctx.globalAlpha = 0.22; ctx.fillStyle = "#0c1524";
-  ctx.beginPath(); ctx.ellipse(0, r * 0.92, r * 0.5, r * 0.15, 0, 0, 7); ctx.fill();
-  ctx.globalAlpha = 1;
-  if (fr) drawMobArt(ctx, fr, r, false, 1, null);
-  else drawRatSilhouette(ctx, r, false);
+  ctx.translate(cx, cy + 6);
+  drawRatSilhouette(ctx, Math.min(d.r, 21), false);
   ctx.restore();
 }
 renderBestiary();
-// 원화는 비동기로 올라온다 — 다 올라온 뒤 도감을 한 번 더 그려야 이모지 대신 실제 그림이 남는다
-for (const t in MOB_IMG) MOB_IMG[t].addEventListener("load", () => renderBestiary(), { once: true });
-for (const t in MOB_SHEET_IMG) MOB_SHEET_IMG[t].addEventListener("load", () => renderBestiary(), { once: true });
+// 원화는 비동기로 올라온다 — 다 올라온 뒤 도감을 한 번 더 그려야 실루엣 대신 실제 그림이 남는다
+for (const t in MOB_INFO_IMG) MOB_INFO_IMG[t].addEventListener("load", () => renderBestiary(), { once: true });
 
 /* ── 도감 여닫기 ──
  * 도감은 판 패널 머릿글의 물음표에 접어 두었다. 판 위에 겹쳐 뜨는 말풍선이라

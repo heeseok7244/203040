@@ -20,7 +20,9 @@ const path = require("path");
 const { decode, encode } = require("./png");
 const { cutout } = require("./sprite");
 
-const IMG = path.join(__dirname, "../public/img");
+/** 원화는 public/img/src, 구운 게임용 시트는 public/img/game 에 둔다 */
+const SRC_DIR = path.join(__dirname, "../public/img/src");
+const OUT_DIR = path.join(__dirname, "../public/img/game");
 /** 인자를 안 주면 이 번호들 중 원화가 있는 것을 전부 굽는다 */
 const ALL = [1, 2, 3, 4, 5, 6];
 
@@ -248,7 +250,7 @@ function bake(src, out_, motion) {
  */
 function defaultOut(src, motion) {
   const m = motion.num.exec(path.basename(src));
-  return path.join(IMG, motion.out(m ? m[1] : 1));
+  return path.join(OUT_DIR, motion.out(m ? m[1] : 1));
 }
 
 /**
@@ -262,10 +264,10 @@ function bakeAll(motion) {
   const failed = [];
   for (const i of ALL) {
     const name = motion.src(i);
-    const src = path.join(IMG, name);
+    const src = path.join(SRC_DIR, name);
     if (!fs.existsSync(src)) { console.log(`${name}\t없음 — 건너뜁니다`); continue; }
     try {
-      bake(src, path.join(IMG, motion.out(i)), motion);
+      bake(src, path.join(OUT_DIR, motion.out(i)), motion);
       n++;
     } catch (e) {
       console.log(`${name}\t❌ ${e.message}`);

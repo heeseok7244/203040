@@ -310,9 +310,16 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   /* 배경 그림이 cover 로 깔렸을 때 실제로 차지하는 상자 크기.
      .hero 가 이 상자를 그대로 재현해서, 냥이를 그림 속 퍼센트 좌표로 놓는다.
      dvh 를 모르는 브라우저를 위해 vh 로 한 번 깔고 덮어쓴다. */
-  --stage-w:max(100vw,calc(100vh * 1672 / 941));
-  --stage-w:max(100vw,calc(100dvh * 1672 / 941));
-  --stage-h:calc(var(--stage-w) * 941 / 1672);
+  --stage-w:max(100vw,calc(100vh * 1670 / 941));
+  --stage-w:max(100vw,calc(100dvh * 1670 / 941));
+  --stage-h:calc(var(--stage-w) * 941 / 1670);
+  /* 냥이 두 마리가 본관 타워 중심에서 좌우로 얼마나 떨어져 서는지 (무대 폭 기준 비율).
+       .10 = 예전 자리(40%·60%) · .125 = 지금 */
+  --cat-off:.125;
+  /* 그림 속 본관 타워의 가로 중심 (무대 폭 기준). 냥이·타이틀·한 줄 문구가 전부 이 값을 기준으로
+     좌우를 잡는다. 원화는 타워가 0.7% 오른쪽에 치우쳐 있어 그림을 14px 왼쪽으로 밀어 정중앙(x 721~948)에
+     맞춰 두었다 — 그림을 갈아끼우면 타워 좌우 끝을 재서 여기에 넣거나 그림을 다시 민다. */
+  --scene-cx:.5;
   /* 로비 글자·버튼의 크기 단위.
      배경·냥이와 같은 기준(무대 폭)에서 뽑아야 브라우저 배율을 바꿔도 셋이 같이 움직인다.
      px 로 적으면 확대할 때 글자만 커져 그림과 어긋난다.
@@ -332,17 +339,17 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   /* 글자·버튼은 아래로 붙인다 — 그림에서 건물 아래 빈 앞마당이 그 자리다. */
   display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
   text-align:center;
-  padding:clamp(16px,3vh,40px) 20px clamp(36px,12vh,130px);
+  padding:clamp(16px,3vh,40px) 20px clamp(36px,11vh,120px);
   position:relative;z-index:1}
 /* 청사 그림 한 장을 화면에 꽉 채운다. 그림이 이미 16:9 로 만들어져 있으므로
    자르거나 가장자리를 덮는 처리는 하지 않는다 — cover 로 깔고 끝.
    뒤의 --sky 는 창이 16:9 보다 세로로 길 때만 드러나는 여벌 바탕이다. */
 #lobby::before{
   content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
-  background:url("img/lobby-bg.webp") center bottom / cover no-repeat,var(--sky)}
+  background:url("img/game/new-lobby-bg.webp") center bottom / cover no-repeat,var(--sky)}
 
 /* ── 8프레임 할퀴기 애니메이션 ──
-   스프라이트시트: public/img/cat-hero.png — 1992×320, 1행×8열, 왼쪽부터 1→8.
+   스프라이트시트: public/img/game/cat-hero.png — 1992×320, 1행×8열, 왼쪽부터 1→8.
    원화는 2행×4열이었지만, 아래 행이 위 행보다 35px 낮게 그려져 있어 그대로 넘기면
    중간에 냥이가 한 번 툭 떨어진다. 배경(남색)을 투명하게 빼고 프레임마다 발끝을
    같은 높이·같은 가로 중심에 맞춰 한 줄로 다시 조립했다 — 그래서 8등분만 하면 된다.
@@ -352,12 +359,14 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
    똑같다(가운데 아래 정렬). 그래서 그 안의 냥이는 화면이 아니라 "그림"을 기준으로
    좌표를 잡고, 창 비율이 바뀌어도 청사에 붙어 다닌다.
 
-   그림(1672×941) 속 좌표 — 격자를 씌워 실측:
-     본관 x 44~56% · 우측 별관 x 57~68% · 나무 x 58~70%
-     본관 꼭대기 y 21% · 건물 밑선 y 60% · 앞마당 지반 아래끝 y 63%       */
+   그림(new-lobby-bg.webp, 1670×941) 속 좌표 — 격자를 씌워 실측:
+     본관 x 43~57% (정중앙) · 좌측 별관 x 28~42% · 우측 별관 x 58~70% · 깃발 x 22~34% (y 37~44%)
+     본관 꼭대기 y 19% · 건물 밑선 y 61% · 앞마당 지반(섬) 아래끝 y 64%       */
 #lobby .hero{
-  --cat-x:60%;              /* 갈색 냥이 중심 — 현관 오른쪽, 우측 별관 앞 */
-  --cat-y:38%;              /* 발밑 = 그림 y 62%. 앞마당 앞 가장자리 */
+  /* 갈색 냥이 중심 — 본관 타워 중심(--scene-cx)에서 --cat-off 만큼 오른쪽 (현관 오른쪽, 우측 별관 앞).
+     --cat-off 는 #lobby 에 있다 — 흰 냥이가 같은 값으로 반대편에 선다. */
+  --cat-x:calc((var(--scene-cx) + var(--cat-off)) * 100%);
+  --cat-y:35%;              /* 발밑 = 그림 y 65%. 섬 아래끝(y 64%) 바로 밑 — 섬 앞에 선다 */
   /* --fw 는 "칸" 의 폭이다. 칸 안에서 냥이 몸통은 약 2/3 를 쓰고 나머지는
      뻗은 앞발·모션선 자리라, 화면에 보이는 냥이는 이 값의 3분의 2쯤 된다.
      .094 는 이전 시트(칸 305×346, .115)와 냥이 키가 같아지도록 맞춘 값이다 —
@@ -386,7 +395,7 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 #lobby .catsprite{
   position:absolute;left:var(--cat-x);bottom:var(--cat-y);transform:translateX(-50%);
   width:var(--fw);height:var(--vh);
-  background-image:url("img/cat-hero.png");
+  background-image:url("img/game/cat-hero.png");
   background-repeat:no-repeat;
   background-size:calc(1992 * var(--u)) calc(320 * var(--u));
   background-position:0 0;
@@ -394,12 +403,12 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 /* 현관 왼편에 서는 흰 냥이. 시트를 갈색 냥이와 똑같은 칸 규격(249×320)으로
    조립해 두었으므로, 서는 자리와 그림 주소만 바꾸면 나머지 계산은 그대로 쓴다.
    둘이 딱 맞춰 움직이면 기계처럼 보여서 반 박자 어긋나게 돌린다. */
-/* 40% = 갈색 냥이(60%) 를 화면 한가운데(50%) 기준으로 뒤집은 자리.
+/* 갈색 냥이를 본관 타워 중심(--scene-cx) 기준으로 뒤집은 자리.
    타이틀도 가운데 정렬이라, 이래야 두 마리가 글자에서 같은 거리에 선다.
-   둘을 더 벌리거나 모으려면 50 에서 같은 폭만큼 떨어뜨리면 된다. */
-#lobby .glow.white,#lobby .catsprite.white{--cat-x:40%}
+   둘을 더 벌리거나 모으려면 #lobby 의 --cat-off 하나만 바꾸면 된다. */
+#lobby .glow.white,#lobby .catsprite.white{--cat-x:calc((var(--scene-cx) - var(--cat-off)) * 100%)}
 #lobby .catsprite.white{
-  background-image:url("img/cat-hero2.png");
+  background-image:url("img/game/cat-hero2.png");
   /* 반 바퀴만큼 미리 돌려놓는다 — 둘이 딱 맞춰 움직이면 기계처럼 보인다.
      --swipe 를 바꿔도 반 박자가 유지되도록 절대값 대신 나눠서 쓴다. */
   animation-delay:calc(var(--swipe) / -2)}
@@ -433,10 +442,25 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
    본체가 transparent 라 text-shadow 를 쓰면 그림자가 글자 안으로 비쳐 보인다.
    그래서 돌출은 shadow 가 아니라 같은 글자를 한 벌 더 깔아서 만든다. */
 #lobby .bigtitle{
-  position:relative;display:block;
+  /* 글자 기둥에서 빼내어 그림 속 깃발 왼편 하늘에 띄운다.
+     무대(.hero)와 같은 좌표계(가운데 아래 정렬, --stage-w × --stage-h)라 창 크기가 바뀌어도
+     늘 그림의 같은 자리에 걸린다.
+     그림 실측 — 깃발 x 22~34% · 깃발 높이 y 37~44% · 본관 x 43~57% · 본관 꼭대기 y 19%
+       --title-x  글자 가로 중심 (무대 폭 기준, 0 = 왼쪽 끝) — 본관 타워 중심(--scene-cx) 위
+       --title-y  글자 세로 중심 (무대 아래에서 올라오는 비율) — .64 = 깃발과 같은 높이 */
+  --title-x:var(--scene-cx);
+  --title-y:.615;
+  position:fixed;
+  left:calc(50% + (var(--title-x) - .5) * var(--stage-w));
+  bottom:calc(var(--stage-h) * var(--title-y));
+  transform:translate(-50%,50%);display:block;white-space:nowrap;
   font-family:"Black Han Sans",var(--disp);font-weight:400;margin:0;
   --ex:calc(var(--ui) * .052);   /* 3D 돌출 한 단 — 글자와 같이 커져야 두께가 안 어긋난다 */
-  font-size:min(calc(var(--ui) * 5.2),14vh);line-height:1.15;letter-spacing:.06em;
+  /* 글자가 차지할 수 있는 최대 폭 — 글자 넉 자 + 자간이 약 4.24em 이라 그걸로 나눈다.
+     창이 좁아지면 이 폭 안에서 글자가 작아진다. */
+  --title-max-w:calc(var(--stage-w) * .48);
+  font-size:min(calc(var(--ui) * 8.8),24vh,calc(var(--title-max-w) / 4.24));
+  line-height:1.15;letter-spacing:.06em;
   /* 앞의 세 겹은 크기가 서로 어긋나는 별 타일 — 겹치면서 불규칙한 별밭이 된다 */
   background:
     radial-gradient(circle at 22% 34%,#fff 0 1.1px,transparent 1.7px) 0 0/37px 43px,
@@ -470,8 +494,10 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   z-index:1;color:transparent;-webkit-text-fill-color:transparent;
   -webkit-text-stroke:calc(var(--ui) * .068) rgba(150,231,255,.8)}
 #lobby .tagline{
+  /* 아래 글·버튼 묶음의 맨 위 줄 — 설명문(.subline) 바로 위에 붙어 버튼들과 한 덩어리로 움직인다.
+     (타이틀만 그림 좌표계로 따로 띄우고, 이 문구부터는 글자 기둥 안에 둔다) */
   font-family:var(--disp);font-size:calc(var(--ui) * 1.54);color:#fff;
-  margin:calc(var(--ui) * .52) 0 0;letter-spacing:.02em;
+  margin:0;letter-spacing:.02em;max-width:var(--col);
   text-shadow:0 0 calc(var(--ui) * 1.15) rgba(255,154,92,.45)}
 #lobby .subline{
   /* 작은 글자에는 px 하한을 둔다 — 균일 축소만 하면 작은 창에서 8px 밑으로 내려가 못 읽는다 */
@@ -479,7 +505,6 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   margin:calc(var(--ui) * .38) 0 0;max-width:var(--col)}
 
 /* #lobby 에 max-width 가 없으므로 글자·버튼 칸은 각자 --col 로 폭을 맞춘다 */
-#lobby .tagline,#lobby .bigtitle{max-width:var(--col)}
 /* 세로 여백도 --ui 로 묶는다. vh 로 두면 창이 작아질 때 글자만 줄고 여백은 그대로라
    기둥이 충분히 짧아지지 않아 타이틀이 다시 냥이 얼굴로 올라온다. */
 #lobby .entry{width:var(--col);margin-top:var(--btn-gap)}
@@ -498,6 +523,19 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   background:linear-gradient(180deg,#ffcb8e,#ffa96e);transform:translateY(-2px);
   box-shadow:0 8px 0 #b95c2c,0 14px 32px rgba(255,140,70,.42)}
 #lobby .entry .go:active{transform:translateY(4px);box-shadow:0 2px 0 #b95c2c}
+/* 솔로 버튼 글자 앞뒤의 고양이 발바닥 — 그림이 아니라 마스크라 글자색(color)을 그대로 따라간다.
+   크기·간격은 글자(em) 기준이라 버튼 글씨를 키우면 같이 커진다. */
+#lobby #btnSolo::before,#lobby #btnSolo::after{
+  content:"";display:inline-block;vertical-align:-.12em;
+  width:1.05em;height:1.05em;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cellipse cx='5' cy='9.5' rx='2.3' ry='3'/%3E%3Cellipse cx='9.4' cy='5.2' rx='2.3' ry='3.1'/%3E%3Cellipse cx='14.6' cy='5.2' rx='2.3' ry='3.1'/%3E%3Cellipse cx='19' cy='9.5' rx='2.3' ry='3'/%3E%3Cpath d='M12 9.5c3.4 0 5 2.6 6.2 4.6 1 1.6 2.3 2.6 2.3 4.4 0 2.2-1.7 3.5-3.8 3.5-1.7 0-3-1-4.7-1s-3 1-4.7 1c-2.1 0-3.8-1.3-3.8-3.5 0-1.8 1.3-2.8 2.3-4.4C7 12.1 8.6 9.5 12 9.5z'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cellipse cx='5' cy='9.5' rx='2.3' ry='3'/%3E%3Cellipse cx='9.4' cy='5.2' rx='2.3' ry='3.1'/%3E%3Cellipse cx='14.6' cy='5.2' rx='2.3' ry='3.1'/%3E%3Cellipse cx='19' cy='9.5' rx='2.3' ry='3'/%3E%3Cpath d='M12 9.5c3.4 0 5 2.6 6.2 4.6 1 1.6 2.3 2.6 2.3 4.4 0 2.2-1.7 3.5-3.8 3.5-1.7 0-3-1-4.7-1s-3 1-4.7 1c-2.1 0-3.8-1.3-3.8-3.5 0-1.8 1.3-2.8 2.3-4.4C7 12.1 8.6 9.5 12 9.5z'/%3E%3C/svg%3E") center/contain no-repeat}
+/* 버튼 글자에 letter-spacing:.04em 이 걸려 있어 마지막 글자 「이」 뒤에도 그만큼 빈칸이 붙는다.
+   그래서 뒤쪽 여백은 그만큼 덜어야 앞뒤가 같은 간격으로 보인다.
+   --paw-gap 하나로 양쪽을 같이 조절한다. */
+#lobby #btnSolo{--paw-gap:.42em}
+#lobby #btnSolo::before{margin-right:var(--paw-gap)}
+#lobby #btnSolo::after{margin-left:calc(var(--paw-gap) - .04em)}
 #lobby #createdBox{
   margin-top:calc(var(--ui) * .94);padding:calc(var(--ui) * .83) calc(var(--ui) * .63);
   border-radius:calc(var(--ui) * .73);
@@ -511,9 +549,10 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   display:flex;align-items:center;gap:calc(var(--ui) * .63)}
 #lobby .or::before,#lobby .or::after{
   content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--violet-line),transparent)}
-/* 1v1 쪽 입구는 솔로 버튼보다 한 단 낮은 톤으로 — 첫 화면의 주인공은 솔로 플레이다 */
+/* 1v1 쪽 입구는 솔로 버튼과 같은 크기, 색만 한 단 낮은 톤으로 — 첫 화면의 주인공은 솔로 플레이다.
+   솔로 버튼은 테두리가 없고 이쪽은 1px 테두리가 있어, 높이를 맞추려면 안쪽 여백에서 1px 을 뺀다. */
 #lobby .entry .go.alt{
-  padding:calc(var(--ui) * .68);font-size:calc(var(--ui) * .91);color:var(--cream);
+  padding:calc(var(--ui) * 1.04 - 1px);font-size:calc(var(--ui) * 1.38);color:var(--cream);
   background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.05));
   border:1px solid var(--violet-line);box-shadow:none}
 #lobby .entry .go.alt:hover:not(:disabled){
@@ -547,8 +586,7 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
     --ui:clamp(9px,min(calc(var(--stage-w) / 132),3.2vw),26px);
     --btn-gap:calc(var(--ui) * .9);
     padding:clamp(10px,2vh,24px) 20px clamp(18px,4.4vh,60px)}
-  #lobby .bigtitle{font-size:min(calc(var(--ui) * 4.4),12vh)}
-  #lobby .tagline{margin-top:calc(var(--ui) * .45)}
+  #lobby .bigtitle{font-size:min(calc(var(--ui) * 7.4),20vh,calc(var(--title-max-w) / 4.24))}
   #lobby .or{margin:calc(var(--ui) * .6) 0}
 }
 /* 더 좁아지면 보조 설명은 접는다 — 남길 것은 버튼과 코드 입력이다 */
