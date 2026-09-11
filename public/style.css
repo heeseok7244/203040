@@ -930,3 +930,152 @@ body.dueling #tip{display:none!important}
 @media(prefers-reduced-motion:reduce){
   .piece.cat.buffed::before{animation:none;background-position:40% 50%}
   .piece.cat.buffed::after{animation:none;box-shadow:0 0 9px 2px rgba(143,106,216,.6)}}
+
+/* ══════════════════════════════════════════════════════════════════════
+   빌드 계열 — 「내가 무슨 덱을 만들고 있는가」
+   강화를 고를 때마다 계열 점수가 오르고, 3점·5점에 닿으면 특수효과가 열린다.
+   선택 모달 위쪽(.linebar)과 헤더의 스테이지 강화 칸(.linebar.mini)이 같은 마크업을 쓴다.
+   ══════════════════════════════════════════════════════════════════════ */
+.linebar{display:flex;flex-direction:column;gap:5px;padding:10px 14px 0}
+.linebar.mini{padding:0 0 6px;gap:3px}
+.lrow{--lc:#8ba2ba;
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;
+  padding:4px 8px;border:1px solid rgba(139,162,186,.28);border-left:3px solid var(--lc);
+  background:rgba(105,182,214,.05);font-size:11px}
+.lrow.lit{background:color-mix(in srgb,var(--lc) 14%,transparent);
+  border-color:color-mix(in srgb,var(--lc) 45%,transparent)}
+.lrow .lname{font-family:var(--disp);color:var(--txt);white-space:nowrap}
+.lrow.lit .lname{color:var(--lc)}
+.lrow .ldots{display:flex;gap:3px}
+.lrow .ldots i{width:9px;height:9px;border:1px solid rgba(139,162,186,.5);border-radius:50%}
+.lrow .ldots i.on{background:var(--lc);border-color:var(--lc);
+  box-shadow:0 0 5px color-mix(in srgb,var(--lc) 70%,transparent)}
+.lrow .lnum{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.lrow.lit .lnum{color:var(--lc)}
+.linebar.mini .lrow{padding:3px 6px;font-size:10px}
+.linebar.mini .lrow .ldots i{width:7px;height:7px}
+/* 단계 설명 — 모달에서 「다음에 무엇이 열리나」를 펼쳐 보일 때만 쓴다 */
+.lsteps{grid-column:1/-1;display:flex;gap:8px;margin-top:4px;flex-wrap:wrap}
+.lstep{display:flex;gap:5px;align-items:baseline;font-size:10px;color:var(--muted)}
+.lstep b{font-family:var(--mono);color:var(--muted)}
+.lstep i{font-style:normal;color:var(--txt)}
+.lstep em{font-style:normal;opacity:.75}
+.lstep.on b,.lstep.on i{color:var(--lc)}
+
+/* 강화 카드에 붙는 계열 딱지 */
+.pick.up{position:relative}
+.pick.up.lined{border-color:var(--lc);
+  background:linear-gradient(180deg,#f5f1de,color-mix(in srgb,var(--lc) 16%,#e6e2c4))}
+.pick.up.lined:hover{box-shadow:0 0 0 2px color-mix(in srgb,var(--lc) 55%,transparent)}
+.pick.up .ltag{position:absolute;top:0;left:0;
+  font-family:var(--mono);font-size:9px;letter-spacing:.04em;
+  padding:2px 6px;background:var(--lc,#8ba2ba);color:#12202e;font-weight:700}
+.pick.up.lined .ltag{color:#1a1207}
+.pick.up .lnext{display:block;margin-top:7px;font-size:10px;color:#6b5e42;
+  border-top:1px dashed rgba(107,94,66,.4);padding-top:5px;width:100%}
+.pick.up .lnext b{color:#b2531f}
+
+/* 계열 단계 개방 축포 — 규칙이 바뀌는 순간이라 한 번은 크게 터진다 */
+.tierpop{--lc:#cda43a;
+  position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);
+  z-index:400;pointer-events:none;text-align:center;
+  padding:18px 30px;background:rgba(12,21,36,.94);
+  border:2px solid var(--lc);border-radius:4px;
+  box-shadow:0 0 0 4px rgba(12,21,36,.6),0 0 40px color-mix(in srgb,var(--lc) 60%,transparent);
+  opacity:0;animation:tierIn .42s cubic-bezier(.2,1.5,.4,1) forwards}
+.tierpop.out{animation:tierOut .5s ease forwards}
+.tierpop i{display:block;font-style:normal;font-size:40px;line-height:1}
+.tierpop b{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.12em;
+  color:var(--muted);margin-top:6px}
+.tierpop strong{display:block;font-family:var(--disp);font-size:26px;letter-spacing:.1em;
+  color:var(--lc);margin:4px 0 6px;text-shadow:0 0 18px color-mix(in srgb,var(--lc) 70%,transparent)}
+.tierpop em{display:block;font-style:normal;font-size:12px;color:var(--txt);max-width:420px}
+@keyframes tierIn{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.55) rotate(-4deg)}
+  60%{opacity:1;transform:translate(-50%,-50%) scale(1.08) rotate(1deg)}
+  100%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)}}
+@keyframes tierOut{to{opacity:0;transform:translate(-50%,-50%) scale(1.15)}}
+
+/* ══════════════════════════════════════════════════════════════════════
+   스킬 컷인 — 합성 냥타워의 고유 스킬이 터지면 화면 아래에서 「파칭!」
+   메이플·던파의 그 캐릭터 창처럼, 살짝 튀어 올랐다가 제자리를 잡는다.
+   저절로 터지는 스킬이라 이게 없으면 터진 줄도 모르고 지나간다.
+   ══════════════════════════════════════════════════════════════════════ */
+#cutin{--sc:#cda43a;
+  position:fixed;left:50%;bottom:26px;z-index:380;pointer-events:none;
+  display:none;align-items:stretch;gap:0;
+  transform:translate(-50%,120%) skewX(-7deg);
+  filter:drop-shadow(0 10px 22px rgba(0,0,0,.6))}
+#cutin.on{display:flex;animation:cutPop .34s cubic-bezier(.16,1.7,.4,1) forwards}
+#cutin:not(.on){animation:cutOut .18s ease forwards}
+@keyframes cutPop{
+  0%{transform:translate(-50%,120%) skewX(-16deg) scale(.8);opacity:0}
+  55%{transform:translate(-50%,-8%) skewX(-4deg) scale(1.06);opacity:1}
+  75%{transform:translate(-50%,2%) skewX(-8deg) scale(.985)}
+  100%{transform:translate(-50%,0) skewX(-7deg) scale(1);opacity:1}}
+@keyframes cutOut{to{transform:translate(-50%,120%) skewX(-16deg);opacity:0}}
+
+#cutin .cutport{position:relative;width:104px;height:104px;flex:none;overflow:hidden;
+  background:radial-gradient(circle at 50% 38%,
+    color-mix(in srgb,var(--sc) 55%,transparent),rgba(12,21,36,.96) 72%);
+  border:2px solid var(--sc);border-right:0}
+#cutin .cutport canvas{position:absolute;left:50%;top:50%;width:104px;height:104px;
+  transform:translate(-50%,-50%) skewX(7deg) scale(1.18);
+  image-rendering:auto;
+  animation:cutPortIn .45s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes cutPortIn{
+  0%{transform:translate(-58%,-50%) skewX(7deg) scale(1.55);opacity:.2}
+  100%{transform:translate(-50%,-50%) skewX(7deg) scale(1.18);opacity:1}}
+#cutin .cutlv{position:absolute;left:0;bottom:0;transform:skewX(7deg);
+  font-family:var(--mono);font-size:10px;font-weight:700;
+  padding:1px 5px;background:var(--gold);color:#1a1207}
+
+#cutin .cutbody{display:flex;flex-direction:column;justify-content:center;gap:2px;
+  padding:10px 24px 10px 16px;min-width:250px;
+  background:linear-gradient(100deg,rgba(12,21,36,.97),rgba(30,48,80,.97));
+  border:2px solid var(--sc);border-left:0}
+#cutin .cutwho{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--muted);
+  transform:skewX(7deg)}
+#cutin .cutname{font-family:var(--disp);font-size:22px;letter-spacing:.09em;line-height:1.2;
+  color:var(--sc);transform:skewX(7deg);
+  text-shadow:0 0 14px color-mix(in srgb,var(--sc) 70%,transparent)}
+#cutin .cutquote{font-size:11px;color:var(--txt);opacity:.82;transform:skewX(7deg)}
+#cutin .cuthit{font-family:var(--mono);font-size:10px;color:var(--sc);opacity:.9;
+  transform:skewX(7deg);margin-top:2px}
+
+/* 스피드라인 — 뒤로 지나가는 사선 세 줄. 「파칭」의 절반은 이 선이 만든다 */
+#cutin .cutlines{position:absolute;inset:-8px -40px;z-index:-1;overflow:hidden}
+#cutin .cutlines i{position:absolute;top:0;bottom:0;width:14px;background:var(--sc);opacity:.22;
+  animation:cutSweep .55s ease-out forwards}
+#cutin .cutlines i:nth-child(1){left:-30px;animation-delay:.02s}
+#cutin .cutlines i:nth-child(2){left:-70px;width:7px;animation-delay:.08s}
+#cutin .cutlines i:nth-child(3){left:-110px;width:22px;opacity:.12;animation-delay:.13s}
+@keyframes cutSweep{
+  0%{transform:translateX(0);opacity:.35}
+  100%{transform:translateX(560px);opacity:0}}
+
+@media(max-width:560px){
+  #cutin .cutbody{min-width:0;padding:8px 16px 8px 12px}
+  #cutin .cutname{font-size:17px}
+  #cutin .cutport{width:80px;height:80px}
+  #cutin .cutport canvas{width:80px;height:80px}
+}
+@media(prefers-reduced-motion:reduce){
+  #cutin.on{animation:none;transform:translate(-50%,0) skewX(-7deg)}
+  #cutin .cutport canvas,#cutin .cutlines i{animation:none}
+  #cutin .cutlines{display:none}
+  .tierpop{animation:none;opacity:1;transform:translate(-50%,-50%)}
+}
+
+/* 처방표에 적히는 「그 냥이 가진 고유 스킬」 — 무엇을 향해 모으는지가 여기 한 줄로 보인다 */
+.rbrow .meta u{display:block;text-decoration:none;font-family:var(--mono);font-size:9px;
+  margin-top:2px;letter-spacing:.02em;opacity:.95}
+
+/* 헤더의 「스테이지 강화」 칸은 .passiveTags(알약 모양 태그들)를 담는 flex-wrap 상자다.
+   그 안에 계열 진행도 줄(.linebar.mini)을 넣으면 줄 안의 <span> 들까지 알약이 되어 버린다.
+   여기서만 **알약 꾸밈(테두리·배경·여백)만** 걷어낸다 — 색과 글자 크기는 건드리지 않는다.
+   그걸 같이 덮으면 계열색(--lc)이 죽어 진행도가 회색 한 덩어리가 된다. */
+.passiveTags .linebar{width:100%;flex:0 0 100%}
+.passiveTags .linebar span{
+  display:inline;background:none;border:0;border-radius:0;padding:0;white-space:normal}
+.passiveTags .linebar .ldots{display:flex;gap:3px}
