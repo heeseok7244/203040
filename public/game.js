@@ -4016,12 +4016,117 @@ const MOB_STRIP = { run: 8, die: 3 };
  */
 const RUN_LIFT = [0.26, 0.48, 0.63, 0.25, 1.00, 0.29, 0, 0.18];
 
+/** 진행 방향 — 4방향 시트의 줄 번호와 같다 */
+const DIR = { right: 0, down: 1, left: 2, up: 3 };
+
+/**
+ * 4방향 달리기 시트 — 한 장에 네 방향 네 줄, 줄마다 달리기 4컷(4×4 격자).
+ * 방향마다 그림이 따로 있으므로 좌우 반전 없이 진행 방향의 줄을 골라 쓴다 — 위아래로 달릴 때
+ * 옆모습을 억지로 쓰지 않아도 되고, 왼쪽으로 갈 때도 뒤집힌 그림이 아니라 제대로 그린 왼쪽 모습이 나온다.
+ * rowOf 는 DIR 순서([→, ↓, ←, ↑])로 "그 방향이 몇째 줄인지" — 시트의 줄 순서가 다르면 여기만 바꾼다
+ * (mob1~4.png 전부 [→, ↓, ←, ↑]).
+ * lift는 컷별 도약 높이(RUN_LIFT 와 같은 뜻). 이 시트들은 네 컷 전부 발이 바닥선에 붙어 있고 몸 높이도
+ * 같다(컷별로 재 봐도 위아래 5px 안쪽) — 그래서 전부 0이다. 여기에 추정값을 넣으면 컷마다 몸이 튕기고
+ * 그림자·먼지가 깜빡여 진동처럼 보인다. 도약이 그려진 시트를 쓰게 되면 그때 실제로 재서 넣는다.
+ * scale은 그림 배율. 그림 크기는 r(피격 반지름)에 비례하는데 네 시트의 쥐가 칸 안에서 똑같은 크기라
+ * r 차이(16·18·24·34)가 그대로 드러난다 — 3단계·보스가 유독 커 보여서 그림만 줄인다. 피격 판정(r)은 그대로다.
+ * 침입자 네 종(copy·fast·tank·boss) 전부 이 형식이다. 가로 스트립(mob-*-run.png)은 시트가 안 올라왔을 때의 대역.
+ * @type {Record<string,{src:string,cols:number,rows:number,rowOf:number[],lift:number[],scale?:number}>}
+ */
+const MOB_SHEET = {
+  copy: { src: "img/mob1.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0] },
+  fast: { src: "img/mob2.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0] },
+  tank: { src: "img/mob3.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0], scale: 0.8 },
+  boss: { src: "img/mob4.png", cols: 4, rows: 4, rowOf: [0, 1, 2, 3], lift: [0, 0, 0, 0], scale: 0.7 },
+};
+/** @type {Record<string,HTMLImageElement>} */
+const MOB_SHEET_IMG = {};
+for (const t in MOB_SHEET) { const im = new Image(); im.src = MOB_SHEET[t].src; MOB_SHEET_IMG[t] = im; }
+
+/**
+ * 4방향 시트의 칸 나누기. 격자를 그림 크기로 똑같이 4등분하면 안 된다 — mob1.png 는 뒷모습(↑) 줄의 귀가
+ * 위 줄 칸까지 올라와 있고, 줄마다 바닥선(발끝)이 칸 아래쪽에서 다른 높이에 있어서 그냥 자르면 ↑ 줄만
+ * 발이 붕 뜬다. 그래서 처음 쓸 때 한 번 알파를 훑어, 투명한 띠로 갈라진 가로 띠(줄)와 세로 띠(칸)를 찾는다.
+ * 줄은 찾은 띠의 위아래를 그대로 쓰고(아래 = 발끝 = 바닥선), 칸은 띠의 가운데에 칸 너비를 맞춘다.
+ * 띠 수가 안 맞으면(시트를 다른 격자로 다시 뽑았다든지) 균등 격자로 물러난다.
+ * @returns {{rows:number[][],colMid:number[]}|null}
+ */
+function sheetCells(t) {
+  const sheet = MOB_SHEET[t], im = imgReady(MOB_SHEET_IMG[t]);
+  if (!sheet || !im) return null;
+  if (sheet.cells !== undefined) return sheet.cells;
+  const w = im.naturalWidth, h = im.naturalHeight;
+  let cells = null;
+  try {
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const c2 = cv.getContext("2d", { willReadFrequently: true });
+    c2.drawImage(im, 0, 0);
+    const a = c2.getImageData(0, 0, w, h).data;
+    const rowHas = new Uint8Array(h), colHas = new Uint8Array(w);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (a[(y * w + x) * 4 + 3] > 20) { rowHas[y] = 1; colHas[x] = 1; }
+    }
+    // 연속된 불투명 띠를 [시작, 끝] 로 모은다
+    const bands = (has) => {
+      const out = []; let s = -1;
+      for (let i = 0; i < has.length; i++) {
+        if (has[i] && s < 0) s = i;
+        if (!has[i] && s >= 0) { out.push([s, i - 1]); s = -1; }
+      }
+      if (s >= 0) out.push([s, has.length - 1]);
+      return out;
+    };
+    const rows = bands(rowHas), cols = bands(colHas);
+    if (rows.length === sheet.rows && cols.length === sheet.cols) {
+      cells = { rows, colMid: cols.map(([x0, x1]) => (x0 + x1) / 2) };
+    }
+  } catch (_) { /* 캔버스를 못 읽으면(교차 출처 등) 균등 격자로 */ }
+  sheet.cells = cells;
+  return cells;
+}
+
+/**
+ * 시트를 절반씩 줄여 둔 단계들(밉맵) — [원본, 1/2, 1/4, 1/8 …].
+ * 시트의 컷은 313px인데 판 위에서는 50~70px로 그려진다(6배 축소). drawImage 의 보간은 2×2 픽셀만 보므로
+ * 그 정도 축소에서는 원본 픽셀 대부분을 건너뛰고, 쥐가 소수점 위치로 움직일 때마다 굵은 외곽선이 잡히는
+ * 픽셀이 매 프레임 달라져 선이 지글지글 떨린다 — 옛 스트립(컷 130px, 2.5배 축소)에는 없던 진동이다.
+ * 절반 축소는 2×2 보간이 정확히 평균이 되므로 단계마다 깨끗하고, 그릴 때는 목표 크기의 1.25~2.5배짜리
+ * 단계를 골라 쓰면 축소 폭이 작아 떨림이 사라진다.
+ * 4방향 시트와 사망 스트립(칸 314px)이 같이 쓴다 — 그림마다 한 번 만들어 그림 객체에 매어 둔다.
+ * @param {HTMLImageElement} im 다 올라온 그림
+ * @returns {(HTMLImageElement|HTMLCanvasElement)[]}
+ */
+const MIPS = new WeakMap();
+function mipsOf(im) {
+  if (MIPS.has(im)) return MIPS.get(im);
+  const mips = [im];
+  let src = im, w = im.naturalWidth, h = im.naturalHeight;
+  try {
+    while (w > 128) {
+      w = Math.round(w / 2); h = Math.round(h / 2);
+      const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+      const c2 = cv.getContext("2d");
+      c2.imageSmoothingEnabled = true; c2.imageSmoothingQuality = "high";
+      c2.drawImage(src, 0, 0, w, h);
+      mips.push(cv); src = cv;
+    }
+  } catch (_) { /* 캔버스를 못 만들면 원본만 쓴다 */ }
+  MIPS.set(im, mips);
+  return mips;
+}
+
+/** 이 종류의 달리기가 몇 컷짜리인지 — 4방향 시트면 그 줄의 컷 수, 아니면 가로 스트립 컷 수 */
+function runCuts(t) { return MOB_SHEET[t] ? MOB_SHEET[t].cols : MOB_STRIP.run; }
+/** 이 종류의 컷별 도약 높이표 */
+function runLift(t) { return MOB_SHEET[t] ? MOB_SHEET[t].lift : RUN_LIFT; }
+
 /** 컷 사이를 이어 준 도약 높이. 컷은 뚝뚝 넘어가도 그림자와 먼지는 이어져야 눈에 안 걸린다.
- *  @param {number} fp 소수점까지의 컷 번호 (정수부가 지금 컷, 소수부가 다음 컷까지의 진행도) */
-function liftAt(fp) {
-  const n = RUN_LIFT.length;
+ *  @param {number} fp 소수점까지의 컷 번호 (정수부가 지금 컷, 소수부가 다음 컷까지의 진행도)
+ *  @param {number[]} [tbl] 도약 높이표 — 생략하면 8컷 스트립의 RUN_LIFT */
+function liftAt(fp, tbl = RUN_LIFT) {
+  const n = tbl.length;
   const i = Math.floor(fp), f = fp - i;
-  const at = (k) => RUN_LIFT[((k % n) + n) % n];
+  const at = (k) => tbl[((k % n) + n) % n];
   return at(i) + (at(i + 1) - at(i)) * f;
 }
 /** @type {Record<string,Record<string,HTMLImageElement>>} */
@@ -4038,18 +4143,47 @@ function imgReady(im) { return im && im.complete && im.naturalWidth ? im : null;
 /** 그릴 준비가 끝난 원화만 돌려준다 (로딩 중이면 null → 벡터 실루엣으로 폴백) */
 function mobArt(t) { return imgReady(MOB_IMG[t]); }
 
+/** 달리기 그림이 컷 단위로 올라와 있는가 — 4방향 시트든 가로 스트립이든. 아니면 서 있는 원화 한 장뿐이다. */
+function runFramed(t) { return !!(imgReady(MOB_SHEET_IMG[t]) || imgReady(MOB_ANIM.run[t])); }
+
 /**
  * 이번에 그릴 컷 하나.
  * kind가 "run"·"die"면 그 스트립의 i번째 컷을, 그 밖(예: "hero")이면 서 있는 원화 한 장을 돌려준다.
  * 스트립이 아직 안 올라왔을 때도 원화로 흘러가므로, 화면이 비는 순간은 없다.
- * @returns {{im:HTMLImageElement,sx:number,sy:number,sw:number,sh:number}|null}
+ * 4방향 시트가 있는 종류는 "run"일 때 dir(DIR.*) 줄의 컷을 돌려준다 — 이 컷은 이미 그 방향을 보고 있으니
+ * 그리는 쪽에서 좌우 반전을 얹으면 안 된다 (dirs 로 알려 준다).
+ * scale은 시트별 그림 배율(MOB_SHEET[t].scale) — drawMobArt 가 r 기준 크기에 곱한다.
+ * mips 는 시트의 축소 단계들(mipsOf) — 좌표는 늘 원본 기준이고, drawMobArt 가 단계에 맞춰 나눈다.
+ * @returns {{im:HTMLImageElement,sx:number,sy:number,sw:number,sh:number,dirs?:boolean,scale?:number,
+ *   mips?:(HTMLImageElement|HTMLCanvasElement)[]}|null}
  */
-function mobFrame(t, kind, i) {
+function mobFrame(t, kind, i, dir = DIR.right) {
+  // 4방향 시트가 있는 종류는 서 있는 원화(hero)도 시트의 정면(↓) 첫 컷으로 대신한다 —
+  // 달리기와 다른 그림체의 원화가 도감에 섞이지 않도록.
+  const sheet = kind === "run" || kind === "hero" ? MOB_SHEET[t] : null;
+  const img = sheet ? imgReady(MOB_SHEET_IMG[t]) : null;
+  if (img) {
+    const cw = img.naturalWidth / sheet.cols, ch = img.naturalHeight / sheet.rows;
+    const c = kind === "hero" ? 0 : ((i % sheet.cols) + sheet.cols) % sheet.cols;
+    const d = Math.min(3, Math.max(0, kind === "hero" ? DIR.down : dir | 0));
+    const row = Math.min(sheet.rows - 1, Math.max(0, sheet.rowOf[d]));
+    const cells = sheetCells(t), scale = sheet.scale || 1, mips = mipsOf(img);
+    if (cells) {
+      const [y0, y1] = cells.rows[row];
+      const sx = Math.min(img.naturalWidth - cw, Math.max(0, cells.colMid[c] - cw / 2));
+      return { im: img, sx, sy: y0, sw: cw, sh: y1 - y0 + 1, dirs: true, scale, mips };
+    }
+    return { im: img, sx: cw * c, sy: ch * row, sw: cw, sh: ch, dirs: true, scale, mips };
+  }
   const n = MOB_STRIP[kind];
   const st = n ? imgReady(MOB_ANIM[kind][t]) : null;
   if (st) {
     const cw = st.naturalWidth / n;
-    return { im: st, sx: cw * (((i % n) + n) % n), sy: 0, sw: cw, sh: st.naturalHeight };
+    // 사망 스트립은 tools/cut-die-sheet.js 가 4방향 시트와 같은 칸 너비·같은 쥐 크기로 뽑아 두므로
+    // 시트의 배율(scale)을 그대로 얹어야 쓰러지는 순간 크기가 튀지 않는다. 축소 단계도 같이 쓴다.
+    const sheet = MOB_SHEET[t];
+    return { im: st, sx: cw * (((i % n) + n) % n), sy: 0, sw: cw, sh: st.naturalHeight,
+      scale: sheet ? sheet.scale || 1 : 1, mips: mipsOf(st) };
   }
   const im = mobArt(t);
   return im ? { im, sx: 0, sy: 0, sw: im.naturalWidth, sh: im.naturalHeight } : null;
@@ -4068,10 +4202,12 @@ const GAIT = {
   // (한 걸음에 몸길이의 반도 못 가면 눈에 띄게 어색하다) 쳇바퀴 돌듯 보인다 —
   // 예전에는 컷이 빨리 넘어가는 쪽만 보고 보폭을 0.3~0.6 몸길이로 줄여 놨던 게 그 꼴이었다.
   // 지금은 한 걸음이 몸길이의 0.6~1.2배다. 그만큼 컷은 천천히 넘어가지만, 발이 땅을 붙잡는다.
-  copy: { freq: 0.065, rise: 0.28, tilt: 0.09, squash: 0.10, dust: 0.9 },  // 보폭 48px(몸 0.9배) · 초당 9컷
-  fast: { freq: 0.057, rise: 0.38, tilt: 0.13, squash: 0.12, dust: 1.3 },  // 전력질주 — 보폭 55px(1.2배) · 13컷
-  tank: { freq: 0.057, rise: 0.14, tilt: 0.05, squash: 0.08, dust: 1.1 },  // 묵직하게 — 보폭 55px(0.8배) · 6컷
-  boss: { freq: 0.051, rise: 0.10, tilt: 0.04, squash: 0.06, dust: 1.5 },  // 보폭 62px(0.6배) · 초당 4컷
+  // 네 종 다 4방향 시트(한 바퀴 4컷 = 두 걸음)라 컷이 8컷의 절반 속도로 넘어간다. 8컷과 같은
+  // 보폭이면 초당 2~4컷이라 뚝뚝 끊겨 보여서 보폭을 줄였다. 보폭의 "몸길이 배수"는 scale 을 곱한 화면 크기 기준.
+  copy: { freq: 0.09, rise: 0.28, tilt: 0.09, squash: 0.10, dust: 0.9 },  // 보폭 35px(몸 0.7배) · 초당 6컷
+  fast: { freq: 0.07, rise: 0.38, tilt: 0.13, squash: 0.12, dust: 1.3 },  // 전력질주 — 보폭 45px(1.0배) · 초당 8컷
+  tank: { freq: 0.10, rise: 0.14, tilt: 0.05, squash: 0.08, dust: 1.1 },  // 묵직하게 — 보폭 31px(0.55배) · 초당 5컷
+  boss: { freq: 0.12, rise: 0.10, tilt: 0.04, squash: 0.06, dust: 1.5 },  // 보폭 26px(0.4배) · 초당 5컷
 };
 const GAIT_DEFAULT = GAIT.copy;
 
@@ -4093,14 +4229,25 @@ function gaitOf(e, r, k = 1) {
 
 /** 원화 컷 하나(mobFrame 결과)를 반지름 r 기준 크기로, 발이 바닥 그림자에 닿도록 (0,0) 중심에 그린다.
  *  스트립의 컷은 전부 바닥선을 공유하도록 잘라 놨으므로, 셀 아래쪽을 지면에 맞추면 컷이 넘어가도 발이 뜨지 않는다.
- *  원화는 전부 오른쪽을 보고 있어서 왼쪽으로 갈 때는 face=-1로 뒤집는다.
+ *  원화는 전부 오른쪽을 보고 있어서 왼쪽으로 갈 때는 face=-1로 뒤집는다 — 단, 4방향 시트에서 온 컷(fr.dirs)은
+ *  이미 제 방향을 보고 있으므로 뒤집지 않는다.
  *  mo(gaitOf 결과)를 주면 도약·착지 스쿼시까지 얹어 달리는 모션이 된다.
  *  slowed면 얼음빛으로 물들여 둔화 상태를 표시한다 (벡터 실루엣의 푸른 톤과 같은 역할). */
 function drawMobArt(g, fr, r, slowed, face, mo) {
-  const k = (r * 2.9) / Math.max(fr.sw, fr.sh);
+  const k = (r * 2.9 * (fr.scale || 1)) / Math.max(fr.sw, fr.sh);
   const w = fr.sw * k, h = fr.sh * k;
+  // 축소 단계 고르기 — 지금 변환(대전장 원근·미니맵 배율 포함)으로 실제 캔버스에 찍힐 폭을 재서,
+  // 원본이 그 1.25배 이상인 한 절반씩 내려간다. 6배 축소를 한 번에 하면 외곽선이 떨린다 (mipsOf 참고).
+  let im = fr.im, sx = fr.sx, sy = fr.sy, sw = fr.sw, sh = fr.sh;
+  if (fr.mips && fr.mips.length > 1 && g.getTransform) {
+    const m = g.getTransform();
+    const px = w * Math.hypot(m.a, m.b);
+    let L = 0;
+    while (L + 1 < fr.mips.length && sw / 2 >= px * 1.25) { L++; sx /= 2; sy /= 2; sw /= 2; sh /= 2; }
+    im = fr.mips[L];
+  }
   g.save();
-  if (face === -1) g.scale(-1, 1);
+  if (face === -1 && !fr.dirs) g.scale(-1, 1);
   if (mo) {
     // 발끝(y=r)을 축으로 삼아야 눌리든 기울든 발이 바닥에서 떨어지지 않는다
     const land = 1 - mo.hop;               // 1 = 막 착지한 순간
@@ -4110,7 +4257,7 @@ function drawMobArt(g, fr, r, slowed, face, mo) {
     g.translate(0, -r - mo.rise);
   }
   if (slowed) g.filter = "grayscale(.6) sepia(.55) hue-rotate(165deg) saturate(1.8) brightness(1.05)";
-  g.drawImage(fr.im, fr.sx, fr.sy, fr.sw, fr.sh, -w / 2, r - h, w, h);
+  g.drawImage(im, sx, sy, sw, sh, -w / 2, r - h, w, h);
   g.restore();
 }
 
@@ -4261,8 +4408,10 @@ function drawMissile(g, s) {
     g.beginPath(); g.arc(len * 0.1, 0, wid * 0.22, 0, 7); g.fill();
     g.restore();
   } else {
-    // 명중 폭발 — 순간 백색 코어 플래시 + 확산하는 충격파 + 튀는 파편, 치명타는 한 단계 더 크고 진하게
-    if (!s.burst) { s.burst = true; spawnSparks(s.x2, s.y2, crit); addShake(crit ? 4.5 : 1.6, crit ? 0.16 : 0.07); }
+    // 명중 폭발 — 순간 백색 코어 플래시 + 확산하는 충격파 + 튀는 파편, 치명타는 한 단계 더 크고 진하게.
+    // 화면 흔들림은 걸지 않는다 — 착탄마다 판 전체가 흔들리면 맞지 않은 쥐까지 떨려 보인다.
+    // 「맞았다」는 맞은 쥐의 피격 펀치(drawMonster: 찌그러짐·넉백·플래시)가 혼자 보여 준다.
+    if (!s.burst) { s.burst = true; spawnSparks(s.x2, s.y2, crit); }
     const bp = (p - 0.9) / 0.1;
     const rad = s.w * 2.4 + bp * (crit ? 30 : 18);
     const alpha = 1 - bp;
@@ -4347,8 +4496,8 @@ function drawLongMissile(g, s) {
     g.beginPath(); g.arc(len * 0.15, 0, wid * 0.22, 0, 7); g.fill();
     g.restore();
   } else {
-    // 착탄 — 장거리 탄약답게 일반 미사일보다 한 단계 더 크고 묵직하게 터진다
-    if (!s.burst) { s.burst = true; spawnSparks(s.x2, s.y2, crit); addShake(crit ? 7 : 3.4, crit ? 0.22 : 0.13); }
+    // 착탄 — 장거리 탄약답게 일반 미사일보다 한 단계 더 크고 묵직하게 터진다 (화면 흔들림은 위와 같은 이유로 없음)
+    if (!s.burst) { s.burst = true; spawnSparks(s.x2, s.y2, crit); }
     const bp = (p - 0.92) / 0.08;
     const rad = 12 + bp * (crit ? 46 : 30);
     const alpha = 1 - bp;
@@ -4414,6 +4563,8 @@ function hexA(hex, a) {
 /** 쓰러져 사라지는 침입자들. 사망 3컷을 차례로 넘긴 뒤 스르르 사라진다. */
 let corpses = [];
 const CORPSE_LIFE = 1.15;        // 전체 지속(초) — 3컷 재생 + 페이드
+const CORPSE_ALPHA = 0.62;       // 시신의 최대 불투명도 — 처음부터 살아 있는 쥐보다 옅게, 뒤따르는 쥐를 가리지 않도록
+const CORPSE_FADE = 0.55;        // 남은 수명이 이 비율에 들어서면 페이드아웃을 시작한다 (0.32 → 더 일찍, 더 길게)
 /** 침입자 하나가 쓰러졌다. 시신 한 구 + 흘린 치즈 조각을 그 자리에 뿌린다. */
 function spawnCorpse(t, x, y, face) {
   const d = ENEMIES[t];
@@ -4433,7 +4584,8 @@ function drawCorpses(g) {
     // 앞 두 컷은 0.2초씩 넘기고, 마지막 컷(완전히 누운 자세)으로 남아 페이드아웃한다
     const fr = mobFrame(c.t, "die", Math.min(2, Math.floor(p / 0.17)));
     if (!fr) continue;
-    const fade = Math.min(1, Math.max(0, (1 - p) / 0.32));
+    // 처음부터 반투명(CORPSE_ALPHA)이고, 수명 뒤쪽(CORPSE_FADE)에서 서서히 사라진다
+    const fade = CORPSE_ALPHA * Math.min(1, Math.max(0, (1 - p) / CORPSE_FADE));
     const pop = Math.max(0, 1 - p / 0.12);                        // 쓰러지는 첫 순간 납작하게 눌린다
 
     g.save();
@@ -4516,10 +4668,20 @@ function drawMonster(g, e, d, now) {
   const bob = Math.sin(e.dist * 0.16) * r * 0.09;       // 이동 거리 기준 걸음 흔들림
   const legPhase = Math.sin(e.dist * 0.32);
   const slowed = e.slowT > 0;
-  // 진행 방향 — 직전 프레임의 x와 비교해 좌우 반전 여부를 정한다 (원화는 전부 오른쪽을 봄)
-  if (e._px !== undefined && Math.abs(e.x - e._px) > 0.05) e._face = e.x < e._px ? -1 : 1;
-  e._px = e.x;
+  // 진행 방향 — 직전 프레임의 위치와 비교한다. 좌우 반전(face)은 원화가 전부 오른쪽을 보기 때문이고,
+  // 4방향 시트를 쓰는 종류는 여기에 더해 상하좌우 중 더 많이 움직인 축으로 줄(_dir)을 고른다.
+  // 경로가 격자를 따라 꺾이므로 모퉁이에서 한 프레임 정도만 두 축이 섞이고, 그때는 큰 쪽을 따른다.
+  if (e._px !== undefined) {
+    const dx = e.x - e._px, dy = e.y - e._py;
+    if (Math.abs(dx) > 0.05) e._face = dx < 0 ? -1 : 1;
+    if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
+      e._dir = Math.abs(dx) >= Math.abs(dy) ? (dx < 0 ? DIR.left : DIR.right) : (dy < 0 ? DIR.up : DIR.down);
+    }
+  }
+  e._px = e.x; e._py = e.y;
   const face = e._face === -1 ? -1 : 1;
+  const dir = e._dir ?? DIR.right;
+  const vertical = dir === DIR.up || dir === DIR.down;
   // 피격 펀치 — 맞은 직후 짧게 찌그러졌다 튕겨나오고(스쿼시), 맞은 반대쪽으로 살짝 밀린다
   const hitDur = e.hitCrit ? 0.22 : 0.14;
   const hitP = e.hitT > 0 ? e.hitT / hitDur : 0;         // 1(막 맞음) → 0(끝)
@@ -4535,21 +4697,22 @@ function drawMonster(g, e, d, now) {
 
   // 실제로 나아가는 중일 때만 걸음을 굴린다 (가처분에 묶였으면 첫 컷에서 멈춰 선다)
   const moving = e.dist > 0 && !(e.freezeT > 0);
-  // 달리기 8컷 — 위상 2π가 한 바퀴, 즉 π/4마다 컷이 한 장 넘어간다.
+  // 달리기 컷 — 위상 2π가 한 바퀴(8컷 스트립이면 π/4마다, 4방향 시트의 4컷이면 π/2마다 한 장 넘어간다).
   // 위상이 이동 거리에서 나오므로 빠른 쥐일수록 컷도 저절로 빨리 넘어가고, 발이 헛돌지 않는다.
+  const nCut = runCuts(e.t), liftTbl = runLift(e.t);
   const phase = e.dist * (GAIT[e.t] || GAIT_DEFAULT).freq;
-  const fp = phase / (Math.PI / 4);            // 소수점까지의 컷 번호
+  const fp = phase / (Math.PI * 2 / nCut);     // 소수점까지의 컷 번호
   const cut = moving ? Math.floor(fp) : 0;
-  const art = mobFrame(e.t, "run", cut);
-  const framed = !!imgReady(MOB_ANIM.run[e.t]);
+  const art = mobFrame(e.t, "run", cut, dir);
+  const framed = runFramed(e.t);
   // 진짜 컷에는 도약이 그려져 있다 — 코드로 또 띄우면 발이 땅을 안 딛고 둥둥 떠 보인다.
   // 그래서 흔들림은 컷이 없을 때(벡터 실루엣)만 얹고, 대신 그림자·먼지를 컷의 도약 높이에 맞춘다.
   const mo = art && moving && !framed ? gaitOf(e, r, 1) : null;
-  const lift = !moving ? 0 : framed ? liftAt(fp) : mo ? mo.hop : 0;
+  const lift = !moving ? 0 : framed ? liftAt(fp, liftTbl) : mo ? mo.hop : 0;
   // 컷은 뚝뚝 넘어가도 몸이 뜨고 내려앉는 것만은 이어 준다 — 컷 그림에 이미 들어 있는 도약 높이와
   // 이어 준 높이의 차이만큼만 위아래로 옮긴다. 컷이 느린 큰 놈일수록 이게 있고 없고가 크다.
   const tween = framed && moving
-    ? { hop: lift, rise: (lift - RUN_LIFT[((cut % RUN_LIFT.length) + RUN_LIFT.length) % RUN_LIFT.length]) * r * 0.2,
+    ? { hop: lift, rise: (lift - liftTbl[((cut % nCut) + nCut) % nCut]) * r * 0.2,
         tilt: 0, squash: 0 }
     : mo;
 
@@ -4577,13 +4740,18 @@ function drawMonster(g, e, d, now) {
   if (art) {
     // 발끝 먼지 — 발이 땅에 닿는 컷에서만 뒤쪽으로 툭 피어오른다 (컷의 도약 높이를 따라간다)
     if (moving && lift < 0.45) {
-      const puff = (0.45 - lift) / 0.45;
+      // 도약표가 전부 0인 시트(발이 늘 땅에 붙어 있음)는 걸음 위상으로 먼지를 부드럽게 오르내리게 한다 —
+      // 컷 단위로 켜졌다 꺼졌다 하면 깜빡임(진동)으로 보인다
+      const puff = liftTbl.some((v) => v > 0) ? (0.45 - lift) / 0.45 : 0.55 + 0.45 * Math.abs(Math.sin(phase));
       const dust = (GAIT[e.t] || GAIT_DEFAULT).dust;
       g.save();
-      // 컷 그림에도 흰 먼지가 그려져 있으므로 여기서는 옅게만 깔아 어두운 바닥에서의 접지감만 보탠다
+      // 컷 그림에도 흰 먼지가 그려져 있으므로 여기서는 옅게만 깔아 어두운 바닥에서의 접지감만 보탠다.
+      // 옆으로 달리면 뒤쪽으로 피어오르고, 위아래로 달릴 때(4방향 시트)는 뒤가 몸에 가려지므로 발 양옆에 깐다.
       g.globalAlpha = 0.22 * puff; g.fillStyle = "#a8977c";
       for (let i = 0; i < 2; i++) {
-        const px = -face * (r * (0.35 + i * 0.4) + puff * r * 0.5 * dust);
+        const px = vertical
+          ? (i ? 1 : -1) * (r * 0.3 + puff * r * 0.25 * dust)
+          : -face * (r * (0.35 + i * 0.4) + puff * r * 0.5 * dust);
         g.beginPath(); g.ellipse(px, r * 0.86, r * (0.16 + i * 0.05) * dust, r * 0.11 * dust, 0, 0, 7); g.fill();
       }
       g.restore();
@@ -4591,14 +4759,20 @@ function drawMonster(g, e, d, now) {
     // 원화가 올라왔으면 종류별 연출만 얹고 그림은 원화로 그린다
     if (e.t === "fast") {
       // 잔상 + 속도선 — 전력질주 느낌. 잔상은 한 컷 전 자세라 실제로 지나온 모습이 남는다.
+      // 둘 다 진행 방향의 "뒤쪽"(bx, by)으로 뻗는다 — 위아래로 달릴 때는 위아래로.
+      const bx = vertical ? 0 : -face, by = vertical ? (dir === DIR.down ? -1 : 1) : 0;
       g.save();
-      g.globalAlpha = 0.24; g.translate(-face * r * 0.75, 0);
-      drawMobArt(g, mobFrame(e.t, "run", cut - 1) || art, r * 0.95, slowed, face, tween);
+      g.globalAlpha = 0.24; g.translate(bx * r * 0.75, by * r * 0.55);
+      drawMobArt(g, mobFrame(e.t, "run", cut - 1, dir) || art, r * 0.95, slowed, face, tween);
       g.restore();
       g.strokeStyle = "rgba(12,21,36,.45)"; g.lineWidth = 1;
       for (let i = 0; i < 3; i++) {
-        const x0 = -face * (r * 1.05 + i * 4), x1 = -face * (r * 1.5 + i * 4);
-        g.beginPath(); g.moveTo(x0, -r * 0.2 + i * 7); g.lineTo(x1, -r * 0.2 + i * 7); g.stroke();
+        const n0 = r * 1.05 + i * 4, n1 = r * 1.5 + i * 4;   // 뒤쪽으로의 거리
+        const s = -r * 0.2 + i * 7;                           // 옆으로 벌어진 간격
+        g.beginPath();
+        if (vertical) { g.moveTo(s, by * n0); g.lineTo(s, by * n1); }
+        else { g.moveTo(bx * n0, s); g.lineTo(bx * n1, s); }
+        g.stroke();
       }
     }
     if (e.t === "boss") {
@@ -6692,6 +6866,7 @@ function paintBeast(cv, t, frame) {
 renderBestiary();
 // 원화는 비동기로 올라온다 — 다 올라온 뒤 도감을 한 번 더 그려야 이모지 대신 실제 그림이 남는다
 for (const t in MOB_IMG) MOB_IMG[t].addEventListener("load", () => renderBestiary(), { once: true });
+for (const t in MOB_SHEET_IMG) MOB_SHEET_IMG[t].addEventListener("load", () => renderBestiary(), { once: true });
 
 /* ── 도감 여닫기 ──
  * 도감은 판 패널 머릿글의 물음표에 접어 두었다. 판 위에 겹쳐 뜨는 말풍선이라
