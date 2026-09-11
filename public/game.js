@@ -458,14 +458,30 @@ const ENEMIES = {
     duel:{ w:4, hpS:4.0, dpsS:2.4, rate:1.0, range:130, sp:92, spf:0.5 } }
 };
 
-/** @type {Record<string,number>[]} */
+/**
+ * 라운드별 침입자 구성 (index 0 = 라운드 1).
+ *
+ * 한 판은 **10라운드**이고 그중 **4 · 7 · 10 은 1:1 대전**이라 침입자가 오지 않는다
+ * (DUEL_WAVES). 그 세 자리는 빈 칸으로 두어 **라운드 번호와 배열 자리가 어긋나지 않게** 한다 —
+ * 자리를 당겨 채우면 「라운드 5의 구성」을 찾을 때마다 대전 라운드 수를 빼야 한다.
+ *
+ * 실제로 싸우는 것은 일곱 라운드(1·2·3·5·6·8·9)뿐이라, 예전 12라운드짜리 곡선을 그대로 쓰면
+ * 물량이 늘 시간이 없어 후반이 싱거워진다. 그래서 **뒤로 갈수록 더 가파르게** 잡았고,
+ * **특허괴물은 마지막 전투 라운드(9)** 에 들어온다 — 라운드 10이 대전이라 여기가 아니면
+ * 보스가 설 자리가 없다.
+ * @type {Record<string,number>[]}
+ */
 const WAVES = [
-  // 공속을 2.2배로 올린 만큼, 웨이브당 스폰 수도 약 1.9배로 늘려서 균형을 맞췄었는데,
-  // 공속을 다시 2배로 더 올리면서 스폰 수도 그만큼 2배로 늘렸다 — 화력도 물량도 같이 시원해지도록.
-  {copy:26}, {copy:34,fast:12}, {copy:38,fast:20}, {copy:30,fast:22,tank:8},
-  {copy:42,fast:26,tank:12}, {fast:46,tank:16}, {copy:50,fast:34,tank:20},
-  {copy:42,fast:38,tank:22}, {fast:54,tank:26}, {copy:50,fast:46,tank:30},
-  {copy:46,fast:46,tank:38}, {boss:2,tank:22,fast:38},
+  {copy:26},                              // 1
+  {copy:34,fast:12},                      // 2
+  {copy:38,fast:20},                      // 3
+  {},                                     // 4 — ⚔️ 1:1 대전
+  {copy:36,fast:24,tank:10},              // 5
+  {copy:44,fast:30,tank:16},              // 6
+  {},                                     // 7 — ⚔️ 1:1 대전
+  {copy:50,fast:38,tank:24},              // 8
+  {copy:48,fast:46,tank:32,boss:1},       // 9 — 마지막 전투 라운드 · 특허괴물 등장
+  {},                                     // 10 — ⚔️ 1:1 대전 (여기서 판이 끝나고 점수를 낸다)
 ];
 
 /**
@@ -611,13 +627,16 @@ const AUGMENTS = {
 const AUGMENT_WAVES = [];
 
 /**
- * 1:1 대전 라운드가 열리는 스테이지.
+ * 1:1 대전 라운드가 열리는 라운드 — **4 · 7 · 10, 세 번**.
  *
- * 증강(2·4·7·10)을 고른 바로 다음 스테이지다 — 방금 판을 뒤집어 놓고 그 결과를 곧장
- * 상대와 맞대 보는 자리가 되도록 잡았다. 이 스테이지에는 침입자가 오지 않고,
- * 대신 별도의 대전장(DUEL)에서 서로가 지금까지 만든 냥타워를 통째로 붙인다.
+ * 세 라운드마다 한 번씩 돌아오고, **마지막 10라운드가 곧 판의 끝**이다. 침입자를 막는 것은
+ * 덱을 만드는 과정이고, 만든 덱이 값을 하는지는 대전에서만 판가름 난다 —
+ * 그 판가름을 판의 마지막 자리에 놓아 「마지막 한 판」이 되게 했다.
+ *
+ * 이 라운드에는 침입자가 오지 않고, 별도의 대전장(DUEL)에서 서로가 지금까지 만든 냥타워를
+ * 통째로 붙인다. 승패는 특허료가 아니라 **최종 랭킹 점수**로만 돌아온다 (RANK 참고).
  */
-const DUEL_WAVES = [5, 11];
+const DUEL_WAVES = [4, 7, 10];
 
 /**
  * 1:1 대전(DUEL) — **오토배틀러**. 서로의 덱을 통째로 맞대 본다.
@@ -669,7 +688,11 @@ const DUEL = {
    * 진형이 자기 **영역의 절반쯤을 채우고** 가운데가 비어 있어야 「두 영역이 마주 본다」로 읽힌다.
    * 예전(4줄·170px)에는 양 끝에 뭉쳐 서서 화면 한가운데가 통째로 비어 있었다. */
   rows: 5, colGap: 34, formDepth: 260,
-  prize: 90, drawPrize: 40,
+  /* 대전 승리 보상에서 **특허료를 뺐다** (prize 90·drawPrize 40 → 0).
+   * 이긴 쪽이 특허료까지 받으면 더 좋은 덱을 사서 다음 대전도 이기고, 그 눈덩이가 세 번
+   * 굴러가면 4라운드 한 판으로 판이 끝나 버린다. 대전의 승패는 이제 **최종 랭킹 점수로만**
+   * 돌아온다 (RANK.duelWin/duelDraw) — 판 안의 자원 격차가 아니라 성적표에 남는다. */
+  prize: 0, drawPrize: 0,
   leakBase: 30, leakPer: 0,
   soloBase: 0.95, soloPerWave: 0.015,
 
@@ -695,6 +718,41 @@ const DUEL = {
   zoneFoe: "rgba(196,50,42,.23)",
 };
 
+/**
+ * 랭킹 점수(RANK) — 한 판이 끝나면 **네 항목을 합쳐 한 숫자**로 낸다.
+ *
+ * 이 게임은 「12라운드를 버텼는가」로 끝나는 생존 게임이 아니라 **10라운드 동안 얼마나 좋은
+ * 덱을 만들었는가**를 재는 오토배틀러다. 그래서 승패를 O/X 로 내지 않고 점수로 낸다 —
+ * 같은 「클리어」 안에서도 잘한 판과 겨우 넘긴 판이 갈려야 다시 할 이유가 생긴다.
+ *
+ * 네 항목은 서로 다른 것을 잰다. 하나만 잘해서는 높은 점수가 나오지 않는다.
+ *   ⚔️ 대전   만든 덱이 **남의 덱을 이기는가** (4·7·10 라운드 세 판)
+ *   🏗️ 덱파워  10라운드가 끝난 시점에 **무엇을 쥐고 있는가** (√(총 체력 × 총 화력))
+ *   ⏱️ 속도   각 전투 라운드를 **얼마나 빨리 끝냈는가** — 판을 얼마나 촘촘히 짰는지의 지표다
+ *   🏛️ 생존   등록원부를 얼마나 지켰는가
+ *
+ * ── 속도를 어떻게 재나 ──
+ * 게임 **시간**으로 잰다(실시간이 아니다). 배속을 걸면 실시간은 줄지만 게임 시간은 그대로라,
+ * ×3 을 눌러 점수를 벌 수 없다. 라운드마다 **파 타임(par)** 을 잡고 par 이내면 만점,
+ * 그보다 오래 걸릴수록 반비례로 깎는다. par 은 「그 라운드의 마지막 침입자가 나오는 시각 +
+ * parPad」다 — 스폰이 다 끝나기 전에 라운드를 끝낼 수는 없으므로, 이게 이론상 최속이다.
+ */
+const RANK = {
+  duelWin: 1200, duelDraw: 500, duelLose: 0,
+  deckMul: 0.8,              // 덱 지수 1점당 점수
+  speedPerWave: 600,         // 전투 라운드 하나의 속도 만점
+  parPad: 9,                 // 파 타임 = 마지막 스폰 시각 + 이 여유(초)
+  hpMul: 10,                 // 남은 등록원부 내구 1당 점수
+  /** 등급 컷 — 위에서부터 먼저 걸리는 것을 쓴다 */
+  grades: [
+    { at: 9000, g: "S", col: "#ffd782", say: "특허청이 통째로 당신 것입니다." },
+    { at: 7200, g: "A", col: "#7fbf6a", say: "빈틈이 거의 없는 판이었습니다." },
+    { at: 5400, g: "B", col: "#69b6d6", say: "탄탄합니다. 한 계열만 더 밀었다면." },
+    { at: 3600, g: "C", col: "#c9b26a", say: "덱의 축이 아직 흐릿합니다." },
+    { at: 0,    g: "D", col: "#e0574d", say: "무엇을 모을지부터 정해 봅시다." },
+  ],
+};
+
 /** 밸런스 상수. 시뮬레이터가 이 객체를 통째로 덮어써서 스윕할 수 있다. */
 const BAL = {
   cellSize: 80, cellGap: 4,
@@ -703,13 +761,14 @@ const BAL = {
    * 0.26 → 0.30 으로 올린 것은 빌드 계열(계열 3·5단계)과 합성 냥타워의 고유 스킬이 들어오면서
    * 후반 화력이 통째로 한 단계 올라갔기 때문이다. 냥타워 수치를 한 발에 몰아 담은 것도 같이
    * 작용한다 — 방어는 명중마다 깎이므로, 한 방이 무거워진 출원냥·특허범위냥은 방어 8짜리
-   * 무효심판 청구인 앞에서 예전의 약 두 배를 낸다. 웨이브 12 기준 적 체력이 3.86배 → 4.30배. */
+   * 무효심판 청구인 앞에서 예전의 약 두 배를 낸다.
+   * 전투 라운드가 일곱뿐이라 뒤로 갈수록 가파르게 잡았다 — 라운드 9 기준 적 체력 3.4배. */
   hpPerWave: 0.30,
   incomeBase: 10, incomePerWave: 3,    // 수입도 줄여서 후반 화력 스노우볼을 억제
   catCostMul: 1.0,           // 같은 종류를 더 배치해도 가격은 그대로 — 임용 비용은 항상 정가다
   pierceCap: 70, slowCap: 70,
   spawnGap: 0.52, spawnGapBoss: 2.0,   // 더 촘촘하게 몰아친다
-  waveCount: 12,
+  waveCount: 10,          // 한 판은 10라운드 — 그중 4·7·10 은 1:1 대전 (DUEL_WAVES)
   prepSecs: 15,              // 양쪽 모두 준비 단계에 들어선 뒤 주어지는 최대 준비시간(초)
   choiceSecs: 15,            // 패시브·증강 선택 제한시간(초). 넘기면 첫 번째가 자동으로 선택된다
   burstSecs: 8,              // 「우선권 주장」 증강의 지속시간(초)
@@ -777,7 +836,7 @@ const BAL = {
 
 return { AUGMENTS, AUGMENT_WAVES, BAL, CATS, CAT_SKILLS, CAT_WEIGHT_TOTAL, catDrawChance,
          DRAW_KEYS, DUEL, DUEL_WAVES, ENEMIES, LINES, LINE_TIER_AT, PASSIVES, PASSIVE_BY_KEY,
-         RECIPES, SABOTAGE, SKILL_CD_LV, SKILL_MUL_LV, WAVES };
+         RANK, RECIPES, SABOTAGE, SKILL_CD_LV, SKILL_MUL_LV, WAVES };
 })();
 __mods["core/maps.js"] = (function(){
 // @ts-check
@@ -2383,7 +2442,7 @@ __mods["core/game.js"] = (function(){
 // @ts-check
 const {Rng} = __req("core/rng.js");
 const {WAVES, BAL, CATS, DRAW_KEYS, RECIPES, SABOTAGE, AUGMENTS, AUGMENT_WAVES,
-       DUEL, DUEL_WAVES, PASSIVES, LINE_TIER_AT} = __req("core/data.js");
+       DUEL, DUEL_WAVES, PASSIVES, LINE_TIER_AT, RANK} = __req("core/data.js");
 const {getMap, parseMap} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {computeStats} = __req("core/stats.js");
@@ -2489,6 +2548,16 @@ class Game {
     this.crafted = 0;                    // 그중 특수 냥타워를 만든 횟수
     /** 1:1 대전 라운드 전적 [승, 무, 패] */
     this.duelRecord = [0, 0, 0];
+    /* ── 랭킹 점수 재료 ──
+     * waveLog  전투 라운드마다 {라운드, 걸린 게임시간, 파 타임} — ⏱️ 속도 점수의 원장
+     * duelLog  대전 라운드마다 {라운드, 승/무/패} — ⚔️ 대전 점수의 원장
+     * wavePar  지금 굴러가는 라운드의 파 타임 (startWave 가 채우고 endWave 가 적어 넣는다)
+     * finalDeck 10라운드가 끝난 시점의 덱 지수 — web 쪽이 계산해 넣어 준다
+     *           (core 는 대전 명세를 만들 줄 모른다. duel.js 의 deckPower 가 그 일을 한다) */
+    this.waveLog = [];
+    this.duelLog = [];
+    this.wavePar = 0;
+    this.finalDeck = 0;
 
     /* ── 방해 공작 ──
      * sabDrawn 이번 웨이브 주기(준비 + 그 웨이브)에 이미 뽑은 횟수 — 라운드가 끝나면 0으로 돌아간다
@@ -2960,12 +3029,19 @@ class Game {
    */
   endDuel(outcome, foeAlive) {
     if (this.phase !== "duel") return false;
-    let dmg = 0, prize = 0;
+    /* 이긴 쪽에게 **특허료를 주지 않는다.** 주면 더 좋은 덱을 사서 다음 대전도 이기고,
+     * 그 눈덩이가 세 번 굴러가면 첫 대전 한 판으로 판이 끝난다. 승패는 최종 랭킹 점수로만
+     * 돌아온다 (rankScore 의 ⚔️ 항목). 진 쪽의 내구 손실은 그대로 둔다 —
+     * 이쪽은 「졌으니 다음 라운드가 버겁다」는 압박이지 자원 격차가 아니다. */
+    let dmg = 0;
+    const prize = outcome === "lose" ? DUEL.prize : DUEL.drawPrize;   // 둘 다 0
     if (outcome === "lose") { dmg = DUEL.leakBase + foeAlive * DUEL.leakPer; this.hp -= dmg; }
-    else if (outcome === "win") { prize = DUEL.prize; this.gold += prize; }
-    else { prize = DUEL.drawPrize; this.gold += prize; }
+    if (prize) this.gold += prize;
     this.duelRecord[outcome === "win" ? 0 : outcome === "draw" ? 1 : 2]++;
-    this.events.push({ t: "duel_end", wave: this.wave, outcome, dmg, prize, foeAlive });
+    this.duelLog.push({ wave: this.wave, outcome });
+    this.events.push({ t: "duel_end", wave: this.wave, outcome, dmg, prize, foeAlive,
+                       points: outcome === "win" ? RANK.duelWin
+                             : outcome === "draw" ? RANK.duelDraw : RANK.duelLose });
 
     if (this.hp <= 0) {
       this.phase = "lost"; this.shots = [];
@@ -3021,15 +3097,67 @@ class Game {
       this.spawnQueue.push({ t, at, lane });
       at += t === "boss" ? BAL.spawnGapBoss : BAL.spawnGap;
     }
+    /* ── 파 타임 ── 이 라운드를 얼마나 빨리 끝냈는지를 재는 잣대(랭킹 ⏱️ 항목).
+     * **마지막 침입자가 나오는 시각 + 여유**다. 스폰이 다 끝나기 전에는 라운드가 끝날 수
+     * 없으므로 이게 이론상 최속이고, 물량 공작(「이의신청 대량제출」)으로 스폰이 길어지면
+     * par 도 같이 늘어난다 — 맞은 쪽이 그 때문에 점수를 잃지 않도록. */
+    this.wavePar = (this.spawnQueue.length ? this.spawnQueue[this.spawnQueue.length - 1].at : 0)
+                   + RANK.parPad;
+
     this.events.push({
-      t: "wave_start", wave: this.wave, count: list.length,
+      t: "wave_start", wave: this.wave, count: list.length, par: this.wavePar,
       cover: this.cover, path: this.totalPath, covered: this.coveredPath, gates: nLanes,
       hpMod: mods.hp, countMod: mods.count, elite: mods.elite,
     });
     return true;
   }
 
-  endWave() { this.closeRound(false); }
+  /**
+   * 랭킹 점수를 낸다 — 판이 끝났을 때(그리고 진행 중 미리보기로) 부르는 한 곳.
+   *
+   * 네 항목이 서로 다른 것을 재므로, 하나만 잘해서는 높은 점수가 나오지 않는다.
+   * 계산에 쓰는 원장(waveLog·duelLog·finalDeck·hp)은 전부 이 클래스 안에 쌓여 있고,
+   * 여기서는 **읽기만 한다** — 점수를 보려고 부른다고 판이 달라지면 안 된다.
+   *
+   * @param {number} [deckPower] 지금 덱 지수. 안 주면 마지막으로 기록된 값(finalDeck)을 쓴다
+   * @returns {{total:number, grade:string, gradeCol:string, say:string,
+   *            duel:number, deck:number, speed:number, hp:number,
+   *            waves:{wave:number,secs:number,par:number,pts:number}[],
+   *            duels:{wave:number,outcome:string,pts:number}[]}}
+   */
+  rankScore(deckPower) {
+    const deckIdx = deckPower == null ? this.finalDeck : deckPower;
+
+    // ⚔️ 대전 — 세 판의 승/무/패
+    const duels = this.duelLog.map((d) => ({
+      wave: d.wave, outcome: d.outcome,
+      pts: d.outcome === "win" ? RANK.duelWin : d.outcome === "draw" ? RANK.duelDraw : RANK.duelLose,
+    }));
+    const duel = duels.reduce((a, d) => a + d.pts, 0);
+
+    /* ⏱️ 속도 — 라운드마다 par 이내면 만점, 그보다 오래 걸릴수록 반비례로 깎는다.
+     * par 의 두 배가 걸리면 절반이 되는 식이라, 늦는다고 0점이 되지는 않는다 —
+     * 「겨우 막아냈다」도 막아낸 것이기 때문이다. */
+    const waves = this.waveLog.map((w) => ({
+      wave: w.wave, secs: w.secs, par: w.par,
+      pts: Math.round(RANK.speedPerWave * Math.min(1, w.par / Math.max(w.par, w.secs))),
+    }));
+    const speed = waves.reduce((a, w) => a + w.pts, 0);
+
+    const deck = Math.round(Math.max(0, deckIdx) * RANK.deckMul);
+    const hp = Math.round(Math.max(0, this.hp) * RANK.hpMul);
+    const total = duel + deck + speed + hp;
+    const g = RANK.grades.find((x) => total >= x.at) || RANK.grades[RANK.grades.length - 1];
+    return { total, grade: g.g, gradeCol: g.col, say: g.say, duel, deck, speed, hp, waves, duels };
+  }
+
+  endWave() {
+    /* 라운드를 끝낸 시각을 **게임 시간**으로 남긴다 (실시간이 아니다).
+     * waveTime 은 tick 이 dt 만큼 더하는 값이라 배속을 걸어도 같은 속도로 흐른다 —
+     * ×3 을 눌러 속도 점수를 벌 수 없다. */
+    this.waveLog.push({ wave: this.wave, secs: this.waveTime, par: this.wavePar || 1 });
+    this.closeRound(false);
+  }
 
   /**
    * 라운드 하나를 마무리한다 — 침입자 웨이브든 1:1 대전이든 뒤처리는 똑같다.
@@ -3208,17 +3336,11 @@ const INLINE = "iVBORw0KGgoAAAANSUhEUgAAAYAAAAEACAMAAACNqVFVAAAB/lBMVEXloJpgHxOg
 const sprite = new Image();
 sprite.src = INLINE.startsWith("__") ? "./sprite.png" : "data:image/png;base64," + INLINE;
 
-/**
- * 「승진」한 냥타워 전용 스프라이트 — 6프레임 384×64 한 줄.
- * 원화(승진고양이 예시.bmp)의 「기본 동작」 6포즈를 잘라 배경을 지우고 64px로 맞춘 것이다
- * (기본 · 손 흔들기 · 할퀴기1 · 할퀴기2 · 할퀴기3 · 대기 — 기본 시트와 프레임 순서가 같다).
- * 색보정(filter)은 걸지 않는다 — 흰 냥이에 선글라스라는 원화 그대로가 승진의 표식이다.
- */
-const promoSprite = new Image();
-promoSprite.src = "img/cat-promoted.png";
-/** 승진 스프라이트 한 칸의 크기(px) */
-const PROMO_CELL = 64;
-const promoReady = () => promoSprite.complete && promoSprite.naturalWidth > 0;
+/* 예전에는 여기에 「승진냥 전용 스프라이트」(선글라스 낀 흰 냥, img/cat-promoted.png)가 있었다.
+ * 최고 레벨에 닿으면 원화가 통째로 그 그림으로 갈아 끼워졌는데, **내가 키운 그 냥이 아니게**
+ * 보이는 것이 문제였다 — 여섯 종을 애써 갈라 놓고 마지막에 전부 같은 흰 냥으로 수렴했다.
+ * 지금은 레벨이 올라도 **기본 1단계 원화를 그대로** 쓰고, 금빛 테두리와 Lv 딱지로만 갈린다.
+ * (파일은 저장소에 그대로 남아 있으니 되살리려면 이 자리에 다시 넣으면 된다.) */
 
 /**
  * 냥 종류별 전용 스프라이트 — 각각 4프레임 한 줄 (tools/cut-cat-sheet.js 가 원화에서 뽑는다).
@@ -3239,6 +3361,19 @@ const CAT_SHEET_SRC = {
   pct:   "img/cat_attack4.png",   // 국제출원냥
   fast:  "img/cat_attack5.png",   // 우선심사냥
   delay: "img/cat_attack6.png",   // 보정명령냥
+
+  /* ── 특수(합성) 냥타워도 **기본 냥 원화를 그대로** 쓴다 ──
+   * 예전에는 전용 원화가 없어 공용 스프라이트에 hue-rotate 를 걸어 물들였는데, 그 결과
+   * 여섯 기본 냥만 제 얼굴이 있고 애써 합성한 다섯은 오히려 흐릿한 색 덩어리로 보였다.
+   * 지금은 **재료 중 그 냥의 성격을 물려준 한 마리**의 원화를 그대로 쓰고, 합성했다는 표시는
+   * 청록 테두리와 Lv 딱지로만 한다 — 판에서 구분이 되면 그걸로 충분하고,
+   * 없는 원화를 색으로 지어내는 것보다 있는 원화를 쓰는 편이 언제나 낫다.
+   * 다섯이 서로 다른 원화를 쓰도록 갈라 두어 한 판에 여럿을 세워도 헷갈리지 않는다. */
+  panel:    "img/cat_attack4.png",   // ⚖️ 심판합의체냥 ← 🌐 국제출원냥 (다중조준을 물려받았다)
+  invalid:  "img/cat_attack3.png",   // ☠️ 무효사유냥   ← 💼 변리사냥
+  citation: "img/cat_attack2.png",   // 🔗 인용문헌냥   ← 📐 특허범위냥
+  rush:     "img/cat_attack5.png",   // ⏱️ 조기공개냥   ← ⚡ 우선심사냥
+  fee:      "img/cat_attack1.png",   // 💰 수수료징수냥 ← 📄 출원냥
 };
 /** 종류 → Image. 시트를 못 찾아도 판이 죽지 않게 로드 실패는 그냥 삼킨다 */
 const catSheets = {};
@@ -3346,7 +3481,6 @@ function motionFrame(key, uid, atkFrame, canJump, now) {
 function onSpriteReady(fn) {
   if (sprite.complete && sprite.naturalWidth) fn();
   else sprite.addEventListener("load", fn, { once: true });
-  if (!promoReady()) promoSprite.addEventListener("load", fn, { once: true });
   for (const key of Object.keys(CAT_SHEET_SRC)) {
     const im = sheetOf(key);                       // 이미 로드에 실패한 종류는 null 이다
     if (im && !sheetReady(key)) im.addEventListener("load", fn, { once: true });
@@ -3357,22 +3491,22 @@ function onSpriteReady(fn) {
   }
 }
 
-return { PROMO_CELL, SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS,
+return { SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS,
          sheetOf, sheetReady, sheetCellW, sheetCellH, cellW, cellH,
          jumpOf, jumpReady, motionFrame,
-         onSpriteReady, promoReady, promoSprite, sprite };
+         onSpriteReady, sprite };
 })();
 __mods["web/main.js"] = (function(){
 // @ts-check
 const {Game, frameOf} = __req("core/game.js");
 const {CATS, CAT_SKILLS, ENEMIES, BAL, LINES, LINE_TIER_AT, PASSIVES, PASSIVE_BY_KEY,
-       SABOTAGE, AUGMENTS, AUGMENT_WAVES,
+       RANK, SABOTAGE, AUGMENTS, AUGMENT_WAVES,
        DUEL, DUEL_WAVES, DRAW_KEYS, RECIPES, catDrawChance} = __req("core/data.js");
 const {DuelSim, campX, makeRoster, mobRoster, deckPower} = __req("core/duel.js");
 const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {auraCells} = __req("core/stats.js");
-const {sprite, onSpriteReady, promoSprite, promoReady, PROMO_CELL,
+const {sprite, onSpriteReady,
        SPEC_FRAMES, SPEC_FRAME_MS,
        sheetOf, sheetReady, sheetCellW, sheetCellH, cellW, cellH,
        motionFrame} = __req("web/sprite.js");
@@ -3594,10 +3728,7 @@ function pieceEl(p, onBoard) {
    * 표시 크기를 쓰므로 공격이 시작돼도 크기나 선 두께가 변하지 않는다.
    * (전용 시트가 없어 공용 스프라이트로 그리는 냥은 예전처럼 64×64 그대로 둔다.)
    */
-  // 판정 기준을 drawCats 와 똑같이 맞춘다. 위의 `promoted`(= 레벨만 본다)를 쓰면 안 된다 —
-  // 쏘지 않는 변리사냥은 Lv3 이어도 승진하지 않아(computeStats) 전용 시트로 그려지는데,
-  // 여기서만 승진으로 치면 그 냥만 저해상도 캔버스에 pixelated 로 그려져 혼자 거칠어진다.
-  const smooth = useSpecSheet(p.key, !!(p.st && p.st.promoted));
+  const smooth = useSpecSheet(p.key);
   const hi = smooth ? Math.min(3, Math.max(1, Math.ceil(window.devicePixelRatio || 1))) : 1;
   cv.width = 64 * hi; cv.height = 64 * hi;
   cv.style.width = "64px"; cv.style.height = "64px";
@@ -3612,15 +3743,10 @@ function pieceEl(p, onBoard) {
   badge.textContent = CATS[p.key].icon;
   badge.style.cssText = BADGE("right");
 
-  // 승진냥(최고 레벨)은 왼쪽에 계급장을 단다 (냥이 자체는 선글라스 낀 원화로 그려진다)
-  if (promoted) {
-    const rank = document.createElement("span");
-    rank.textContent = "승";
-    rank.style.cssText = BADGE("left") +
-      ";border-color:#cda43a;background:#2b2418;color:#ffd782;font-size:13px;font-weight:700";
-    el.appendChild(rank);
-  }
-  // 합성 레벨 — 왼쪽 위. 무엇이 몇 레벨인지 판을 훑기만 해도 보여야 합성 계획이 선다.
+  /* 합성 레벨 — 왼쪽 위. 무엇이 몇 레벨인지 판을 훑기만 해도 보여야 합성 계획이 선다.
+   * 예전에는 최고 레벨에만 따로 「승」 계급장을 달았는데, 원화까지 갈아타던 시절의 잔재다.
+   * 지금은 원화가 그대로이므로 **표시도 Lv 딱지 하나로 통일**한다 — 같은 것을 두 가지 방식으로
+   * 말하면 어느 쪽이 진짜인지 판에서 되묻게 된다. 최고 레벨은 금빛 테두리로 갈린다. */
   if (lv > 1) {
     const tag = document.createElement("span");
     tag.className = "lvtag";
@@ -3657,11 +3783,41 @@ function renderHud() {
   const regEl = $("#regHead");
   if (regEl) regEl.textContent = String(game.reg);
 
+  renderScore();
   applyStageTheme();         // 스테이지 구간이 넘어가면 전장 원화도 같이 갈린다
   const prep = game.phase === "prep";
   renderReadyBar();          // 개시 버튼의 상태는 이제 준비 상황이 정한다
   renderMergeDock();         // 합성 가능한 묶음이 생기면 판 우측 상단에 저절로 뜬다
   updateSabotageBar();
+}
+
+/**
+ * 지금까지의 랭킹 점수 — 판이 도는 내내 보여 준다.
+ *
+ * 10라운드가 끝나면 **이 숫자가 곧 결과**다. 끝나고서야 처음 보면 무엇을 잘못했는지 알 수 없으니,
+ * 진행 중에도 네 항목이 각각 얼마씩 쌓였는지 계속 깔아 둔다 — 「대전은 이겼는데 속도가 안 나오네」가
+ * 판 안에서 보여야 다음 라운드에 손을 쓸 수 있다.
+ *
+ * 덱 파워는 **지금 판을 재서** 넣는다 (마지막 라운드의 확정값 finalDeck 과 달리 실시간이다).
+ * 대전 라운드 중에는 판이 접혀 있으므로 확정값을 그대로 쓴다.
+ */
+let scoreSig = "";
+function renderScore() {
+  const box = $("#sScore");
+  if (!box) return;
+  const live = game.phase === "duel" ? (game.finalDeck || 0) : deckPower(makeRoster(game));
+  const r = game.rankScore(live);
+  const sig = `${r.total}|${r.grade}`;
+  if (sig === scoreSig) return;          // 매 프레임 불려도 바뀐 게 없으면 DOM을 건드리지 않는다
+  scoreSig = sig;
+  box.textContent = r.total.toLocaleString();
+  box.style.color = r.gradeCol;
+  const g = $("#sGrade");
+  if (g) { g.textContent = r.grade; g.style.color = r.gradeCol; }
+  const legs = $("#sScoreLegs");
+  if (legs) legs.innerHTML =
+    `<span>⚔️ ${r.duel.toLocaleString()}</span><span>🏗️ ${r.deck.toLocaleString()}</span>` +
+    `<span>⏱️ ${r.speed.toLocaleString()}</span><span>🏛️ ${r.hp.toLocaleString()}</span>`;
 }
 const btn = (s) => /** @type {HTMLButtonElement} */ ($(s));
 
@@ -3670,12 +3826,22 @@ const btn = (s) => /** @type {HTMLButtonElement} */ ($(s));
 const canPrep = () => !!game && game.phase === "prep" && !game.awaitingPassive && !game.awaitingAugment;
 const online = () => !soloMode && !!ws && ws.readyState === 1;
 /**
- * 이 웨이브를 상대와 맞춰서 시작해야 하는가.
- * 첫 스테이지만 둘 다 준비를 눌러야 열리고, 그 뒤로는 각자 원할 때 개시한다 —
- * 준비를 빨리 끝낸 쪽이 상대를 기다리며 멈춰 있을 이유가 없다.
- * @param {number} wave 시작하려는 웨이브 번호
+ * 이 라운드를 상대와 맞춰서 시작해야 하는가 — **1v1 에서는 언제나 그렇다.**
+ *
+ * 한때는 첫 라운드만 맞추고 그 뒤로는 각자 원할 때 개시하게 두었다. 「준비를 빨리 끝낸 쪽이
+ * 상대를 기다리며 멈춰 있을 이유가 없다」는 이유였는데, **1:1 대전이 세 번(4·7·10)으로 늘면서
+ * 그 자유가 판을 어긋나게 만든다.** 한쪽이 앞서 나가면 그쪽이 라운드 4 대전에 들어섰을 때
+ * 상대는 아직 라운드 3을 돌고 있고, 명세가 오지 않아 12초를 기다리다 **쥐 침입단으로 대체**된다 —
+ * 사람과 붙으라고 만든 라운드가 혼자 노는 라운드가 된다.
+ *
+ * 이제 **모든 라운드가 「둘 다 준비」로 열립니다.** 둘 다 누르면 곧바로, 아니면 준비시간
+ * (BAL.prepSecs)이 끝나면 자동으로 — 서버가 판정하고 양쪽에 동시에 알린다.
+ * 그래서 두 사람의 라운드 번호가 판이 끝날 때까지 한 번도 어긋나지 않는다.
+ *
+ * 솔로에는 맞출 상대가 없으므로 이 함수를 보지 않고 곧바로 개시한다 (호출부에서 거른다).
+ * @param {number} wave 시작하려는 라운드 번호
  */
-const needsSync = (wave) => wave <= 1;
+const needsSync = (wave) => { void wave; return true; };
 
 /**
  * 준비 단계에 들어섰다는 사실을 서버에 한 번만 알린다.
@@ -3703,7 +3869,7 @@ function renderReadyBar() {
   if (!bar) return;
 
   const duelNext = game.nextIsDuel;
-  // 맞춰 시작하는 웨이브가 아니면 솔로와 똑같이 「개시」 버튼 하나로 끝난다
+  // 솔로에는 맞출 상대가 없다 — 「개시」 버튼 하나로 끝난다
   const sync = !soloMode && needsSync(next);
   if (game.phase === "duel") {
     b.disabled = true; b.textContent = "1:1 대전 중…";
@@ -3718,8 +3884,8 @@ function renderReadyBar() {
     // 솔로에서는 "준비"가 아니라 곧바로 개시다 — 기다릴 상대가 없다.
     // 다음이 대전 라운드면 무엇이 시작되는지 버튼에 그대로 적는다.
     b.textContent = duelNext
-      ? (!sync ? `⚔ 스테이지 ${next} 1:1 대전 개시` : iReady ? "준비 취소" : `⚔ 스테이지 ${next} 1:1 대전 준비`)
-      : (!sync ? `웨이브 ${next} 개시` : iReady ? "준비 취소" : `웨이브 ${next} 준비 완료`);
+      ? (!sync ? `⚔ 라운드 ${next} 1:1 대전 개시` : iReady ? "준비 취소" : `⚔ 라운드 ${next} 1:1 대전 준비`)
+      : (!sync ? `라운드 ${next} 개시` : iReady ? "준비 취소" : `라운드 ${next} 준비 완료`);
   } else {
     b.disabled = true;
   }
@@ -3734,7 +3900,7 @@ function renderReadyBar() {
   }
   b.classList.toggle("waiting", sync && iReady && game.phase === "prep");
 
-  // 준비 표시줄은 서로를 기다리는 첫 스테이지에만 뜬다
+  // 준비 표시줄 — 1v1 에서는 매 라운드 뜬다 (모든 라운드가 「둘 다 준비」로 열린다)
   if (!sync) { bar.classList.add("hidden"); return; }
   const show = game.phase === "prep";
   bar.classList.toggle("hidden", !show);
@@ -3745,7 +3911,7 @@ function renderReadyBar() {
   $("#rdyMe").querySelector("b").textContent = iReady ? "준비 완료" : "준비 중";
   $("#rdyOpp").className = "rdy " + (oppReady ? "on" : oppInPrep ? "off" : "away");
   $("#rdyOpp").querySelector("b").textContent =
-    oppReady ? "준비 완료" : oppInPrep ? "준비 중" : "웨이브 진행 중";
+    oppReady ? "준비 완료" : oppInPrep ? "준비 중" : "라운드 진행 중";
 
   const t = $("#rdyTimer");
   if (!online()) t.textContent = "서버 연결 끊김 — 혼자 진행합니다";
@@ -3758,7 +3924,7 @@ function renderReadyBar() {
 /** 실제 개시. 서버의 waveGo 신호(또는 서버가 없을 때의 직접 개시)로만 들어온다. */
 function doStartWave() {
   iReady = false; oppReady = false; oppInPrep = false; prepEndsAt = 0;
-  // 스테이지 5·11 은 침입자가 아니라 상대와 붙는다
+  // 라운드 4·7·10 은 침입자가 아니라 상대와 붙는다
   if (game.nextIsDuel) { startDuelRound(); return; }
   if (!game.startWave()) { log("동선이 막혀 있습니다."); return; }
   render();
@@ -3846,7 +4012,12 @@ function draw(now) {
  * 전용 시트가 없는 종류(특수 냥타워 등)는 예전 공용 스프라이트로 되돌아간다.
  * @param {string} key @param {boolean} promoted
  */
-const useSpecSheet = (key, promoted) => !promoted && sheetReady(key);
+/* 전용 원화를 쓰는가. **합성·승진 여부를 보지 않는다** —
+ * 레벨이 오르거나 이종 합성으로 나온 냥도 **기본 1단계 냥의 원화를 그대로** 쓰고,
+ * 합성했다는 표시는 테두리(아우라)와 Lv 딱지로만 한다. 예전에는 승진냥만 전용 원화
+ * (선글라스 낀 흰 냥)로 갈아탔는데, 원래 쓰던 냥과 얼굴이 통째로 달라져 「내가 키운 그 냥」이
+ * 아니게 보였다. */
+const useSpecSheet = (key) => sheetReady(key);
 
 /**
  * 그 냥의 현재 공격 프레임. 공격 중이 아니면 0(평상시 자세)이다.
@@ -3888,11 +4059,7 @@ function drawCats(g, now) {
     cg.imageSmoothingEnabled = true;          // 부드러운 일러스트라 NEAREST 로 늘리면 외곽선이 깨진다
     cg.imageSmoothingQuality = "high";
     cg.clearRect(0, 0, 64, 64);
-    if (c.st.promoted && promoReady()) {
-      // 승진냥 — 선글라스 낀 흰 냥이 원화를 그대로 쓴다 (색보정 없음). 샷건만 위에 얹는다.
-      cg.drawImage(promoSprite, fr * PROMO_CELL, 0, PROMO_CELL, PROMO_CELL, 0, 0, 64, 64);
-      drawShotgun(cg, !!(c.atkEnd && now < c.atkEnd));
-    } else if (useSpecSheet(c.key, !!c.st.promoted)) {
+    if (useSpecSheet(c.key)) {
       // 전용 시트를 가진 냥 — 평상시 0번 칸, 공격하는 동안만 0→1→2→3 (색보정 없이 원화 그대로).
       // 네 칸이 같은 배율·같은 바닥선으로 구워져 있어 칸이 넘어가도 중심과 발끝이 그대로다.
       //
@@ -4167,31 +4334,7 @@ function drawRatSilhouette(g, r, slowed) {
   g.strokeStyle = out; g.lineWidth = 1.1;
 }
 
-/**
- * 승진냥이 든 샷건 — 승진 스프라이트(64×64) 위에 겹쳐 그린다.
- * 원화에는 총이 없어서 이 부분만 도형으로 얹는다. 좌표는 원화의 앞발 높이에 맞춰 잡았으므로,
- * 스프라이트를 다시 뽑으면 아래 translate 값만 손보면 된다.
- * @param {CanvasRenderingContext2D} cg
- * @param {boolean} firing 공격 모션 중인가 (총구 화염을 그릴지)
- */
-function drawShotgun(cg, firing) {
-  cg.save();
-  cg.translate(34, 40);
-  cg.rotate(-0.3);
-  cg.fillStyle = "#6b4a2a"; cg.fillRect(-11, -1.7, 7, 3.4);     // 개머리판
-  cg.fillStyle = "#3a3f47"; cg.fillRect(-4.5, -1.4, 14, 2.8);   // 총열
-  cg.fillStyle = "#22262c"; cg.fillRect(-1, 0.9, 6, 1.5);       // 펌프
-  cg.fillStyle = "#8a939c"; cg.fillRect(9.5, -1.2, 2, 2.4);     // 총구
-  if (firing) {                                                 // 총구 화염
-    cg.fillStyle = "rgba(255,196,92,.92)";
-    cg.beginPath();
-    cg.moveTo(12, 0); cg.lineTo(21, -4); cg.lineTo(18.5, 0); cg.lineTo(21, 4);
-    cg.closePath(); cg.fill();
-  }
-  cg.restore();
-}
-
-/** 승진냥 샷건의 방사 범위 — 명중 지점에서 퍼지는 주황 고리 한 겹. */
+/** 방사 피해의 범위 — 명중 지점에서 퍼지는 주황 고리 한 겹. */
 function drawBlastRing(g, s) {
   const p = 1 - Math.max(0, s.life / s.max);
   g.save();
@@ -4722,6 +4865,9 @@ function addFloater(x, y, txt, col, opt = {}) {
 /** 합성 냥타워의 스킬이 훑고 간 범위 — 판 위에 고리 하나가 번졌다 사라진다 */
 const skillRings = [];
 
+/** 대전장이 열려 있는 동안 도착한 「판 종료」 — 대전장을 접을 때 꺼내 쓴다 */
+let pendingOver = null;
+
 /** 치명타 글씨를 마지막으로 띄운 시각 (냥타워 uid → ms). 연사 냥타워가 화면을 도배하지 않도록 */
 const critShownAt = new Map();
 
@@ -4768,8 +4914,8 @@ function consumeEvents() {
        */
       case "wave_end":
         log(ev.duel
-          ? `스테이지 ${ev.wave} 대전 종료 · 수입 <b>+${ev.income}</b>`
-          : `웨이브 ${ev.wave} 방어 완료 · 수입 <b>+${ev.income}</b>`);
+          ? `라운드 ${ev.wave} 대전 종료 · 수입 <b>+${ev.income}</b>`
+          : `라운드 ${ev.wave} 방어 완료 · 수입 <b>+${ev.income}</b>`);
         // 대전 라운드라면 결과 화면을 읽는 동안은 모달을 띄우지 않는다 —
         // 대전장을 접을 때(closeDuelRound) 이어서 연다.
         if (duel) break;
@@ -4820,14 +4966,14 @@ function consumeEvents() {
         // 아무것도 하지 않는다. 두 곳에서 띄우면 축포가 두 번 터진다.
         break;
       case "duel_start":
-        log(`<b style="color:#cda43a">⚔ 1:1 대전</b> 스테이지 ${ev.wave} — 침입자 대신 <b>내 덱 전부</b>가 상대 덱과 붙습니다. (자동 진행 · 배속 없음)`);
+        log(`<b style="color:#cda43a">⚔ 1:1 대전</b> 라운드 ${ev.wave} — 침입자 대신 <b>내 덱 전부</b>가 상대 덱과 붙습니다. (자동 진행 · 배속 없음)`);
         break;
       case "duel_end":
         log(ev.outcome === "win"
-          ? `<b style="color:#cda43a">대전 승리</b> — 특허료 <b>+${ev.prize}</b>`
+          ? `<b style="color:#cda43a">대전 승리</b> — 랭킹 점수 <b>+${ev.points.toLocaleString()}</b>`
           : ev.outcome === "draw"
-            ? `<b>대전 무승부</b> — 특허료 <b>+${ev.prize}</b>`
-            : `<b class="warn">대전 패배</b> — 등록원부 내구 <b>−${ev.dmg}</b>`);
+            ? `<b>대전 무승부</b> — 랭킹 점수 <b>+${ev.points.toLocaleString()}</b>`
+            : `<b class="warn">대전 패배</b> — 등록원부 내구 <b>−${ev.dmg}</b> (점수 가산 없음)`);
         if (ev.outcome === "lose") addShake(8, .35);
         renderHud();
         break;
@@ -4858,16 +5004,19 @@ function consumeEvents() {
       case "golden":
         log(`<b style="color:#cda43a">직권보정</b> ${ev.name} — 이번 웨이브 동안 공격력 3배`);
         break;
+      /* 판이 끝났다. 다만 **마지막 10라운드가 곧 대전**이라, 대전장이 열려 있는 채로
+       * 여기에 닿는다 — 그대로 종료 화면을 띄우면 방금 붙은 결과 도장을 읽을 틈도 없이
+       * 화면이 덮인다. 대전 중이면 붙잡아 두었다가 대전장을 접을 때(closeDuelRound) 띄운다. */
       case "over":
-        sendWS({ t: ev.win ? "won" : "lost" });
-        endMatch(ev.win, ev.win ? "특허 등록을 완료했습니다!" : "등록원부가 무너졌습니다.");
+        if (duel) { pendingOver = ev; break; }
+        finishOver(ev);
         break;
     }
   }
 }
 
 /* ═══════ 1:1 대전 라운드 (오토배틀러) ═══════
- * 스테이지 5·11 은 침입자가 오지 않는다. 대신 청사 판을 접어 두고 별도의 대전장으로 옮겨,
+ * 라운드 4·7·10 은 침입자가 오지 않는다. 대신 청사 판을 접어 두고 별도의 대전장으로 옮겨,
  * 지금까지 만든 냥타워를 **통째로** 상대 덱과 맞붙인다.
  *
  * 진행은 세 마디다.
@@ -4899,6 +5048,10 @@ const duelAuthority = () => soloMode || youAre !== "p2";
 function startDuelRound() {
   if (!game.startDuel()) { log("대전 라운드를 열지 못했습니다."); return; }
   const mine = makeRoster(game);
+  /* 대전 중에는 청사 판이 접혀 있어 덱을 다시 잴 수 없다. 라운드에 들어서는 지금 재어 두지
+   * 않으면 랭킹의 🏗️ 항목이 대전 내내 0으로 떨어져, 화면의 점수가 대전에 들어설 때마다
+   * 뚝 내려갔다가 끝나면 도로 올라간다 — 보는 사람 입장에서는 그냥 버그다. */
+  game.finalDeck = deckPower(mine);
   duel = { wave: game.wave, sim: null, mine, theirs: null, foeMob: false, phase: "wait",
            waitT: 0, acc: 0, endT: 0, res: null, floats: [], skRings: [], verdictT: 0 };
   $("#duelStage").classList.remove("hidden");
@@ -5094,8 +5247,33 @@ function applyDuelOutcome(res) {
   duel.res = { ...res };
   duel.phase = "done";
   duel.endT = 3.4;                                  // 결과를 읽을 틈
-  game.endDuel(res.outcome, res.foeAlive);          // 내구·특허료 정산은 코어가 한다
+  /* 랭킹의 🏗️ 덱 파워 항목은 **마지막 라운드(10)가 끝난 시점**의 덱 지수를 쓴다.
+   * core 는 대전 명세를 만들 줄 모르므로(그 일은 duel.js 가 한다) 여기서 넣어 준다.
+   * 대전 중에는 판이 달라지지 않으니 라운드 개시 때 만든 명세가 곧 종료 시점의 덱이다. */
+  game.finalDeck = deckPower(duel.mine);
+  game.endDuel(res.outcome, res.foeAlive);          // 내구 정산·전적 기록은 코어가 한다
   renderDuelResult();
+}
+
+/** 성적표에 적는 「무슨 덱이었나」 한 줄 — 계열 점수와 열린 단계 */
+function lineSummaryHtml() {
+  const keys = Object.keys(LINES).filter((k) => (game.lineScore && game.lineScore[k]) > 0)
+    .sort((a, b) => game.lineScore[b] - game.lineScore[a]);
+  if (!keys.length) return "";
+  const txt = keys.map((k) => {
+    const L = LINES[k], t = game.lineTier[k] || 0;
+    return `<span style="color:${L.col}">${L.icon} ${L.name} ${game.lineScore[k]}점${t ? ` (${t}단계)` : ""}</span>`;
+  }).join(" · ");
+  return `<span>빌드 계열</span><b>${txt}</b>`;
+}
+
+/** 판이 끝났다 — 상대에게 알리고 성적표를 띄운다 */
+function finishOver(ev) {
+  pendingOver = null;
+  sendWS({ t: ev.win ? "won" : "lost" });
+  endMatch(ev.win, ev.win
+    ? "10라운드를 모두 마쳤습니다. 성적을 냅니다."
+    : "등록원부가 무너졌습니다.");
 }
 
 /** 대전장을 접고 청사 판으로 돌아온다 */
@@ -5106,6 +5284,8 @@ function closeDuelRound() {
   document.body.classList.remove("dueling");
   $("#duelResult").classList.add("hidden");
   render();
+  // 마지막 대전이었다면 여기가 판의 끝이다 — 붙잡아 둔 종료를 이제 띄운다
+  if (pendingOver) { finishOver(pendingOver); return; }
   // 대전 라운드도 한 라운드다 — 대전장을 접고 나서 이 스테이지의 선택지를 연다.
   // (결과 도장을 읽는 동안 모달이 덮치면 무엇을 보고 있었는지 알 수 없어진다)
   if (game.awaitingAugment) openAugmentModal();
@@ -5352,11 +5532,10 @@ function drawDuelUnit(g, u, ms) {
 
     const fake = { key: u.k, uid: u.id * 97, atkEnd: u.atkT > 0 ? ms + u.atkT * 1000 : 0 };
     const [row, fr] = frameOf(fake, ms);
-    const art = (u.pr && promoReady()) ? null : catFrameCanvas(u.k, row, fr);
+    const art = catFrameCanvas(u.k, row, fr);
     g.save();
     g.scale(facing, 1);
-    if (u.pr && promoReady()) g.drawImage(promoSprite, fr * PROMO_CELL, 0, PROMO_CELL, PROMO_CELL, -25, -50, 50, 50);
-    else if (art) g.drawImage(art, -25, -50, 50, 50);
+    if (art) g.drawImage(art, -25, -50, 50, 50);
     else { g.fillStyle = mine ? "#5bc8e8" : "#e0574d"; g.beginPath(); g.arc(0, -25, 16, 0, 7); g.fill(); }
     g.restore();
     if (hit) { g.fillStyle = "rgba(255,255,255,.5)"; g.fillRect(-S / 2, -S, S, S); }
@@ -5524,11 +5703,13 @@ function renderDuelResult() {
   const won = r.outcome === "win", drew = r.outcome === "draw";
   const box = $("#duelResult");
   box.className = won ? "win" : drew ? "draw" : "lose";
+  /* 보상은 **특허료가 아니라 점수**다 — 이긴 쪽이 자원까지 가져가면 눈덩이가 굴러
+   * 첫 대전 한 판으로 판이 끝난다. 진 쪽의 내구 손실만 판 안에 남는다. */
+  const pts = won ? RANK.duelWin : drew ? RANK.duelDraw : RANK.duelLose;
   box.innerHTML = `<b>${won ? "대전 승리" : drew ? "무승부" : "대전 패배"}</b>
     <i>${r.reason}</i>
-    <span>${won ? `특허료 +${DUEL.prize}`
-      : drew ? `특허료 +${DUEL.drawPrize}`
-      : `등록원부 내구 −${DUEL.leakBase + r.foeAlive * DUEL.leakPer}`}</span>`;
+    <span>랭킹 점수 <b>+${pts.toLocaleString()}</b>${
+      won || drew ? "" : ` · 등록원부 내구 −${DUEL.leakBase + r.foeAlive * DUEL.leakPer}`}</span>`;
   box.classList.remove("hidden");
 }
 
@@ -5743,17 +5924,45 @@ function endMatch(iWon, reasonText) {
   $("#duelStage").classList.add("hidden");
   document.body.classList.remove("dueling");
   const s = game.summary();
+  /* 성적표 — 한 판의 결말은 O/X 가 아니라 **점수**다.
+   * 판이 도중에 끝났다면(내구 0) 덱 지수는 지금 판을 재서 넣는다 — 마지막 대전까지 가지
+   * 못했으므로 game.finalDeck 이 비어 있기 때문이다. */
+  const rank = game.rankScore(game.finalDeck || deckPower(makeRoster(game)));
+  const bar = (label, pts, max, col) => `
+    <div class="rkrow">
+      <span class="rklbl">${label}</span>
+      <span class="rktrack"><i style="width:${Math.min(100, pts / max * 100).toFixed(1)}%;background:${col}"></i></span>
+      <span class="rkpts">${pts.toLocaleString()}</span>
+    </div>`;
+  const maxSpeed = Math.max(1, rank.waves.length * RANK.speedPerWave);
+  const maxDuel = Math.max(1, DUEL_WAVES.length * RANK.duelWin);
+
   $("#sheet").innerHTML = `<div class="end">
-    <h3 style="color:${iWon ? "#cda43a" : "#e0574d"}">${iWon ? "등록결정 — 승리" : "거절결정 — 패배"}</h3>
-    <p style="color:var(--muted);font-size:12.5px;margin:0 0 14px">${reasonText}</p>
-    <div class="kv" style="max-width:250px;margin:0 auto 16px;text-align:left">
+    <h3 style="color:${iWon ? "#cda43a" : "#e0574d"}">${iWon ? "심사 종료 — 성적표" : "거절결정 — 판 중단"}</h3>
+    <p style="color:var(--muted);font-size:12.5px;margin:0 0 12px">${reasonText}</p>
+
+    <div class="rankbox" style="--rc:${rank.gradeCol}">
+      <div class="rkgrade">${rank.grade}</div>
+      <div class="rktotal"><b>${rank.total.toLocaleString()}</b><i>점</i></div>
+      <div class="rksay">${rank.say}</div>
+    </div>
+    <div class="rankbars">
+      ${bar(`⚔️ 1:1 대전 <em>${s.duelRecord[0]}승 ${s.duelRecord[1]}무 ${s.duelRecord[2]}패</em>`, rank.duel, maxDuel, "#e0574d")}
+      ${bar(`🏗️ 덱 파워 <em>지수 ${Math.round(game.finalDeck || 0).toLocaleString()}</em>`, rank.deck, 4000, "#6fe0d0")}
+      ${bar(`⏱️ 클리어 속도 <em>${rank.waves.length}개 라운드</em>`, rank.speed, maxSpeed, "#cda43a")}
+      ${bar(`🏛️ 등록원부 <em>${Math.max(0, Math.round(game.hp))}/${game.maxHp}</em>`, rank.hp, Math.max(1, game.maxHp * RANK.hpMul), "#7fbf6a")}
+    </div>
+    ${rank.waves.length ? `<div class="rkwaves"><i>라운드별 클리어 (파 타임 대비)</i>
+      ${rank.waves.map((w) => `<span class="${w.pts >= RANK.speedPerWave ? "par" : ""}">
+        <b>R${w.wave}</b>${w.secs.toFixed(1)}초 <em>/ ${w.par.toFixed(0)}초</em> <u>${w.pts}</u></span>`).join("")}
+      </div>` : ""}
+
+    <div class="kv" style="max-width:280px;margin:14px auto 16px;text-align:left">
       <span>처치</span><b>${s.killed}</b><span>돌파 허용</span><b>${s.leaked}</b>
-      <span>최종 동선</span><b>${s.totalPath}칸 (제압 ${s.covered})</b>
-      <span>최종 제압률</span><b>${Math.round(s.cover * 100)}%</b>
-      <span>배치 심사관</span><b>${s.cats}명 (최고 Lv${s.maxLv || 1} · 승진 ${s.promoted}명)</b>
+      <span>배치 심사관</span><b>${s.cats}명 (최고 Lv${s.maxLv || 1})</b>
       <span>합성</span><b>${s.merged}회 (특수 ${s.crafted})</b>
       ${s.specials.length ? `<span>특수 냥타워</span><b>${[...new Set(s.specials)].map((k) => `${CATS[k].icon} ${CATS[k].name}`).join(" · ")}</b>` : ""}
-      ${DUEL_WAVES.length ? `<span>1:1 대전</span><b>${s.duelRecord[0]}승 ${s.duelRecord[1]}무 ${s.duelRecord[2]}패</b>` : ""}
+      ${lineSummaryHtml()}
       <span>방해 공작</span><b>${s.sabotage.length ? s.sabotage.map((k) => `${SABOTAGE[k].icon} ${SABOTAGE[k].short}`).join(" · ") : "없음"}</b>
       </div>
     <button class="go" id="again" style="padding:10px 26px">로비로</button></div>`;
@@ -6160,7 +6369,7 @@ function lineRowHtml(key, full) {
 function openPassiveModal() {
   const offer = game.passiveOffers();
   const lines = Object.keys(LINES).map((k) => lineRowHtml(k, false)).join("");
-  $("#sheet").innerHTML = `<h3>스테이지 ${game.wave} 클리어 — 강화 넷 중 하나를 고르세요</h3>
+  $("#sheet").innerHTML = `<h3>라운드 ${game.wave} 클리어 — 강화 넷 중 하나를 고르세요</h3>
     <div class="upnote">같은 <b>계열</b>을 모을수록 그 계열의 카드가 더 잘 나옵니다.
       <b>3점</b>과 <b>5점</b>에 닿으면 그 계열에만 있는 <b>특수효과</b>가 열립니다 —
       숫자가 오르는 게 아니라 <b>규칙이 하나 바뀝니다</b>.
@@ -6398,6 +6607,24 @@ function catFrameCanvas(key, row, frame) {
   const id = `${key}:${row}:${frame}`;
   const hit = catFrameCache.get(id);
   if (hit) return hit;
+
+  /* 전용 원화가 있으면 **그쪽을 먼저 쓴다** — 판 위·대전장·미니맵·컷인이 전부 이 함수를 거치므로,
+   * 여기서 갈라 놓지 않으면 같은 냥이 화면마다 다른 얼굴로 나온다. 특수(합성) 냥타워도 이제
+   * 재료 냥의 원화를 쓰므로(CAT_SHEET_SRC) 색보정으로 물들이던 시절과 달리 여기서 다 해결된다.
+   * 전용 시트는 4컷이라 공용 시트의 프레임 번호(0~5)가 넘칠 수 있어 마지막 칸으로 잘라 준다. */
+  if (sheetReady(key)) {
+    const im = sheetOf(key), cw = sheetCellW(key), ch = sheetCellH(key);
+    const cells = Math.max(1, Math.round(im.naturalWidth / cw));
+    const cv = document.createElement("canvas");
+    cv.width = 64; cv.height = 64;
+    const cg = cv.getContext("2d");
+    cg.imageSmoothingEnabled = true;
+    cg.imageSmoothingQuality = "high";
+    cg.drawImage(im, Math.min(frame, cells - 1) * cw, 0, cw, ch, 0, 0, 64, 64);
+    catFrameCache.set(id, cv);
+    return cv;
+  }
+
   if (!sprite.complete || !sprite.naturalWidth) return null;   // 아직 로딩 중 — 캐시하지 않는다
   const cv = document.createElement("canvas");
   cv.width = 64; cv.height = 64;
@@ -6468,16 +6695,14 @@ function drawOpponent(now) {
 
     // 대기 애니메이션 프레임까지 같이 맞춘다 (uid 대신 좌표로 위상을 흩뿌린다)
     const [row, fr] = frameOf({ key: p.k, uid: p.x * 31 + p.y * 7, atkEnd: 0 }, now || 0);
-    // 승진냥은 내 판과 같은 원화(선글라스 냥)로, 금빛 테두리까지 붙여 그린다
-    const spec = useSpecSheet(p.k, !!p.pr);
-    const img = (p.pr && promoReady()) || spec ? null : catFrameCanvas(p.k, row, fr);
-    if (p.pr && promoReady()) {
-      const sz = tile * 1.02;
-      g.drawImage(promoSprite, fr * PROMO_CELL, 0, PROMO_CELL, PROMO_CELL,
-                  cx - sz / 2, cy - sz / 2, sz, sz);
+    // 내 판과 같은 원화로 그린다. 최고 레벨(승진)도 원화는 그대로고 금빛 테두리로만 갈린다.
+    const spec = useSpecSheet(p.k);
+    const img = spec ? null : catFrameCanvas(p.k, row, fr);
+    if (p.pr) {
       g.strokeStyle = "#cda43a"; g.lineWidth = Math.max(1, cell * 0.06);
       g.strokeRect(cx - tile / 2, cy - tile / 2, tile, tile);
-    } else if (spec) {
+    }
+    if (spec) {
       // 전용 시트를 쓰는 냥 — 내 판과 같은 원화. 스냅샷에는 공격 시각이 없으니 평상시 자세(0번 칸)
       const sz = tile * 1.02;
       g.drawImage(sheetOf(p.k), 0, 0, sheetCellW(p.k), sheetCellH(p.k),
@@ -6534,9 +6759,11 @@ function drawOpponent(now) {
  *   연구단지 x 37.4 + 130.74k · y 124.1 + 118.73k   (1254×1254)
  *   우주기지 x 63.2 + 131.90k · y 114.5 + 112.80k   (1312×1199)
  */
+/* 세 전장이 판을 셋으로 나눈다. 한 판이 12라운드에서 **10라운드**로 줄면서 경계도 같이 당겼다 —
+ * 3/7 로 끊으면 대전 라운드(4·7·10) 직전마다 전장이 바뀌어, 「전장이 바뀌면 곧 대전」이 된다. */
 const STAGE_THEMES = [
-  { to: 5,        id: "idea_campus",      name: "아이디어 캠퍼스", img: "map/Idea_campus.png",      pad: [91, 23, 42, 20] },
-  { to: 10,       id: "research_complex", name: "연구 개발 단지",  img: "map/research_complex.png", pad: [90, 28, 45, 26] },
+  { to: 3,        id: "idea_campus",      name: "아이디어 캠퍼스", img: "map/Idea_campus.png",      pad: [91, 23, 42, 20] },
+  { to: 7,        id: "research_complex", name: "연구 개발 단지",  img: "map/research_complex.png", pad: [90, 28, 45, 26] },
   { to: Infinity, id: "space_base",       name: "우주 기술 기지",  img: "map/space_base.png",       pad: [87, 42, 54, 42] },
 ];
 const themeForStage = (n) => STAGE_THEMES.find((t) => n <= t.to) || STAGE_THEMES[STAGE_THEMES.length - 1];
@@ -6557,7 +6784,7 @@ function applyStageTheme() {
   a.dataset.stage = th.id;
   $("#mapName").textContent = th.name;
   fitArena(true);        // 원화마다 액자 두께가 달라 판 전체 크기가 바뀐다
-  if (!first) log(`<b>전장 변경</b> — 스테이지 ${stageNo()}부터는 <b>${th.name}</b>입니다.`);
+  if (!first) log(`<b>전장 변경</b> — 라운드 ${stageNo()}부터는 <b>${th.name}</b>입니다.`);
 }
 /** 원화가 장당 2MB 남짓이라, 전환하는 순간 빈 판이 보이지 않도록 미리 한 장씩 받아 둔다 */
 function preloadStageArt() {
@@ -6592,7 +6819,7 @@ function beginBattle() {
   preloadStageArt();
   $("#oppLabel").textContent = youAre === "p1" ? "OPPONENT (후)" : "OPPONENT (선)";
   log(soloMode
-    ? `<b>솔로 플레이</b> — 상대 없이 웨이브 ${BAL.waveCount}개를 혼자 막아냅니다.`
+    ? `<b>솔로 플레이</b> — 상대 없이 ${BAL.waveCount}라운드를 치르고 랭킹 점수를 받습니다.`
     : `<b>1v1 대전</b> — 상대와 같은 판·같은 웨이브를 동시에 치릅니다.`);
   log(`<b>${game.map.name}</b> 방위 개시 · ${game.map.desc}`);
   if (!soloMode) log(`<b>방해 공작</b>은 종류를 고르지 않습니다 — 특허료를 내고 <b>무작위로 하나를 뽑아</b> ` +

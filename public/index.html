@@ -27,7 +27,7 @@
 
   <div class="entry">
     <button id="btnSolo" class="go">솔로 플레이</button>
-    <div class="codehint">혼자서 12웨이브를 지켜냅니다 — 상대를 기다리지 않습니다</div>
+    <div class="codehint">혼자서 10라운드를 치르고 랭킹 점수를 받습니다 — 상대를 기다리지 않습니다</div>
     <div class="or">또는 1v1 대전</div>
     <button id="btnCreate" class="go alt">방 만들기</button>
     <div id="createdBox" class="hidden">
@@ -59,7 +59,8 @@
         <i>보유 현황 <b>ROSTER</b></i>
         <div id="promoteList"></div>
         <div class="prhint">합성은 두 갈래입니다 — <b>같은 종류·같은 레벨 3명</b>이면 레벨업(Lv2 공격력 ×1.85,
-          <b>Lv3 는 승진냥</b>: 선글라스·샷건에 반경 1.4칸 방사 피해 70%),
+          <b>Lv3</b> 는 공격력 ×3.42에 반경 1.4칸 방사 피해 70%가 붙습니다.
+          <b>원화는 1단계 그대로</b>이고 금빛 테두리와 <b>Lv 딱지</b>로만 갈립니다),
           <b style="color:#6fe0d0">다른 종류</b>를 처방대로 모으면 뽑기에 없는 <b style="color:#6fe0d0">특수 냥타워</b>가
           나옵니다. 특수 냥타워 다섯은 저마다 <b style="color:var(--gold)">쿨마다 저절로 터지는 고유 스킬</b>을
           하나씩 가지고, 터질 때 화면 아래에 캐릭터 컷인이 뜹니다.
@@ -126,26 +127,27 @@
        누를 것과 볼 것이 눈길 한 줄기 안에 들어오게 했다. -->
   <div>
     <div class="panel" id="ctlPanel">
-      <h2>웨이브 진행
+      <h2>라운드 진행
         <span class="h2right">
-          <em>WAVE</em>
+          <em>ROUND</em>
           <!-- 판을 접고 첫 화면으로 — 브라우저 뒤로가기는 탭 자체를 닫아버려서 나갈 길이 없었다.
                1v1 은 나가면 상대가 빈 판을 붙들고 있게 되므로 솔로에서만 보인다 (style.css) -->
           <button id="btnExit" type="button">나가기</button>
         </span></h2>
       <div class="pad">
         <div class="boardctl">
-          <button id="btnGo" class="go">웨이브 1 준비 완료</button>
+          <button id="btnGo" class="go">라운드 1 준비 완료</button>
           <button id="btnSpeed">속도 ×1</button>
         </div>
-        <!-- 웨이브는 양쪽이 모두 준비해야(또는 준비시간 15초가 끝나야) 동시에 시작된다 -->
+        <!-- 모든 라운드는 양쪽이 모두 준비해야(또는 준비시간 15초가 끝나야) 동시에 시작된다.
+             그래야 두 사람의 라운드 번호가 어긋나지 않고, 4·7·10 의 1:1 대전이 제때 맞물린다 -->
         <div id="readyBar">
           <div class="rdy off" id="rdyMe"><i>나</i><b>준비 중</b></div>
           <div class="rdymid">
             <span id="rdyTimer">상대를 기다리는 중</span>
             <span class="rdytrack"><i id="rdyFill"></i></span>
           </div>
-          <div class="rdy away" id="rdyOpp"><i>상대</i><b>웨이브 진행 중</b></div>
+          <div class="rdy away" id="rdyOpp"><i>상대</i><b>라운드 진행 중</b></div>
         </div>
       </div>
     </div>
@@ -156,7 +158,12 @@
         <div class="meStats">
           <div class="stat dmg"><b id="sHp">22</b><span>원부 내구</span></div>
           <div class="stat gold"><b id="sGold">85</b><span>특허료</span></div>
-          <div class="stat"><b id="sWave">0/12</b><span>웨이브</span></div>
+          <div class="stat"><b id="sWave">0/10</b><span>라운드</span></div>
+        </div>
+        <!-- 이 판의 성적. 10라운드가 끝나면 이 숫자가 곧 결과다 (rankScore) -->
+        <div class="stat score" id="scoreBox">
+          <b id="sScore">0</b><span>랭킹 점수 <i id="sGrade">D</i></span>
+          <div class="scorelegs" id="sScoreLegs"></div>
         </div>
         <!-- 스테이지 강화가 곧 내 덱이다. 1:1 대전장까지 그대로 실린다.
              상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다.
@@ -172,7 +179,7 @@
       <div class="pad">
         <div class="oppStats">
           <div class="stat dmg"><b id="oppHp">100</b><span>원부 내구</span></div>
-          <div class="stat"><b id="oppWave">0/12</b><span>웨이브</span></div>
+          <div class="stat"><b id="oppWave">0/10</b><span>라운드</span></div>
         </div>
         <canvas id="oppCv" width="280" height="280"></canvas>
       </div>
@@ -181,7 +188,7 @@
 </div>
 </div>
 
-<!-- ── 1:1 대전장 (스테이지 5·11) — 오토배틀러 ──
+<!-- ── 1:1 대전장 (라운드 4·7·10) — 오토배틀러 ──
      청사 판을 접어 두고 옆에서 본 한 줄짜리 전장으로 옮겨 온다. 왼쪽이 늘 내 진영,
      오른쪽이 상대 진영이다. 지금까지 만든 냥타워가 전부 진형을 짜고 저절로 진군하며,
      아래 줄에는 조작 대신 **양쪽 덱**이 나란히 놓인다 — 누를 것이 하나도 없다.

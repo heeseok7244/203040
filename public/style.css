@@ -1079,3 +1079,47 @@ body.dueling #tip{display:none!important}
 .passiveTags .linebar span{
   display:inline;background:none;border:0;border-radius:0;padding:0;white-space:normal}
 .passiveTags .linebar .ldots{display:flex;gap:3px}
+
+/* ══════════════════════════════════════════════════════════════════════
+   랭킹 점수 — 판이 도는 내내 보이는 성적, 그리고 끝났을 때의 성적표.
+   10라운드가 끝나면 이 숫자가 곧 결과이므로, 끝나고서야 처음 보게 두지 않는다.
+   ══════════════════════════════════════════════════════════════════════ */
+#mePanel .stat.score{display:block;margin-top:9px;padding:7px 10px;text-align:center}
+#mePanel .stat.score>b{display:block;font-family:var(--disp);font-size:26px;line-height:1.1;
+  color:var(--gold);letter-spacing:.04em}
+#mePanel .stat.score>span{display:block;font-size:9.5px;color:var(--muted);letter-spacing:.08em}
+#mePanel .stat.score>span i{font-style:normal;font-weight:700;font-family:var(--mono)}
+.scorelegs{display:flex;justify-content:center;gap:8px;margin-top:5px;flex-wrap:wrap}
+.scorelegs span{font-family:var(--mono);font-size:9.5px;color:var(--muted);white-space:nowrap}
+
+/* 성적표 — 등급 · 총점 · 항목별 막대 */
+.rankbox{--rc:#cda43a;
+  display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:2px 14px;
+  align-items:center;max-width:400px;margin:0 auto 12px;padding:12px 18px;
+  border:2px solid var(--rc);background:rgba(12,21,36,.6);text-align:left}
+.rkgrade{grid-row:1/3;font-family:var(--disp);font-size:54px;line-height:1;color:var(--rc);
+  text-shadow:0 0 22px color-mix(in srgb,var(--rc) 65%,transparent)}
+.rktotal b{font-family:var(--disp);font-size:32px;color:var(--txt);letter-spacing:.03em}
+.rktotal i{font-style:normal;font-size:12px;color:var(--muted);margin-left:4px}
+.rksay{font-size:11px;color:var(--muted)}
+
+.rankbars{max-width:400px;margin:0 auto;display:flex;flex-direction:column;gap:5px}
+.rkrow{display:grid;grid-template-columns:130px 1fr auto;gap:8px;align-items:center;font-size:11px}
+.rklbl{color:var(--txt);white-space:nowrap;text-align:left}
+.rklbl em{font-style:normal;color:var(--muted);font-size:9.5px;font-family:var(--mono)}
+.rktrack{height:8px;background:rgba(105,182,214,.12);border:1px solid rgba(139,162,186,.3);
+  overflow:hidden}
+.rktrack i{display:block;height:100%}
+.rkpts{font-family:var(--mono);font-size:11px;color:var(--txt);min-width:48px;text-align:right}
+
+/* 라운드별 클리어 시간 — par 이내로 끝낸 라운드는 초록으로 표시한다 */
+.rkwaves{max-width:400px;margin:10px auto 0;text-align:left}
+.rkwaves>i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;
+  color:var(--muted);letter-spacing:.08em;margin-bottom:4px}
+.rkwaves span{display:inline-flex;align-items:baseline;gap:4px;font-size:10px;color:var(--muted);
+  border:1px solid rgba(139,162,186,.3);padding:2px 6px;margin:0 4px 4px 0}
+.rkwaves span b{color:var(--txt);font-family:var(--mono);font-size:10px}
+.rkwaves span em{font-style:normal;opacity:.6}
+.rkwaves span u{text-decoration:none;font-family:var(--mono);color:var(--gold)}
+.rkwaves span.par{border-color:rgba(127,191,106,.55);background:rgba(127,191,106,.1)}
+.rkwaves span.par u{color:var(--ok)}
