@@ -139,11 +139,13 @@ const CATS = {
     icon: "💼",
   },
 
-  /* ══ 특수 냥타워 ══
+  /* ══ 특수 냥타워 ══ **지금은 판에 나오지 않는다** ══
    * 뽑기로는 절대 나오지 않는다(weight 0). **다른 종류끼리 합성**해야만 얻을 수 있고,
    * 같은 종류를 셋 모아 레벨을 올리는 것과 달리 **없던 규칙**을 하나씩 들고 온다 —
    * 연쇄·정지·즉사·징수처럼 숫자만 커지는 게 아니라 판이 달리 돌아가게 만드는 것들이다.
-   * 처방은 아래 RECIPES 에 모여 있다. */
+   *
+   * 이 다섯을 얻는 길(이종 합성 처방)은 잠가 두었다 — 아래 RECIPES 의 메모 참고. 정의는
+   * **그대로 남긴다**: 지우면 되살릴 때 스탯·고유 스킬·원화 배정까지 다시 짜야 한다. */
   panel: {
     name: "심판합의체냥", row: 2, arow: 3, kind: "atk", special: true, weight: 0,
     dmg: 14, rate: 1.3, range: 250, targets: 6, pierce: 20, tag: "합의심결", cost: 330,
@@ -200,21 +202,32 @@ const catDrawChance = (key) => (CATS[key].weight || 0) / CAT_WEIGHT_TOTAL;
 /**
  * 합성 처방(RECIPES) — **다른 종류끼리** 합쳐 특수 냥타워를 만든다.
  *
- * 같은 종류 셋을 모으는 레벨업이 「같은 것을 더 세게」라면, 이쪽은 「없던 것을 만든다」이다.
- * 재료는 전부 **Lv1** 이어야 한다 — 애써 올려 둔 Lv2·Lv3 이 처방에 빨려 들어가면
- * 합성 단추를 누르는 일이 도박이 되어 버린다. 재료가 서로 다른 종류라는 것도 규칙이다.
+ * ── 지금은 비어 있다 (이종 합성 잠금) ──
+ * **합성이 너무 어려웠다.** 같은 종류 셋을 모으는 레벨업과 이종 합성 처방 다섯이 같은 재료
+ * 풀(Lv1 냥타워)을 놓고 다투는 구조라, 뽑은 냥을 레벨업에 쓸지 처방에 남길지부터 갈렸고
+ * 처방 쪽은 「무엇을 남기고 무엇을 태울지」를 매 뽑기마다 따져야 했다. 배우는 비용이
+ * 재미보다 커진 자리라, **같은 타워 강화(레벨업)만 남기고 이종 합성은 통째로 잠갔다.**
  *
- * 처방은 재료 수가 많을수록(그리고 비싼 종류를 쓸수록) 센 것이 나오도록 잡았고,
- * 어느 재료도 두 처방에서 같은 자리를 차지하지 않게 흩어 놓아, 무엇을 남기고 무엇을 태울지가
- * 매번 판단거리가 되도록 했다.
+ * 잠그는 방식은 **이 배열을 비우는 것 하나**다 — recipeOffers 가 이 배열을 훑어 만드므로,
+ * 비어 있으면 처방 목록도 빈 채로 나오고 합성 단추도 뜨지 않는다. 아래 다섯 줄의 주석을
+ * 되살리면 그대로 예전처럼 돌아온다 (계산·UI 코드는 건드리지 않고 그대로 두었다).
+ *
+ * 특수 냥타워 다섯(⚖️🔗⏱️💰☠️)은 처방으로만 얻는 것이라, 잠긴 동안에는 판에 나오지 않는다.
+ * 정의(CATS)와 고유 스킬(CAT_SKILLS)은 그대로 남겨 둔다 — 되살릴 때 같이 돌아와야 한다.
+ *
+ * (예전 메모) 재료는 전부 Lv1 이어야 했다 — 애써 올려 둔 Lv2·Lv3 이 처방에 빨려 들어가면
+ * 합성 단추를 누르는 일이 도박이 되어 버리기 때문이다. 처방은 재료 수가 많을수록(그리고
+ * 비싼 종류를 쓸수록) 센 것이 나오도록 잡았고, 어느 재료도 두 처방에서 같은 자리를 차지하지
+ * 않게 흩어 놓았다.
  * @type {{key:string, need:string[]}[]}
  */
 const RECIPES = [
-  { key: "panel",    need: ["spec", "claim", "pct"] },     // 출원 + 특허범위 + 국제출원
-  { key: "invalid",  need: ["pct", "agent"] },             // 국제출원 + 변리사
-  { key: "citation", need: ["claim", "delay"] },           // 특허범위 + 보정명령
-  { key: "rush",     need: ["fast", "delay"] },            // 우선심사 + 보정명령
-  { key: "fee",      need: ["spec", "agent"] },            // 출원 + 변리사
+  // ── 이종 합성 잠금 — 되살리려면 아래 다섯 줄의 주석만 풀면 된다 ──
+  // { key: "panel",    need: ["spec", "claim", "pct"] },     // 출원 + 특허범위 + 국제출원
+  // { key: "invalid",  need: ["pct", "agent"] },             // 국제출원 + 변리사
+  // { key: "citation", need: ["claim", "delay"] },           // 특허범위 + 보정명령
+  // { key: "rush",     need: ["fast", "delay"] },            // 우선심사 + 보정명령
+  // { key: "fee",      need: ["spec", "agent"] },            // 출원 + 변리사
 ];
 
 /*
@@ -491,40 +504,46 @@ const WAVES = [
  * 냥타워는 내가 고르고 상대를 흔드는 쪽이 운에 맡겨지므로, 「내 판은 내가 짓고 상대 판은
  * 던져 본다」로 성격이 갈린다. 뽑기는 한 웨이브 주기(준비 + 그 웨이브)에 BAL.sabotageDraws 번.
  *
- * when   "live" 상대 판에서 곧바로 흐르기 시작한다 (상대가 준비 단계면 다음 웨이브 개시와 함께)
- *        "next" 상대의 다음 웨이브 구성 자체를 바꾼다 (이미 웨이브 중이면 그 다음 웨이브)
- * kind   haste 이동속도 · fog 사거리 · tough 체력 · swarm 물량 · elite 정예 추가 투입
- * weight 뽑기 가중치. 판을 크게 흔드는 것일수록 낮게 잡았다
+ * ── 왜 셋인가 ──
+ * 예전에는 다섯이었다 (기름 +이동속도 · 연막 −사거리 · 보강 +체력 · 물량 +30% · 정예 +6).
+ * 다섯 다 **숫자를 몇 % 흔드는** 것이라 맞은 쪽이 「뭔가 불리해졌다」만 알고 **무엇을 맞았는지**
+ * 가려내지 못했다 — 판 아래 붉은 딱지를 읽지 않으면 그냥 판이 어려워진 것으로만 보였다.
+ * 그래서 **한눈에 무슨 일이 벌어졌는지 보이는 셋만** 남겼다.
+ *   💸 돈뺏기    잔고 숫자가 그 자리에서 깎인다 (그리고 던진 쪽으로 넘어간다)
+ *   📨 몹보내기  없던 침입자가 실제로 쏟아져 들어온다
+ *   ⛔ 타워정지  쏘던 냥타워가 통째로 멈춘다
+ * 거기에 맞은 쪽 판 위로 **흐릿한 고양이**가 나타나 훼방을 놓는다 (web/main.js 의 ghostCats) —
+ * 숫자를 읽지 않고도 「상대가 내 판을 건드렸다」가 눈에 보이도록 한 장치다.
+ *
+ * when   "live" 상대 판에 그 자리에서 꽂힌다 · "next" 상대의 다음 웨이브 구성을 바꾼다
+ *        (몹보내기는 상대가 전투 중이면 live, 준비 중이면 저절로 next 로 떨어진다)
+ * kind   steal 특허료 강탈 · swarm 침입자 추가 투입 · freeze 냥타워 정지
+ * amount steal 빼앗는 특허료 · swarm 밀어 넣는 마리 수 · freeze 쓰이지 않는다
+ * dur    효과가 흐르는 시간(초). freeze 만 쓴다
+ * weight 뽑기 가중치. 셋을 합치면 100 이라 그대로 퍼센트로 읽힌다
  * @type {Record<string,{key:string,name:string,short:string,icon:string,cost:number,weight:number,
  *   when:"live"|"next",kind:string,tag:string,amount:number,dur?:number,desc:string}>}
  */
 const SABOTAGE = {
-  grease: {
-    key: "grease", name: "심사 지연 기름", short: "기름", icon: "🛢️", cost: 110, weight: 26,
-    when: "live", kind: "haste", amount: 0.45, dur: 10, tag: "실시간 · 이동속도",
-    desc: "상대 청사 복도에 기름을 붓는다. 상대 판의 모든 침입자가 10초 동안 45% 빨라진다. " +
-      "상대가 준비 단계면 다음 웨이브가 시작되는 순간부터 흐른다.",
-  },
-  fog: {
-    key: "fog", name: "심사 방해 연막", short: "연막", icon: "🌫️", cost: 100, weight: 26,
-    when: "live", kind: "fog", amount: 0.25, dur: 12, tag: "실시간 · 사거리",
-    desc: "서류를 잔뜩 밀어 넣어 시야를 흐린다. 상대 냥타워의 사거리가 12초 동안 25% 줄어든다. " +
-      "사거리로 버티는 배치일수록 크게 흔들린다.",
-  },
-  tough: {
-    key: "tough", name: "무효자료 보강", short: "보강", icon: "💊", cost: 130, weight: 20,
-    when: "next", kind: "tough", amount: 0.40, tag: "다음 웨이브 · 체력",
-    desc: "상대를 치러 가는 침입자들에게 자료를 쥐여 준다. 상대의 다음 웨이브 침입자 체력이 40% 늘어난다.",
+  steal: {
+    key: "steal", name: "특허료 가압류", short: "돈뺏기", icon: "💸", cost: 110, weight: 36,
+    when: "live", kind: "steal", amount: 140, tag: "즉시 · 특허료 강탈",
+    desc: "상대 계좌에 가압류를 걸어 특허료 140을 그대로 빼앗는다 — 빼앗은 돈은 내 잔고로 들어온다. " +
+      "뽑기 값(정액)보다 많이 들어오므로, 이게 나오면 돈을 벌면서 상대의 다음 임용을 늦춘다. " +
+      "상대 잔고가 모자라면 빚으로 남는다.",
   },
   swarm: {
-    key: "swarm", name: "이의신청 대량제출", short: "물량", icon: "📨", cost: 120, weight: 20,
-    when: "next", kind: "swarm", amount: 0.30, tag: "다음 웨이브 · 물량",
-    desc: "이의신청서를 무더기로 넣는다. 상대의 다음 웨이브 침입자 수가 30% 늘어난다 (보스는 늘지 않는다).",
+    key: "swarm", name: "이의신청 대량제출", short: "몹보내기", icon: "📨", cost: 120, weight: 36,
+    when: "live", kind: "swarm", amount: 8, tag: "즉시 · 침입자 8마리",
+    desc: "이의신청서를 무더기로 넣어 침입자 8마리를 상대 판에 밀어 넣는다. " +
+      "상대가 전투 중이면 그 자리에서 곧바로 줄 뒤에 붙어 쏟아지고, 준비 중이면 다음 웨이브에 끼어 들어간다.",
   },
-  elite: {
-    key: "elite", name: "전문가 증인 투입", short: "정예", icon: "⚖️", cost: 150, weight: 8,
-    when: "next", kind: "elite", amount: 6, tag: "다음 웨이브 · 정예",
-    desc: "무효심판 청구인 6명을 상대 쪽 웨이브에 끼워 넣는다. 단단한 정예가 줄 사이에 섞여 들어간다.",
+  freeze: {
+    key: "freeze", name: "심사 중지 명령", short: "타워정지", icon: "⛔", cost: 150, weight: 28,
+    when: "live", kind: "freeze", amount: 0, dur: 5, tag: "실시간 · 타워 5초 정지",
+    desc: "심사 중지 명령을 꽂아 상대 냥타워 전부를 5초 동안 멈춰 세운다 — 사격도 고유 스킬도 나가지 않는다. " +
+      "침입자는 그동안에도 계속 걸어오므로, 한창 몰릴 때 꽂히면 한 줄이 그대로 통과한다. " +
+      "상대가 준비 단계면 다음 웨이브 첫 5초를 통째로 먹는다.",
   },
 };
 
@@ -787,10 +806,12 @@ const BAL = {
   promoteSplash: 0.7,        // 방사 피해 비율 (직격 피해의 70%)
 
   /* ── 방해 공작 뽑기 ──
-   * 무엇이 나갈지 고르지 않는다. 정액을 내고 다섯 중 하나를 무작위로 뽑아 상대 판에 던진다.
-   * sabotageCost 는 다섯 공작의 가중 평균가(약 117)와 거의 같게 잡아, 뽑기 자체로는 손해도
-   * 이득도 아니게 했다. sabotageDraws 는 한 웨이브 주기(준비 + 그 웨이브)에 뽑을 수 있는 횟수. */
-  sabotageCost: 115,
+   * 무엇이 나갈지 고르지 않는다. 정액을 내고 **셋 중 하나**를 무작위로 뽑아 상대 판에 던진다.
+   * sabotageCost 는 세 공작의 가중 평균가(110×36% + 120×36% + 150×28% ≈ 125)와 같게 잡아,
+   * 뽑기 자체로는 손해도 이득도 아니게 했다 — 돈뺏기(140 강탈)가 나오면 값을 치르고도 남고,
+   * 타워정지(값 150)가 나오면 그만큼 싸게 산 셈이 된다.
+   * sabotageDraws 는 한 웨이브 주기(준비 + 그 웨이브)에 뽑을 수 있는 횟수. */
+  sabotageCost: 125,
   sabotageDraws: 2,
 
   /* ── 합성 ──
@@ -1699,11 +1720,14 @@ function step(g, dt, now) {
   // 「우선권 주장」 증강 — 웨이브 개시 직후 잠깐 동안 전체 공속 2배
   const burst = (g.augSet && g.augSet.has("burst") && g.waveTime < BAL.burstSecs) ? 2 : 1;
 
-  // 상대가 건 방해 공작 — 전투가 흐르는 동안에만 닳는다.
-  // (준비 단계에서 맞았다면 다음 웨이브가 시작되는 순간부터 흐르기 시작한다는 뜻이다.)
+  /* 상대가 건 방해 공작 — 전투가 흐르는 동안에만 닳는다.
+   * (준비 단계에서 맞았다면 다음 웨이브가 시작되는 순간부터 흐르기 시작한다는 뜻이다.)
+   *
+   * 「심사 중지 명령」에 걸린 동안에는 **사격도 고유 스킬도 나가지 않는다.** 침입자는 그대로
+   * 걸어오고 이미 날아간 탄환도 그대로 날아간다 — 멈추는 것은 쏘는 쪽뿐이다. */
   const fx = g.fx;
-  if (fx.hasteT > 0) fx.hasteT = Math.max(0, fx.hasteT - dt);
-  if (fx.fogT > 0) fx.fogT = Math.max(0, fx.fogT - dt);
+  if (fx.freezeT > 0) fx.freezeT = Math.max(0, fx.freezeT - dt);
+  const frozen = fx.freezeT > 0;
   const hasteMul = g.enemySpeedMul;
   const rangeMul = g.catRangeMul;
 
@@ -1711,8 +1735,10 @@ function step(g, dt, now) {
   if (g.feeT > 0) { g.feeT -= dt; if (g.feeT <= 0) { g.feeT = 0; g.feeMul = 1; } }
 
   /* ── 고유 스킬 ── 사격보다 먼저 본다.
-   * 사격 재장전과 별개의 시계라, 평소 쏘느라 바쁜 냥도 쿨이 차면 그 자리에서 터뜨린다. */
-  for (const c of cats(g)) {
+   * 사격 재장전과 별개의 시계라, 평소 쏘느라 바쁜 냥도 쿨이 차면 그 자리에서 터뜨린다.
+   * 「심사 중지 명령」에 멈춰 있는 동안에는 쿨도 돌지 않는다 — 풀리는 순간 쌓였던 스킬이
+   * 한꺼번에 터지면 정지시킨 쪽이 오히려 손해가 되기 때문이다. */
+  if (!frozen) for (const c of cats(g)) {
     const sk = c.st && c.st.skill;
     if (!sk || !c.st.atk) continue;          // 쏘지 못하는 냥은 스킬도 못 쓴다 (대전장과 같은 규칙)
     if (c.skCd == null) c.skCd = sk.cd;      // 판에 서자마자 터지지 않도록 한 번은 채워 두고 시작한다
@@ -1731,15 +1757,15 @@ function step(g, dt, now) {
     fireSkill(g, c, sk, sk.n ? list.slice(0, sk.n) : list, sx, sy, reach);
   }
 
-  // ── 사격 ──
-  for (const c of cats(g)) {
+  // ── 사격 ── (「심사 중지 명령」에 멈춰 있으면 한 발도 나가지 않는다)
+  if (!frozen) for (const c of cats(g)) {
     // 실제로 사격하는가는 st.atk 가 정한다 — 「변리사 개업」을 고르면 보좌형도 여기에 들어온다
     if (!c.st || !c.st.atk) continue;
     c.cd = (c.cd || 0) - dt;
     if (c.cd > 0) continue;
 
     const [cx, cy] = pieceCenter(c);
-    const reach = c.st.range * rangeMul;      // 「심사 방해 연막」을 맞으면 사거리가 줄어든다
+    const reach = c.st.range * rangeMul;      // 사거리를 흔드는 공작이 되살아나면 여기에 실린다
     const inRange = [];
     for (const e of g.enemies) {
       if (e.dead) continue;
@@ -1867,7 +1893,7 @@ function step(g, dt, now) {
   while (g.spawnQueue.length && g.spawnQueue[0].at <= g.waveTime) {
     const q = g.spawnQueue.shift();
     const d = ENEMIES[q.t];
-    // 「무효자료 보강」을 맞은 웨이브는 여기서 체력이 통째로 부풀려진다
+    // waveFx.hp 는 침입자 체력을 통째로 부풀리는 자리다 (지금 그걸 거는 공작은 없어 늘 1이다)
     const scale = (1 + BAL.hpPerWave * (g.wave - 1)) * g.waveFx.hp;
     const lane = g.lanes[q.lane] || g.lanes[0];
     g.enemies.push({
@@ -2563,12 +2589,14 @@ class Game {
      * sabDrawn 이번 웨이브 주기(준비 + 그 웨이브)에 이미 뽑은 횟수 — 라운드가 끝나면 0으로 돌아간다
      * sabSent  내가 상대에게 던진 공작 로그 (표시용)
      * fx       상대가 나에게 건 실시간 공작. 전투가 흐르는 동안에만 닳는다
-     * waveMods 다음 웨이브 구성을 바꾸는 예약분 — 웨이브를 개시하는 순간 waveFx 로 옮겨간다
+     *          (지금은 freezeT — 「심사 중지 명령」의 남은 정지 시간 — 하나뿐이다)
+     * waveMods 다음 웨이브 구성을 바꾸는 예약분 — 웨이브를 개시하는 순간 꺼내 쓴다.
+     *          extra 는 「이의신청 대량제출」을 **준비 단계에** 맞았을 때 밀려드는 추가 마리 수다
      * waveFx   지금 굴러가는 웨이브에 실제로 적용된 값 */
     this.sabDrawn = 0;
     this.sabSent = [];
-    this.fx = { hasteT: 0, hasteMul: 1, fogT: 0, fogMul: 1 };
-    this.waveMods = { hp: 1, count: 1, elite: 0 };
+    this.fx = { freezeT: 0 };
+    this.waveMods = { extra: 0 };
     this.waveFx = { hp: 1 };
 
     this.enemies = []; this.shots = []; this.spawnQueue = [];
@@ -2608,10 +2636,15 @@ class Game {
     }
   }
 
-  /** 상대의 「기름」이 흐르는 동안 침입자가 그만큼 빨라진다 */
-  get enemySpeedMul() { return this.fx.hasteT > 0 ? this.fx.hasteMul : 1; }
-  /** 상대의 「연막」이 흐르는 동안 냥타워 사거리가 그만큼 줄어든다 */
-  get catRangeMul() { return this.fx.fogT > 0 ? this.fx.fogMul : 1; }
+  /* 예전에는 여기에 enemySpeedMul(「기름」)·catRangeMul(「연막」)이 있었다. 방해 공작을 셋으로
+   * 줄이면서 둘 다 빠졌지만, **배율을 읽는 자리(combat.js 의 step, 사거리 원 그리기)는 그대로
+   * 두고** 여기서 1을 돌려준다 — 나중에 비슷한 공작을 되살릴 때 그 자리를 다시 찾지 않아도 된다. */
+  /** 침입자 이동속도 배율 (지금은 흔드는 공작이 없다) */
+  get enemySpeedMul() { return 1; }
+  /** 냥타워 사거리 배율 (지금은 흔드는 공작이 없다) */
+  get catRangeMul() { return 1; }
+  /** 상대의 「심사 중지 명령」이 흐르는 동안 내 냥타워가 통째로 멈춘다 */
+  get catsFrozen() { return this.fx.freezeT > 0; }
 
   /** 스탯 · 제압률을 다시 계산. 심사관을 놓거나 옮길 때마다 부른다. 동선(this.lanes)은 건드리지 않는다. */
   recompute() {
@@ -2958,9 +2991,15 @@ class Game {
     const cost = this.sabotageCost();
     const d = SABOTAGE[key];
     this.gold -= cost;
+    /* 💸 돈뺏기 — **빼앗은 돈은 여기서 내 잔고로 들어온다.** 상대 쪽에서 깎이는 것은
+     * receiveSabotage 가 하고, 받는 것은 던진 쪽에서 바로 처리한다. 상대의 잔고를 기다려
+     * 되받는 식(왕복 두 번)으로 만들면 상대가 끊겼을 때 돈이 사라져 버린다 —
+     * 뽑은 결과가 곧 강탈액이므로 여기서 더하는 편이 한쪽이 끊겨도 어긋나지 않는다. */
+    const gain = d.kind === "steal" ? d.amount : 0;
+    if (gain) this.gold += gain;
     this.sabDrawn++;
     this.sabSent.push(key);
-    this.events.push({ t: "sabotage", key, name: d.name, icon: d.icon, cost,
+    this.events.push({ t: "sabotage", key, name: d.name, icon: d.icon, cost, gain,
                        tag: d.tag, desc: d.desc, left: this.sabotageLeft });
     return key;
   }
@@ -2968,21 +3007,62 @@ class Game {
   /**
    * 상대가 나에게 건 공작을 내 판에 실제로 적용한다.
    *
-   * 실시간(live)형은 전투가 흐르는 동안에만 닳으므로, 준비 단계에서 맞으면 고스란히 다음
-   * 웨이브 첫머리에 얹힌다. 다음 웨이브(next)형은 예약해 두었다가 startWave 가 꺼내 쓴다.
+   * 셋 다 **그 자리에서 눈에 보이는 일**이 벌어진다 (숫자가 몇 % 흔들리는 것이 아니다).
+   *   💸 steal  잔고가 그 자리에서 깎인다 — 준비든 전투든 상관없다
+   *   📨 swarm  전투 중이면 침입자가 그 자리에서 줄 뒤에 붙어 쏟아지고,
+   *             준비 중이면 다음 웨이브에 끼어 들어간다 (waveMods.extra 로 예약)
+   *   ⛔ freeze 냥타워가 멈춘다. 전투가 흐르는 동안에만 닳으므로, 준비 단계에서 맞으면
+   *             고스란히 다음 웨이브 첫머리 5초를 먹는다
    * @param {string} key
    */
   receiveSabotage(key) {
     const d = SABOTAGE[key];
     if (!d) return false;
-    if (d.kind === "haste") { this.fx.hasteMul = 1 + d.amount; this.fx.hasteT = Math.max(this.fx.hasteT, d.dur); }
-    if (d.kind === "fog")   { this.fx.fogMul = Math.max(0.3, 1 - d.amount); this.fx.fogT = Math.max(this.fx.fogT, d.dur); }
-    if (d.kind === "tough") this.waveMods.hp *= 1 + d.amount;
-    if (d.kind === "swarm") this.waveMods.count *= 1 + d.amount;
-    if (d.kind === "elite") this.waveMods.elite += d.amount;
+    // 돈뺏기 — 잔고가 모자라도 그대로 가져간다. 마이너스는 빚으로 남는다 (특허괴물 합의금과 같은 규칙)
+    if (d.kind === "steal") this.gold -= d.amount;
+    if (d.kind === "freeze") this.fx.freezeT = Math.max(this.fx.freezeT, d.dur || 5);
+    // 몹보내기 — 지금 싸우는 중이면 바로 밀어 넣고(now), 아니면 다음 웨이브로 예약한다
+    let now = false;
+    if (d.kind === "swarm") {
+      now = this.phase === "wave" && this.lanes.length > 0;
+      if (now) this.injectEnemies(d.amount);
+      else this.waveMods.extra += d.amount;
+    }
     this.recompute();
-    this.events.push({ t: "sabotaged", key, name: d.name, icon: d.icon, when: d.when, desc: d.desc });
+    this.events.push({ t: "sabotaged", key, name: d.name, icon: d.icon, when: d.when, desc: d.desc,
+                       kind: d.kind, amount: d.amount, dur: d.dur || 0, now, gold: Math.round(this.gold) });
     return true;
+  }
+
+  /**
+   * 침입자 n마리를 **지금 굴러가는 웨이브에** 밀어 넣는다 (「이의신청 대량제출」 전용).
+   *
+   * 두 가지를 꼭 지켜야 한다.
+   *  1. 소환 대기열(spawnQueue)은 at(소환 시각) 오름차순이고 step() 은 **맨 앞 하나만** 본다.
+   *     그래서 끼워 넣은 뒤 반드시 다시 정렬한다 — 그러지 않으면 뒤에 붙은 몹이 앞의 큰 at 에
+   *     막혀 영원히 나오지 않고, 그대로 웨이브가 끝나지 않는 채로 멈춘다.
+   *  2. 난수는 waveRng(시드 공유)가 아니라 Math.random 을 쓴다. 공작은 한쪽만 맞는 것이라
+   *     waveRng 를 당겨 쓰면 그 뒤의 웨이브 구성이 상대와 어긋난다.
+   *
+   * par(속도 점수의 잣대)도 밀어 넣은 만큼 늘린다 — 남이 쏟아 놓은 물량 때문에 맞은 쪽이
+   * 랭킹 점수를 잃으면 안 된다.
+   * @param {number} n 밀어 넣을 마리 수
+   * @returns {number} 실제로 밀어 넣은 마리 수
+   */
+  injectEnemies(n) {
+    const nLanes = this.lanes.length;
+    if (!nLanes || n <= 0) return 0;
+    // 보스는 끼워 넣지 않는다 — 특허괴물은 마지막 전투 라운드의 사건이라 공작으로 불러올 것이 아니다
+    const kinds = ["copy", "copy", "fast", "tank"];
+    let at = this.waveTime;
+    for (let i = 0; i < n; i++) {
+      at += BAL.spawnGap;
+      this.spawnQueue.push({ t: kinds[Math.floor(Math.random() * kinds.length)],
+                             at, lane: Math.floor(Math.random() * nLanes) });
+    }
+    this.spawnQueue.sort((a, b) => a.at - b.at);
+    this.wavePar += n * BAL.spawnGap;
+    return n;
   }
 
   /** 부속 구역을 개방한다. 고정 구조물이 빈 칸이 된다. */
@@ -3075,18 +3155,28 @@ class Game {
 
     // 상대가 걸어 둔 다음 웨이브 공작을 여기서 꺼내 쓰고 예약분은 비운다
     const mods = this.waveMods;
-    this.waveMods = { hp: 1, count: 1, elite: 0 };
-    this.waveFx = { hp: mods.hp };
+    this.waveMods = { extra: 0 };
+    this.waveFx = { hp: 1 };
 
     const def = WAVES[this.wave - 1];
-    const scale = (this.bal.waveScale ?? 1) * mods.count;   // 「이의신청 대량제출」이 물량을 부풀린다
+    const scale = this.bal.waveScale ?? 1;
     let list = [];
     for (const k in def) {
       const n = k === "boss" ? def[k] : Math.max(1, Math.round(def[k] * scale));
       for (let i = 0; i < n; i++) list.push(k);
     }
-    for (let i = 0; i < mods.elite; i++) list.push("tank");   // 「전문가 증인 투입」
+    /* 기본 구성은 **여기서 먼저** 섞는다. waveRng 는 상대와 시드를 공유하는 한 줄기라,
+     * 공작으로 늘어난 마리까지 같이 섞으면 뽑는 횟수가 달라져 그 뒤의 웨이브 구성이 상대와
+     * 어긋난다 (shuffle 은 길이−1 번 난수를 당긴다). 그래서 **섞는 것은 기본 구성까지**다. */
     list = this.waveRng.shuffle(list);
+
+    /* 「이의신청 대량제출」을 **준비 단계에** 맞은 만큼 줄 사이에 끼워 넣는다.
+     * 난수는 waveRng 가 아니라 Math.random 이다 — 같은 이유로 공유 시드를 건드리지 않는다. */
+    const extraKinds = ["copy", "copy", "fast", "tank"];
+    for (let i = 0; i < (mods.extra || 0); i++) {
+      const t = extraKinds[Math.floor(Math.random() * extraKinds.length)];
+      list.splice(Math.floor(Math.random() * (list.length + 1)), 0, t);
+    }
     list.sort((a, b) => (a === "boss" ? 1 : 0) - (b === "boss" ? 1 : 0));
 
     // 진입구가 여럿이면 돌아가며 분배한다
@@ -3107,7 +3197,7 @@ class Game {
     this.events.push({
       t: "wave_start", wave: this.wave, count: list.length, par: this.wavePar,
       cover: this.cover, path: this.totalPath, covered: this.coveredPath, gates: nLanes,
-      hpMod: mods.hp, countMod: mods.count, elite: mods.elite,
+      extra: mods.extra || 0,
     });
     return true;
   }
@@ -3166,8 +3256,8 @@ class Game {
    */
   closeRound(isDuel) {
     this.phase = "prep";
-    // 상대가 걸어 둔 실시간 공작(기름·연막)은 웨이브와 함께 끝난다 — 준비 단계까지 끌고 가지 않는다
-    this.fx.hasteT = 0; this.fx.fogT = 0;
+    // 상대가 걸어 둔 실시간 공작(타워 정지)은 웨이브와 함께 끝난다 — 준비 단계까지 끌고 가지 않는다
+    this.fx.freezeT = 0;
     // 방해 공작 뽑기는 웨이브 주기마다 다시 찬다
     this.sabDrawn = 0;
     // 이번 웨이브에서 날아가던 미사일이 남아있으면 웨이브가 끝나도 화면에 얼어붙은 채 남는 잔상 버그가
@@ -4003,7 +4093,9 @@ function draw(now) {
   // 시신은 살아 있는 침입자 아래에 깔린다 — 뒤따라오는 쥐가 시신에 가려지지 않도록
   safe("침입자 그리기", () => { drawCorpses(g); drawEnemies(g, now); });
   safe("탄환 그리기", () => { for (const s of game.shots) drawMissile(g, s); });
-  safe("연출 그리기", () => { drawCrumbs(g); drawSparks(g); drawSkillRings(g); drawFloaters(g); });
+  // 유령냥(상대 공작)은 냥타워·침입자 **위에** 얹힌다 — 판을 휘젓는 것이라 뒤에 숨으면 뜻이 없다
+  safe("연출 그리기", () => { drawCrumbs(g); drawSparks(g); drawSkillRings(g);
+                              drawGhostCats(g, now); drawFloaters(g); });
   g.restore(); // 화면 흔들림 여기까지 — 이 아래는 화면에 고정된 UI라 흔들리지 않는다
 }
 
@@ -4039,14 +4131,36 @@ function specFrame(cat, now) {
 
 /** 냥타워 — 사거리 원과, 각 조각이 들고 있는 64×64 캔버스의 스프라이트 */
 function drawCats(g, now) {
+  /* 상대의 「심사 중지 명령」에 멈춰 있는가. 멈춘 동안에는 사거리 원이 **회색으로 꺼지고**
+   * 터 위에 ⛔ 가 얹힌다 — 한 발도 안 나가는데 평소와 똑같이 보이면 버그로 읽힌다.
+   *
+   * **전투 중에만** 이렇게 그린다. 정지 시간은 전투가 흐르는 동안에만 닳으므로 준비 단계에서
+   * 맞으면 freezeT 가 그대로 남아 있는데, 그때까지 판을 회색으로 덮으면 냥타워를 어디에 놓을지
+   * 보려는 참에 사거리 원이 전부 꺼져 배치를 읽을 수 없게 된다.
+   * (준비 단계에 걸려 있다는 사실은 판 아래 #fxTags 가 문구를 갈라서 알린다.) */
+  const frozen = game.catsFrozen && game.phase === "wave";
   for (const c of B.cats(game)) {
     if (!c.st) continue;
     if (c.st.atk) {   // 「변리사 개업」을 고르면 보좌형에게도 사거리 원이 생긴다
       const [cx, cy] = B.pieceCenter(c);
-      // 상대의 「심사 방해 연막」이 걸려 있으면 실제로 줄어든 사거리를 그대로 그린다
       g.beginPath(); g.arc(cx, cy, c.st.range * game.catRangeMul, 0, 7);
-      g.fillStyle = c.st.golden ? "rgba(205,164,58,.12)" : "rgba(105,182,214,.07)"; g.fill();
-      g.strokeStyle = c.st.golden ? "rgba(205,164,58,.6)" : "rgba(60,106,138,.32)"; g.lineWidth = 1; g.stroke();
+      g.fillStyle = frozen ? "rgba(120,130,140,.10)"
+                 : c.st.golden ? "rgba(205,164,58,.12)" : "rgba(105,182,214,.07)"; g.fill();
+      g.strokeStyle = frozen ? "rgba(150,160,170,.35)"
+                    : c.st.golden ? "rgba(205,164,58,.6)" : "rgba(60,106,138,.32)";
+      g.lineWidth = 1; g.stroke();
+    }
+    if (frozen) {
+      // 멈춰 선 표시 — 터 한가운데에 ⛔ 하나. 여러 겹 그리지 않는다 (판이 기호로 덮인다)
+      const [fx2, fy2] = B.pieceCenter(c);
+      g.save();
+      g.globalAlpha = 0.55 + 0.35 * Math.sin(now / 140);   // 깜빡여서 「지금 멈춘 중」임을 알린다
+      g.textAlign = "center"; g.textBaseline = "middle";
+      g.font = "18px ui-monospace,monospace";
+      // 이모지는 대개 제 색으로 찍히지만, 흑백 글리프로 떨어지는 브라우저에서도 읽히게 색을 준다
+      g.fillStyle = "#e0574d";
+      g.fillText("⛔", fx2, fy2 - 2);
+      g.restore();
     }
     const cc = catCanvas.get(c.uid);
     if (!cc) continue;
@@ -4111,6 +4225,212 @@ function drawSkillRings(g) {
     g.beginPath(); g.arc(r.x, r.y, r.r, 0, 7); g.stroke();
     g.restore();
   }
+}
+
+/* ═══════ 방해 공작 유령냥 — 「당했다」를 눈으로 알리는 장치 ═══════
+ *
+ * 방해 공작은 **상대가 내 판에 거는 것**이라, 맞은 쪽이 무슨 일이 벌어졌는지 모르면
+ * 그냥 「판이 갑자기 어려워졌다」로만 보인다. 예전에는 판 아래 붉은 딱지 한 줄이 전부였고,
+ * 그걸 읽지 않으면 알 길이 없었다.
+ *
+ * 그래서 공작을 맞으면 **흐릿한 고양이**가 판 위에 나타나 휘젓는다. 판 안의 지점들을 골라
+ * 돌아다니다가 멈춰 서서 발톱을 긁고(긁힌 자리에 세 줄짜리 자국이 남는다), 머리 위에 그 공작의
+ * 딱지를 띄운다. 흐릿하게 그리는 것은 **내 냥타워가 아니라는 것**을 한눈에 알리기 위해서다 —
+ * 판 위의 다른 것은 전부 또렷하다.
+ *
+ * 연출뿐이고 판을 건드리지 않는다. 실제 효과는 core 쪽 receiveSabotage 가 이미 걸어 두었다.
+ * 그래서 프레임이 밀리거나 그리기가 한 번 터져도 게임 진행에는 아무 영향이 없다.
+ */
+const GHOST = {
+  steal:  { n: 2, life: 2.4, col: "#ffd782", icon: "💸", say: "특허료 압수!" },
+  swarm:  { n: 3, life: 2.8, col: "#e0574d", icon: "📨", say: "이의신청 한 트럭!" },
+  freeze: { n: 2, life: 5.0, col: "#9fd8ff", icon: "⛔", say: "심사 중지!" },
+};
+/** 유령냥이 쓸 원화 — 내 냥타워와 섞이지 않게 아무 종류나 돌려 쓴다 (못 읽으면 벡터로 그린다) */
+const GHOST_SHEETS = ["delay", "fast", "spec"];
+/** @type {{x:number,y:number,tx:number,ty:number,life:number,max:number,sheet:string,
+ *   col:string,icon:string,say:string,flip:number,seed:number,paw:number,trail:number[][]}[]} */
+let ghostCats = [];
+/** 유령냥이 긁어 놓은 자국 — 한 군데에 세 줄, 금세 흐려진다 */
+let ghostClaws = [];
+
+/**
+ * 공작을 맞았다 — 유령냥을 판에 풀어놓는다.
+ * @param {string} kind SABOTAGE 의 kind (steal · swarm · freeze)
+ * @param {number} [dur] 효과가 흐르는 시간(초). 주면 유령냥도 그만큼 머문다 (타워 정지)
+ */
+function summonGhostCats(kind, dur) {
+  const d = GHOST[kind];
+  if (!d) return;
+  const { w, h } = fxCanvasSize();
+  if (!w || !h) return;
+  const life = Math.max(d.life, dur || 0);
+  for (let i = 0; i < d.n; i++) {
+    // 판 바깥에서 달려들어온다 — 처음부터 판 안에 떠 있으면 「원래 있던 것」처럼 보인다
+    const side = Math.floor(Math.random() * 4);
+    const x = side === 0 ? -40 : side === 1 ? w + 40 : Math.random() * w;
+    const y = side === 2 ? -40 : side === 3 ? h + 40 : Math.random() * h;
+    ghostCats.push({
+      x, y, tx: w * (0.2 + Math.random() * 0.6), ty: h * (0.2 + Math.random() * 0.6),
+      life, max: life, sheet: GHOST_SHEETS[i % GHOST_SHEETS.length],
+      col: d.col, icon: d.icon, say: i === 0 ? d.say : "",
+      flip: 1, seed: Math.random() * 6.28, paw: 0, trail: [],
+    });
+  }
+}
+
+/** 유령냥을 걷게 한다. 판이 멈춰 있어도(준비 단계) 계속 돌아야 해서 전투 tick 과 따로 센다. */
+function stepGhostCats(dt) {
+  if (!ghostCats.length && !ghostClaws.length) return;   // 매 프레임 불리므로 없으면 바로 나간다
+  const { w, h } = fxCanvasSize();
+  for (let i = ghostCats.length - 1; i >= 0; i--) {
+    const gc = ghostCats[i];
+    gc.life -= dt;
+    if (gc.life <= 0) { ghostCats.splice(i, 1); continue; }
+    if (gc.paw > 0) gc.paw -= dt;
+
+    const dx = gc.tx - gc.x, dy = gc.ty - gc.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    if (dist < 16) {
+      // 도착했다 — 발톱을 한 번 긁고 다음 지점을 고른다
+      gc.paw = 0.34;
+      ghostClaws.push({ x: gc.x, y: gc.y, ang: Math.random() * 6.28, col: gc.col, life: 0.9, max: 0.9 });
+      gc.tx = w * (0.12 + Math.random() * 0.76);
+      gc.ty = h * (0.12 + Math.random() * 0.76);
+    } else {
+      const sp = (gc.paw > 0 ? 60 : 230) * dt;   // 긁는 동안에는 거의 멈춘다
+      gc.x += (dx / dist) * sp;
+      gc.y += (dy / dist) * sp;
+      gc.flip = dx < 0 ? -1 : 1;
+      // 잔상 — 몇 컷 앞의 자리를 기억해 두고 옅게 겹쳐 그린다. 흐릿함이 움직임으로도 보이게 한다
+      gc.trail.unshift([gc.x, gc.y]);
+      if (gc.trail.length > 7) gc.trail.pop();
+    }
+  }
+  for (let i = ghostClaws.length - 1; i >= 0; i--) {
+    ghostClaws[i].life -= dt;
+    if (ghostClaws[i].life <= 0) ghostClaws.splice(i, 1);
+  }
+}
+
+/**
+ * 유령냥과 긁힌 자국을 그린다. **냥타워·침입자 위에** 얹힌다 —
+ * 판을 휘젓고 있는 것이므로 뒤에 숨으면 뜻이 없다.
+ */
+function drawGhostCats(g, now) {
+  if (!ghostCats.length && !ghostClaws.length) return;
+  // ── 긁힌 자국 (세 줄) ──
+  for (const c of ghostClaws) {
+    const a = Math.max(0, c.life / c.max);
+    g.save();
+    g.globalAlpha = a * 0.75;
+    g.translate(c.x, c.y); g.rotate(c.ang);
+    g.strokeStyle = c.col; g.lineWidth = 2.2; g.lineCap = "round";
+    const grow = 1 - a;                         // 긁히면서 길어진다
+    for (let k = -1; k <= 1; k++) {
+      g.beginPath();
+      g.moveTo(-16 * grow, k * 9);
+      g.lineTo(18 * grow, k * 9 + k * 3);
+      g.stroke();
+    }
+    g.restore();
+  }
+
+  if (!ghostCats.length) return;
+  for (const gc of ghostCats) {
+    const a = Math.max(0, gc.life / gc.max);
+    // 앞 12% 는 달려들며 나타나고, 뒤 25% 는 스르르 사라진다
+    const fade = Math.min(1, (1 - a) / 0.12) * Math.min(1, a / 0.25);
+    const bob = Math.sin(now / 150 + gc.seed) * 4;
+    const im = sheetReady(gc.sheet) ? sheetOf(gc.sheet) : null;
+
+    g.save();
+    g.globalAlpha = Math.max(0, fade) * 0.42;
+    // 잔상 — 뒤쪽일수록 옅게
+    for (let t = gc.trail.length - 1; t >= 1; t -= 2) {
+      const [tx, ty] = gc.trail[t];
+      drawGhostBody(g, im, gc, tx, ty + bob, 0.16 * (1 - t / gc.trail.length));
+    }
+    g.restore();
+
+    g.save();
+    g.globalAlpha = Math.max(0, fade) * 0.55;
+    // 바닥에 깔리는 색 무리 — 흐릿한 몸이 판에 묻히지 않게 받쳐 준다
+    const glow = g.createRadialGradient(gc.x, gc.y + bob, 2, gc.x, gc.y + bob, 44);
+    glow.addColorStop(0, gc.col); glow.addColorStop(1, "rgba(0,0,0,0)");
+    g.globalAlpha = Math.max(0, fade) * 0.2;
+    g.fillStyle = glow;
+    g.beginPath(); g.arc(gc.x, gc.y + bob, 44, 0, 7); g.fill();
+    g.globalAlpha = Math.max(0, fade) * 0.6;
+    drawGhostBody(g, im, gc, gc.x, gc.y + bob, 1);
+    g.restore();
+
+    // 긁는 순간 — 발톱이 그 자리에서 번쩍인다
+    if (gc.paw > 0) {
+      g.save();
+      g.globalAlpha = Math.max(0, fade) * Math.min(1, gc.paw / 0.34);
+      g.strokeStyle = "#fff"; g.lineWidth = 2.6; g.lineCap = "round";
+      for (let k = -1; k <= 1; k++) {
+        g.beginPath();
+        g.moveTo(gc.x + gc.flip * 6, gc.y + bob + k * 7);
+        g.lineTo(gc.x + gc.flip * 26, gc.y + bob + k * 7 + k * 4);
+        g.stroke();
+      }
+      g.restore();
+    }
+
+    // 머리 위 딱지 — 무엇에 당했는지가 여기 적혀 있다
+    g.save();
+    g.globalAlpha = Math.max(0, fade);
+    g.textAlign = "center"; g.textBaseline = "alphabetic";
+    g.font = "18px ui-monospace,monospace";
+    g.fillStyle = gc.col;        // 이모지가 흑백 글리프로 떨어지는 브라우저에서도 읽히도록
+    g.fillText(gc.icon, gc.x, gc.y + bob - 34);
+    if (gc.say) {
+      g.font = "bold 12px 'Jua','Gowun Dodum',ui-monospace,monospace";
+      g.lineWidth = 3.2; g.strokeStyle = "rgba(24,16,10,.85)"; g.lineJoin = "round";
+      g.strokeText(gc.say, gc.x, gc.y + bob - 50);
+      g.fillStyle = gc.col;
+      g.fillText(gc.say, gc.x, gc.y + bob - 50);
+    }
+    g.restore();
+  }
+  g.globalAlpha = 1;
+}
+
+/**
+ * 유령냥 몸뚱이 한 컷.
+ *
+ * 원화가 있으면 그걸 흐리게(blur) 찍는다. `ctx.filter` 를 못 쓰는 브라우저에서는 조용히
+ * 선명하게 찍히는데, 그래도 반투명이라 유령으로 읽힌다 — 여기서 판이 멈추면 안 되므로
+ * 기능 검사 없이 그냥 넣는다. 원화를 아직 못 읽었으면 벡터 실루엣으로 대신 그린다
+ * (귀 둘 · 몸통 · 꼬리 — 작게 그려도 고양이로 읽히는 최소한).
+ * @param {CanvasRenderingContext2D} g
+ * @param {HTMLImageElement|null} im 쓸 원화 (없으면 벡터)
+ * @param {any} gc @param {number} x @param {number} y @param {number} k 불투명도 배율
+ */
+function drawGhostBody(g, im, gc, x, y, k) {
+  g.save();
+  g.globalAlpha *= k;
+  g.translate(x, y);
+  g.scale(gc.flip * 1.1, 1.1);
+  if (im) {
+    const cw = cellW(im), ch = cellH(im);
+    g.filter = "blur(2px) saturate(.25) brightness(1.25)";
+    g.drawImage(im, 0, 0, cw, ch, -32, -32, 64, 64);
+    g.filter = "none";
+  } else {
+    g.fillStyle = gc.col;
+    g.beginPath(); g.ellipse(0, 6, 17, 13, 0, 0, 7); g.fill();          // 몸통
+    g.beginPath(); g.arc(2, -10, 11, 0, 7); g.fill();                    // 머리
+    g.beginPath();                                                        // 귀 둘
+    g.moveTo(-7, -17); g.lineTo(-3, -26); g.lineTo(2, -16);
+    g.moveTo(6, -16); g.lineTo(11, -26); g.lineTo(14, -16);
+    g.fill();
+    g.strokeStyle = gc.col; g.lineWidth = 4; g.lineCap = "round";        // 꼬리
+    g.beginPath(); g.moveTo(-15, 9); g.quadraticCurveTo(-28, 4, -24, -8); g.stroke();
+  }
+  g.restore();
 }
 
 /**
@@ -4984,7 +5304,8 @@ function consumeEvents() {
         log(`<b>분할출원</b> ${ev.name} 하나가 ${ev.placed ? "판에 추가되었습니다" : "대기열에 놓였습니다"}`);
         break;
       case "sabotage": {
-        log(`<b style="color:#c3a8f5">방해 공작 뽑기</b> ${ev.icon} <b>${ev.name}</b> (${ev.tag}) — 상대 판에 던졌습니다 (−${ev.cost} · 남은 ${ev.left}회)`);
+        log(`<b style="color:#c3a8f5">방해 공작 뽑기</b> ${ev.icon} <b>${ev.name}</b> (${ev.tag}) — 상대 판에 던졌습니다 ` +
+            `(−${ev.cost}${ev.gain ? ` · 강탈 <b style="color:#ffd782">+${ev.gain}</b>` : ""} · 남은 ${ev.left}회)`);
         // 심사현황 로그가 화면에서 빠졌으므로, 나갔다는 사실은 상대 청사 위에 도장으로 남긴다
         const opp = $("#oppCv");
         if (opp) {
@@ -4993,11 +5314,23 @@ function consumeEvents() {
         }
         break;
       }
+      /* 상대가 내 판을 건드렸다.
+       * 붉은 글씨 한 줄로는 **무엇을 맞았는지** 가려내기 어려워서, 공작마다 판 위에 서로 다른
+       * 것이 보이게 했다 — 그리고 셋 다 공통으로 **흐릿한 고양이**가 나타나 판을 휘젓는다
+       * (summonGhostCats). 숫자를 읽지 않아도 「지금 당했다」가 눈에 들어오도록 한 장치다. */
       case "sabotaged": {
         log(`<b class="warn">상대 공작</b> ${ev.icon} ${ev.name} — ${ev.desc}`);
         const { w, h } = fxCanvasSize();
         addFloater(w / 2, h / 2, `${ev.icon} ${ev.name}`, "#e0574d", { big: true, life: 1.4, rise: 34 });
-        addShake(5, .24);
+        if (ev.kind === "steal")
+          addFloater(w / 2, h / 2 + 26, `특허료 −${ev.amount}`, "#ffd782", { big: true, life: 1.5, rise: 26 });
+        if (ev.kind === "swarm")
+          addFloater(w / 2, h / 2 + 26, ev.now ? `침입자 ${ev.amount}마리 난입!` : `다음 웨이브 +${ev.amount}마리`,
+                     "#e0574d", { big: true, life: 1.5, rise: 26 });
+        if (ev.kind === "freeze")
+          addFloater(w / 2, h / 2 + 26, `냥타워 ${ev.dur}초 정지!`, "#9fd8ff", { big: true, life: 1.5, rise: 26 });
+        summonGhostCats(ev.kind, ev.dur);
+        addShake(ev.kind === "freeze" ? 7 : 5, .28);
         renderHud();
         break;
       }
@@ -5748,6 +6081,8 @@ function loop() {
   stepSparks(dt);
   stepCorpses(dt);
   stepCrumbs(dt);
+  // 유령냥은 준비 단계에서도 돌아야 한다 (공작은 준비 중에도 날아온다) — 전투 tick 과 따로 센다
+  stepGhostCats(dt);
   stepShake(dt);
 
   // 각 단계를 따로 감싼다 — 한 군데가 터져도 나머지 화면은 계속 살아 있어야 한다
@@ -5874,7 +6209,7 @@ function showTip(e, p) {
     ${slow ? `<i style="color:#79b7d8">둔화 ${Math.round(slow)}% · 1.6초</i>` : ""}
     ${critC ? `<i style="color:#cda43a">치명타 ${Math.round(critC * 100)}% · 피해 ×${critM.toFixed(1)}</i>` : ""}
     ${specialTipHtml(p.key, s)}
-    ${d.special ? `<i style="color:#6fe0d0">이종 합성 전용 — ${(RECIPES.find((r) => r.key === p.key) || { need: [] }).need.map((k) => CATS[k].name).join(" + ")}</i>` : ""}
+    ${d.special ? `<i style="color:#6fe0d0">이종 합성 전용 — ${(RECIPES.find((r) => r.key === p.key) || { need: [] }).need.map((k) => CATS[k].name).join(" + ") || "지금은 잠겨 있습니다"}</i>` : ""}
     ${lv < BAL.maxLv ? `<i style="color:#8a7c5e">같은 종류 Lv${lv} ${BAL.mergeNeed}명을 모으면 Lv${lv + 1}로 합성됩니다${lv + 1 >= BAL.promoteLv ? " (승진냥)" : ""}</i>` : ""}
     ${s && s.splash ? `<i style="color:#ff9a5c">승진냥 — 샷건 방사 피해 ${Math.round(s.splash.f * 100)}% (반경 ${(s.splash.r/(CS+GAP)).toFixed(1)}칸)</i>` : ""}
     ${s && s.golden ? `<i style="color:#cda43a">직권보정 — 이번 웨이브 공격력 3배</i>` : ""}`;
@@ -5960,7 +6295,8 @@ function endMatch(iWon, reasonText) {
     <div class="kv" style="max-width:280px;margin:14px auto 16px;text-align:left">
       <span>처치</span><b>${s.killed}</b><span>돌파 허용</span><b>${s.leaked}</b>
       <span>배치 심사관</span><b>${s.cats}명 (최고 Lv${s.maxLv || 1})</b>
-      <span>합성</span><b>${s.merged}회 (특수 ${s.crafted})</b>
+      <!-- 이종 합성을 잠근 동안에는 특수 횟수가 늘 0이라 괄호를 붙이지 않는다 -->
+      <span>합성</span><b>${s.merged}회${s.crafted ? ` (특수 ${s.crafted})` : ""}</b>
       ${s.specials.length ? `<span>특수 냥타워</span><b>${[...new Set(s.specials)].map((k) => `${CATS[k].icon} ${CATS[k].name}`).join(" · ")}</b>` : ""}
       ${lineSummaryHtml()}
       <span>방해 공작</span><b>${s.sabotage.length ? s.sabotage.map((k) => `${SABOTAGE[k].icon} ${SABOTAGE[k].short}`).join(" · ") : "없음"}</b>
@@ -6033,7 +6369,7 @@ function buildSabotageBar() {
       const d = SABOTAGE[k];
       return `<div class="srow" data-k="${k}">
         <span class="ic">${d.icon}</span>
-        <span class="meta"><b>${d.name}</b><i>${d.tag}</i></span>
+        <span class="meta"><b>${d.short}</b><i>${d.tag}</i></span>
         <span class="pct">${Math.round((d.weight / total) * 100)}%</span>
       </div>`;
     }).join("")}</div>`;
@@ -6064,7 +6400,7 @@ function updateSabotageBar() {
 function showSabotageTip(e, d) {
   if (dragging) return;
   const t = $("#tip");
-  t.innerHTML = `<b>${d.name}</b> — ${d.tag}<i>${d.desc}</i>`;
+  t.innerHTML = `<b>${d.short}</b> (${d.name}) — ${d.tag}<i>${d.desc}</i>`;
   t.style.display = "block";
   t.style.left = Math.min(e.clientX + 14, innerWidth - 264) + "px";
   t.style.top = Math.min(e.clientY + 14, innerHeight - 150) + "px";
@@ -6092,7 +6428,7 @@ function flashSabotage(key) {
   const box = $("#sabFlash");
   if (!box) return;
   box.innerHTML = `<span class="ic">${d.icon}</span>
-    <span class="meta"><b>${d.name}</b><i>${d.tag}</i><em>${d.desc}</em></span>`;
+    <span class="meta"><b>${d.short} — ${d.name}</b><i>${d.tag}</i><em>${d.desc}</em></span>`;
   box.classList.remove("hidden");
   // 같은 것이 연달아 나와도 새로 뽑았다는 게 보이도록 등장 애니메이션을 다시 태운다
   box.classList.remove("pop");
@@ -6106,13 +6442,13 @@ function renderFxTags() {
   if (!el || !game) return;
   const tags = [];
   const fx = game.fx, mods = game.waveMods;
-  if (fx.hasteT > 0)
-    tags.push(`<span>🛢️ 침입자 이동속도 +${Math.round((fx.hasteMul - 1) * 100)}% · ${fx.hasteT.toFixed(1)}초</span>`);
-  if (fx.fogT > 0)
-    tags.push(`<span>🌫️ 냥타워 사거리 −${Math.round((1 - fx.fogMul) * 100)}% · ${fx.fogT.toFixed(1)}초</span>`);
-  if (mods.hp > 1) tags.push(`<span>💊 다음 웨이브 체력 +${Math.round((mods.hp - 1) * 100)}%</span>`);
-  if (mods.count > 1) tags.push(`<span>📨 다음 웨이브 물량 +${Math.round((mods.count - 1) * 100)}%</span>`);
-  if (mods.elite) tags.push(`<span>⚖️ 다음 웨이브 정예 ${mods.elite}마리 추가</span>`);
+  /* 정지 시간은 **전투가 흐르는 동안에만** 닳는다. 그래서 준비 단계에서는 숫자가 줄지 않는데,
+   * 그때도 「N초 남음」이라고 적으면 멈춘 시계처럼 보인다 — 문구를 갈라 둔다. */
+  if (fx.freezeT > 0)
+    tags.push(game.phase === "wave"
+      ? `<span>⛔ 냥타워 정지 · ${fx.freezeT.toFixed(1)}초 남음</span>`
+      : `<span>⛔ 다음 웨이브 첫 ${fx.freezeT.toFixed(1)}초 냥타워 정지</span>`);
+  if (mods.extra) tags.push(`<span>📨 다음 웨이브 침입자 ${mods.extra}마리 추가</span>`);
   el.innerHTML = tags.join("");
   el.classList.toggle("hidden", !tags.length);
 }
@@ -6183,7 +6519,8 @@ function renderCatRoster() {
       </div>
       <span class="fl">${d.desc}</span>
     </div>`;
-  }).join("") + recipeBookHtml();
+  // 이종 합성을 잠갔으므로 처방표도 붙이지 않는다 — 되살릴 때는 `+ recipeBookHtml()` 을 되돌린다
+  }).join("") /* + recipeBookHtml() */;
 
   el.querySelectorAll(".catpick").forEach((card) => {
     const key = /** @type {HTMLElement} */ (card).dataset.k;
@@ -6212,6 +6549,9 @@ function renderCatRoster() {
  *
  * 처방은 처음부터 전부 펼쳐 두고, 재료가 다 모인 줄만 초록으로 띄운다
  * (실제로 누르는 단추는 판 우측 상단에 뜬다).
+ *
+ * **지금은 아무도 부르지 않는다** — 이종 합성을 잠그면서 renderCatRoster 에서 떼어 냈다.
+ * 지우지 않고 남겨 둔다: RECIPES 를 되살릴 때 이 함수와 호출 한 줄만 되돌리면 끝난다.
  */
 function recipeBookHtml() {
   const offers = game.recipeOffers(true);
@@ -6250,8 +6590,10 @@ function renderMergeDock() {
   if (!el || !game) return;
   // 합성은 준비 단계에만. 웨이브 중에 냥이 사라지면 쏘던 자리가 그대로 뚫린다.
   const open = game.phase === "prep" && !game.awaitingPassive && !game.awaitingAugment;
-  // 특수 냥타워(이종 합성)를 먼저 보여준다 — 레벨업은 언제든 되지만 처방은 재료가 흩어지면
-  // 다음 뽑기에서 다시 모아야 하고, 무엇보다 판이 달라지는 쪽이라 눈에 먼저 띄어야 한다.
+  /* 예전에는 특수 냥타워(이종 합성)를 레벨업보다 먼저 보여줬다 — 처방은 재료가 흩어지면 다시
+   * 모아야 하고 판이 달라지는 쪽이라 눈에 먼저 띄어야 했다. 지금은 이종 합성을 잠갔으므로
+   * RECIPES 가 비어 있어 이 목록도 늘 빈 채로 나온다 (아래 recipeChips 도 따라서 빈 문자열).
+   * 처방을 되살리면 코드를 건드리지 않고 그대로 다시 뜬다. */
   const recipes = open ? game.recipeOffers() : [];
   const levels = open ? game.mergeOffers().filter((o) => o.have >= o.need) : [];
   const sig = (open ? "" : "off|") +
@@ -6807,6 +7149,7 @@ function beginBattle() {
   errShown.clear();     // 새 판에서는 오류 보고도 새로 시작한다
   sparks = [];
   corpses = []; crumbs = [];
+  ghostCats = []; ghostClaws = [];   // 지난 판에서 휘젓던 유령냥이 새 판에 남아 있으면 안 된다
   shakeT = 0; shakeMag = 0;
   iReady = false; oppReady = false; oppInPrep = false;
   prepEndsAt = 0; prepSentWave = 0; oppAugs = [];
@@ -6824,14 +7167,17 @@ function beginBattle() {
   log(`<b>${game.map.name}</b> 방위 개시 · ${game.map.desc}`);
   if (!soloMode) log(`<b>방해 공작</b>은 종류를 고르지 않습니다 — 특허료를 내고 <b>무작위로 하나를 뽑아</b> ` +
     `상대 판에 던집니다 (웨이브 주기마다 ${BAL.sabotageDraws}회).`);
-  log(`같은 종류·같은 레벨 <b>${BAL.mergeNeed}명</b>이 모이면 판 우측 상단에 <b>합성</b> 단추가 뜹니다. ` +
-      `Lv${BAL.promoteLv}이 되면 <b>승진냥</b>(선글라스·샷건·방사 피해)이 됩니다.`);
-  log(`<b style="color:#6fe0d0">다른 종류끼리도 합성</b>됩니다 — 처방 ${RECIPES.length}가지로 ` +
-      `연쇄·정지·즉사·징수 같은 <b>특수 냥타워</b>를 만들 수 있습니다 (뽑기로는 나오지 않습니다).`);
+  log(`<b>강화는 같은 타워를 모으는 것 하나</b>입니다 — 같은 종류·같은 레벨 <b>${BAL.mergeNeed}명</b>이 모이면 ` +
+      `판 우측 상단에 <b>합성</b> 단추가 뜹니다. Lv${BAL.promoteLv}이 되면 <b>승진냥</b>(샷건·방사 피해)이 됩니다.`);
+  // 이종 합성(다른 종류끼리의 처방)은 잠가 두었다 — RECIPES 를 되살리면 이 안내도 함께 되돌린다
+  // log(`<b style="color:#6fe0d0">다른 종류끼리도 합성</b>됩니다 — 처방 ${RECIPES.length}가지로 ` +
+  //     `연쇄·정지·즉사·징수 같은 <b>특수 냥타워</b>를 만들 수 있습니다 (뽑기로는 나오지 않습니다).`);
   log(`스테이지 <b>${DUEL_WAVES.join(" · ")}</b>는 침입자 대신 <b>1:1 대전</b>입니다 — ` +
       `별도의 대전장에서 <b>내 냥타워 전부</b>가 상대 덱과 저절로 붙습니다 (누를 것 없음). ` +
       `지는 쪽은 등록원부 내구 <b>${DUEL.leakBase}</b>을 잃습니다.`);
-  if (!soloMode) log(`<b>방해 공작</b>으로 상대 판에 기름·연막·정예 투입을 걸 수 있습니다 (웨이브 주기마다 종류별 1회).`);
+  if (!soloMode) log(`<b>방해 공작</b> 셋 — 💸 <b>돈뺏기</b>(특허료 ${SABOTAGE.steal.amount} 강탈) · ` +
+    `📨 <b>몹보내기</b>(침입자 ${SABOTAGE.swarm.amount}마리) · ⛔ <b>타워정지</b>(${SABOTAGE.freeze.dur}초). ` +
+    `맞으면 판 위에 <b>흐릿한 고양이</b>가 나타나 휘젓습니다 — 무엇에 당했는지가 그걸로 보입니다.`);
   log(`전장은 스테이지 <b>1~5 ${STAGE_THEMES[0].name}</b> · <b>6~10 ${STAGE_THEMES[1].name}</b> · <b>11~ ${STAGE_THEMES[2].name}</b> 순으로 바뀝니다.`);
   buildBoardCells();
   buildSabotageBar();
