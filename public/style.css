@@ -723,6 +723,9 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 .lvtile.top b{color:var(--gold)}
 .lvtile.spec{border-color:#6fe0d0;background:rgba(111,224,208,.12)}
 .lvtile.spec b,.lvtile.spec em{color:#6fe0d0}
+/* 합성 재료가 다 찬 묶음 — 판 우측 상단에 합성 단추가 떠 있다는 신호 */
+.lvtile.ready{border-color:#8fd66a;background:rgba(143,214,106,.16)}
+.lvtile.ready b{color:#8fd66a}
 
 /* ── 합성 (판 우측 상단) ──
    원화 액자의 윗여백(--map-pad 위쪽 87~91px)에 얹혀서 판을 가리지 않는다. */

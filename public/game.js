@@ -123,7 +123,10 @@ const CATS = {
     filter: "hue-rotate(40deg) saturate(1.45)",
     icon: "🌐",
     // 대전장 — 셋을 같이 노리는 값을 한 방으로 키운다. hp 는 임용가 190→70 전의 체력(≈548)을 유지
-    duel: { hp: 1.93, dmg: 2.9 },
+    /* hp 1.93→2.6 · spd 1.3: 앞줄로 빨리 붙어야 셋을 동시에 노릴 수 있는데, 걸어가는 동안 저격수
+     * (특허범위냥, 방어무시 45)에게 먼저 녹아 버렸다. 발을 빠르게 하고 몸을 두껍게 해 사거리 안까지
+     * 살아서 닿게 한다 — 방어 대신 체력인 것은 방어무시가 못 깎는 쪽이 체력이기 때문이다 */
+    duel: { hp: 2.6, dmg: 2.9, spd: 1.3 },
   },
   /*
    * 우선심사냥 — 가장 빠르고 가장 가벼운 연사형. 🎯 입증(치명타) 계열의 주인공이다.
@@ -145,7 +148,9 @@ const CATS = {
      * 공격력은 0.7배 — 맞아 주는 냥이 때리는 것까지 잘하면 다른 냥을 뽑을 이유가 없어진다.
      * (판의 능력치는 그대로고 대전 명세(makeRoster)를 만들 때만 갈아 씌운다) */
     // hp 1.6→1.67 · dmg 0.7→0.42: 임용가 65→60 · dmg 3→5 뒤에도 대전 체력(≈437)·한 방(≈2.1)이 그대로
-    duel: { hp: 1.67, dmg: 0.42, range: 38, armor: 0.30, tank: true },
+    // armor 0.30→0.45 · spd 1.35: 탱커가 앞줄에 닿기도 전에 저격수에게 녹았다. 걸음을 빠르게 해
+    // 맞는 시간을 줄이고, 방어를 올려 방어무시 45 를 뚫고도 25% 는 남게 한다 (예전엔 16%)
+    duel: { hp: 1.67, dmg: 0.42, range: 38, armor: 0.45, spd: 1.35, tank: true },
   },
   /*
    * 보정명령냥 — 유일한 둔화형.
@@ -726,9 +731,11 @@ const DUEL_WAVES = [4, 7, 10];
  *              every  회복 주기(초) · flat 한 번의 고정 회복 · pct 대상 최대 체력의 비율만큼 추가
  *              range  회복이 닿는 거리(px) · lv 레벨마다 곱하는 배율
  *              auraUp 💼 「대리인 증원」 한 장마다 +이만큼 · tierMul 💼 5단계 「특허법인 설립」 배율
- *            한 명이 초당 10 남짓 — 공격 한 명이 내는 피해(30 언저리)의 1/3 이라, 셋이 붙어야
- *            공격 한 명을 상쇄한다. 탱커(방어 30%)에게 들어가면 그만큼 더 값을 한다.
- *            「과하지 않고 적당히」가 이 값이다 — 힐러 둘이 탱커 위에 서면 받는 피해의 1/4 쯤을 되돌린다
+ *            한 명이 초당 10 남짓(체력 400짜리 기준 0.5초마다 3 + 2.4) — 공격 한 명이 내는 피해
+ *            (30 언저리)의 1/3 이라, 셋이 붙어야 공격 한 명을 상쇄한다. 탱커에게 들어가면 더 값을 한다.
+ *            예전(flat 6 · pct 0.025)은 체력이 두 배로 오른 뒤 손보지 않아 초당 30 을 넘겼다 —
+ *            힐러 하나가 공격수 하나를 통째로 지워 싸움이 안 끝났다
+ * spd        (CATS[k].duel.spd) 종류별 걸음 배율 — 탱커·다중조준은 앞줄에 빨리 닿아야 값을 한다
  * rows       진형의 줄 수. 한 칸(열)에 이만큼씩 쌓아 세우고, 줄 번호가 곧 깊이(dep)가 된다
  *            — 뒤로 얼마나 물러나 서는지는 아래 depthRise·depthScale 이 정한다
  * colGap     열 사이의 가로 간격(px). 덱이 크면 이 값을 줄여 진형을 formDepth 안에 욱여넣는다
@@ -753,7 +760,7 @@ const DUEL = {
   hpBase: 130, hpPerCost: 2.2, hpLv: 1.9, hpPromo: 1.3,
   dmgMul: 0.62,
   pierceDmg: 0.2,
-  heal: { every: 0.5, flat: 6, pct: 0.025, range: 170, lv: 1.3, auraUp: 0.25, tierMul: 1.4 },
+  heal: { every: 0.5, flat: 3, pct: 0.006, range: 170, lv: 1.3, auraUp: 0.25, tierMul: 1.4 },
   /* ── 대난투(4인) 전용 지형 ──
    * 1:1 · 2:2 는 옆에서 본 한 줄짜리 전장(line)이라 x 하나로 거리를 잰다. 대난투는 네 진영이
    * 한가운데로 몰려드는 **2차원 난전(brawl)**이다 — 왼쪽·오른쪽·뒤·앞 네 귀퉁이에서 출발해
@@ -871,13 +878,20 @@ const MODES = {
 const BAL = {
   cellSize: 80, cellGap: 4,
   startGold: 130, startHp: 80,         // 난이도 상향 — 시작 자금·체력을 줄여 초반부터 신중하게
-  /* 웨이브당 적 체력 배율 증가.
-   * 0.26 → 0.30 으로 올린 것은 빌드 계열(계열 3·5단계)과 합성 냥타워의 고유 스킬이 들어오면서
-   * 후반 화력이 통째로 한 단계 올라갔기 때문이다. 냥타워 수치를 한 발에 몰아 담은 것도 같이
-   * 작용한다 — 방어는 명중마다 깎이므로, 한 방이 무거워진 출원냥·특허범위냥은 방어 8짜리
-   * 무효심판 청구인 앞에서 예전의 약 두 배를 낸다.
-   * 전투 라운드가 일곱뿐이라 뒤로 갈수록 가파르게 잡았다 — 라운드 9 기준 적 체력 3.4배. */
-  hpPerWave: 0.30,
+  /* ── 라운드별 침입자 체력 배율 (index 0 = 라운드 1) ──
+   * 예전에는 직선(1 + 0.30 × (라운드−1), 라운드 9 에서 3.4배)이었다. 그러면 초반은 빡빡한데
+   * 후반이 싱거웠다 — 냥타워 수 · 합성 레벨(Lv3 = 공격력 3.4배 + 승진 보정 + 방사) · 강화 ·
+   * 증강이 전부 **곱으로** 쌓여 화력은 뒤로 갈수록 가속하는데 적 체력은 직선으로만 늘어,
+   * 라운드 8~9 에서는 쥐가 문에서 나오는 족족 그 자리에서 죽고 웨이브 길이가 소환 간격뿐이었다.
+   * (출원냥 Lv3 넷이면 초당 2000 안팎을 낸다 — 도용업자 42 × 3.4 = 143 은 한 방이다.)
+   * 그래서 표로 직접 적는다. 라운드 1~3 은 예전과 거의 같고(초반은 그대로 빡빡하게), 라운드 5
+   * 부터 가파르게 휜다. 4 · 7 · 10 은 대전 라운드라 값이 쓰이지 않지만 자리를 비우지 않는다
+   * (WAVES 와 같은 이유 — 라운드 번호와 배열 자리를 맞춘다). 표를 넘어가면 마지막 값으로 간다. */
+  hpScale: [1.0, 1.3, 1.7, 2.3, 3.6, 5.6, 8.5, 13, 20, 30],
+  /* 소환 간격 — 라운드마다 spawnGapStep 씩 줄어 spawnGapMin 까지 촘촘해진다. 체력만 올리면
+   * 한 마리씩 나와 한 마리씩 죽는 것은 그대로라, 후반에는 **여럿이 한꺼번에** 몰려 사거리 안에
+   * 쌓이도록 한다 — 그래야 다중조준·방사·둔화가 값을 하고 줄이 밀리는 긴장이 생긴다. */
+  spawnGapStep: 0.03, spawnGapMin: 0.28,
   incomeBase: 10, incomePerWave: 3,    // 수입도 줄여서 후반 화력 스노우볼을 억제
   catCostMul: 1.0,           // 같은 종류를 더 배치해도 가격은 그대로 — 임용 비용은 항상 정가다
   pierceCap: 70, slowCap: 70,
@@ -950,9 +964,19 @@ const BAL = {
   tierAuraMul: 1.4,          // 💼 대리 5단계 — 보좌 배율 자체가 1.4배
 };
 
+/** 이 라운드 침입자의 체력 배율 (BAL.hpScale 표, 넘어가면 마지막 값) */
+function enemyHpScale(wave) {
+  const t = BAL.hpScale;
+  return t[Math.min(t.length, Math.max(1, wave)) - 1];
+}
+/** 이 라운드의 소환 간격(초) — 라운드마다 조금씩 촘촘해진다 */
+function spawnGapAt(wave) {
+  return Math.max(BAL.spawnGapMin, BAL.spawnGap - BAL.spawnGapStep * (wave - 1));
+}
+
 return { AUGMENTS, AUGMENT_WAVES, BAL, CATS, CAT_SKILLS, CAT_WEIGHT_TOTAL, catDrawChance,
          DRAW_KEYS, DUEL, DUEL_WAVES, ENEMIES, LINES, LINE_TIER_AT, MODES, PASSIVES, PASSIVE_BY_KEY,
-         RANK, RECIPES, SABOTAGE, SKILL_CD_LV, SKILL_MUL_LV, WAVES };
+         RANK, RECIPES, SABOTAGE, SKILL_CD_LV, SKILL_MUL_LV, WAVES, enemyHpScale, spawnGapAt };
 })();
 __mods["core/maps.js"] = (function(){
 // @ts-check
@@ -1711,7 +1735,7 @@ return { auraCells, computeStats };
 })();
 __mods["core/combat.js"] = (function(){
 // @ts-check
-const {ENEMIES, BAL} = __req("core/data.js");
+const {ENEMIES, BAL, enemyHpScale} = __req("core/data.js");
 const {cats, pieceCenter, posOnPath} = __req("core/board.js");
 /**
  * 적 하나에 피해를 준다. 처치 시 보상 지급 + 이벤트.
@@ -1990,7 +2014,7 @@ function step(g, dt, now) {
     const q = g.spawnQueue.shift();
     const d = ENEMIES[q.t];
     // waveFx.hp 는 침입자 체력을 통째로 부풀리는 자리다 (지금 그걸 거는 공작은 없어 늘 1이다)
-    const scale = (1 + BAL.hpPerWave * (g.wave - 1)) * g.waveFx.hp;
+    const scale = enemyHpScale(g.wave) * g.waveFx.hp;
     const lane = g.lanes[q.lane] || g.lanes[0];
     g.enemies.push({
       t: q.t, lane: q.lane ?? 0, hp: d.hp * scale, max: d.hp * scale, dist: 0,
@@ -2121,6 +2145,7 @@ function makeRoster(game) {
       spf: s.splash ? r3(s.splash.f) : 0,
       // 방어(0~1)와 방어무시(%p). 방어무시는 상대 방어를 그 비율만큼 깎는다
       ar: prof.armor || 0,
+      ms: prof.spd || 1,                       // 걸음 배율 (종류별 대전 성격)
       pi: Math.round(s.pierce || 0),
       // 💥 3단계 — 방사가 방어를 완전히 무시 · 🎯 3단계 — 치명타가 방어를 무시
       spp: !!s.splashPierce, cp: !!s.critPierce,
@@ -2394,6 +2419,7 @@ class DuelSim {
         cc: u.cc || 0, cm: u.cm || 1, sl: u.sl || 0,
         sp: u.sp || 0, spf: u.spf || 0, atk: !!u.atk,
         ar: u.ar || 0, pi: u.pi || 0, spp: !!u.spp, cp: !!u.cp, hl: u.hl || 0,
+        ms: u.ms || 1,
         ch: u.ch || null, stC: u.stC || 0, stD: u.stD || 0, ex: u.ex || 0,
         sd: u.sd || 0, ccd: u.ccd || 0,
         // 합성 냥타워의 고유 스킬. 판에 서자마자 터지지 않도록 쿨을 한 번 채워 두고 시작한다.
@@ -2657,7 +2683,7 @@ class DuelSim {
             if (f.side === u.side) { if (f.atk && d < md) { md = d; mate = f; } }
             else if (d < fd) { fd = d; foe = f; }
           }
-          const spd = held ? 0 : DUEL.moveSpd * 0.8 * slow * DT;
+          const spd = held ? 0 : DUEL.moveSpd * u.ms * 0.8 * slow * DT;
           if (mate) { if (md > 40) moves.push([u, ...this.stepToward(u, mate, spd)]); }
           else if (foe) moves.push([u, ...this.stepToward(u, foe, spd)]);
           u.walking = !!(mate ? md > 40 : foe);
@@ -2678,7 +2704,7 @@ class DuelSim {
       if (near > u.range) {
         // 아직 아무에게도 못 닿는다 — 계속 걸어간다 (두들길 성채 같은 것은 없다)
         if (held) { u.walking = false; continue; }
-        const spd = DUEL.moveSpd * slow * DT;
+        const spd = DUEL.moveSpd * u.ms * slow * DT;
         moves.push([u, ...this.stepToward(u, foes.length ? foes[0][1] : null, spd)]);
         u.walking = true;
         continue;
@@ -2776,7 +2802,7 @@ __mods["core/game.js"] = (function(){
 // @ts-check
 const {Rng} = __req("core/rng.js");
 const {WAVES, BAL, CATS, DRAW_KEYS, RECIPES, SABOTAGE, AUGMENTS, AUGMENT_WAVES,
-       DUEL, DUEL_WAVES, PASSIVES, LINE_TIER_AT, RANK} = __req("core/data.js");
+       DUEL, DUEL_WAVES, PASSIVES, LINE_TIER_AT, RANK, spawnGapAt} = __req("core/data.js");
 const {getMap, parseMap} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {computeStats} = __req("core/stats.js");
@@ -3364,12 +3390,12 @@ class Game {
     const kinds = ["copy", "copy", "fast", "tank"];
     let at = this.waveTime;
     for (let i = 0; i < n; i++) {
-      at += BAL.spawnGap;
+      at += spawnGapAt(this.wave);
       this.spawnQueue.push({ t: kinds[Math.floor(Math.random() * kinds.length)],
                              at, lane: Math.floor(Math.random() * nLanes) });
     }
     this.spawnQueue.sort((a, b) => a.at - b.at);
-    this.wavePar += n * BAL.spawnGap;
+    this.wavePar += n * spawnGapAt(this.wave);
     return n;
   }
 
@@ -3499,7 +3525,7 @@ class Game {
     for (const t of list) {
       const lane = t === "boss" ? this.waveRng.int(nLanes) : (laneCursor++ % nLanes);
       this.spawnQueue.push({ t, at, lane });
-      at += t === "boss" ? BAL.spawnGapBoss : BAL.spawnGap;
+      at += t === "boss" ? BAL.spawnGapBoss : spawnGapAt(this.wave);
     }
     /* ── 파 타임 ── 이 라운드를 얼마나 빨리 끝냈는지를 재는 잣대(랭킹 ⏱️ 항목).
      * **마지막 침입자가 나오는 시각 + 여유**다. 스폰이 다 끝나기 전에는 라운드가 끝날 수
@@ -7416,10 +7442,15 @@ function renderPromoteList() {
     /* 글자 없이 판 위와 같은 원화(시트 0번 칸)만 타일로 늘어놓는다.
      * 레벨·수는 타일 귀퉁이 딱지로만 남긴다 — 시트가 없는 종류는 아이콘으로 대신한다. */
     const src = CAT_SHEET_SRC[key];
-    return `<div class="lvtile${top ? " top" : ""}${d.special ? " spec" : ""}" data-k="${key}" title="${d.name} Lv${lv} ×${count[id]}">
+    /* 수는 「합성까지 몇 명」으로 읽히게 n/3 로 적는다 — 합성 단추는 재료가 다 찼을 때만 판 위에
+     * 뜨므로, 그 전에는 여기가 「하나 더 사면 레벨이 오른다」를 알려 주는 유일한 자리다.
+     * 다 찼으면 초록으로 갈려 단추가 떠 있음을 알린다. 최고 레벨은 더 안 모이니 ×n 그대로. */
+    const need = BAL.mergeNeed, canUp = lv < BAL.maxLv, ready = canUp && count[id] >= need;
+    const hint = canUp ? ` — ${need}명 모으면 Lv${lv + 1} (판 우측 상단 합성 단추)` : " — 최고 레벨";
+    return `<div class="lvtile${top ? " top" : ""}${d.special ? " spec" : ""}${ready ? " ready" : ""}" data-k="${key}" title="${d.name} Lv${lv} ×${count[id]}${hint}">
       ${src ? `<span class="spr" style="background-image:url('${src}')"></span>`
             : `<span class="ic">${d.icon}</span>`}
-      <em>Lv${lv}</em><b>×${count[id]}</b>
+      <em>Lv${lv}</em><b>${canUp ? `${count[id]}/${need}` : `×${count[id]}`}</b>
     </div>`;
   }).join("");
 }
