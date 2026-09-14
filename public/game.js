@@ -64,6 +64,19 @@ __mods["core/data.js"] = (function(){
  */
 const CATS = {
   /*
+   * ── 임용가 기준 ── **출원냥 60 이 가장 싸다.** 나머지는 출원냥보다 값을 하도록 능력을 맞추고
+   * 그만큼 더 받는다. 방어 1(잡졸)·8(탱커)·13(보스)에 대한 기대 DPS(치명타 포함, 명중당 최소
+   * 피해 1 반영)에 사거리·부가효과 값어치를 얹어 매겼다.
+   *   출원냥   23.8 / 17.1 / 12.4  · 사거리 118                 → 60 (기준·최저가)
+   *   우선심사 31.0 /  7.7 /  7.7  · 잡졸엔 1.3배, 방어엔 막힌다  → 65  (dmg 3→5 · 치명배율 1.45→1.7)
+   *   보정명령  6.5 /  1.6 /  1.6  · 둔화 42% = 옆 냥 1.7배       → 65  혼자선 약하고 옆에 세우면 셈
+   *   특허범위 11.1 /  8.9 /  7.3  · 사거리 2.6배 = 오래 쏨       → 70  (dmg 15→20 · 방어무시 35→45)
+   *   국제출원 30.9 /  4.8 /  4.8  · 셋 다 있을 때만, 탱커엔 무력   → 75
+   *   변리사      —               · 인접 둘 ×1.44 ≈ 출원냥 0.9명   → 80  자리를 타서 조금 할인
+   * 대전장 체력은 임용가에 비례하고(DUEL.hpPerCost) 대전 공격력은 판의 dmg 를 그대로 받으므로,
+   * 값·능력을 바꾼 종류는 duel.hp / duel.dmg 로 예전 대전 수치를 그대로 맞춰 두었다.
+   */
+  /*
    * 출원냥 — **한 방이 무겁고 느린** 물리형. 💥 침해 계열의 주인공이다.
    * 예전에는 dmg 12 / rate 2.0 의 「무난한 중간」이라 아무 빌드도 대표하지 못했다.
    * 지금은 같은 DPS를 한 발에 몰아 담아, 방어력을 뚫는 힘(26 − 방어 8 = 18)과
@@ -73,7 +86,7 @@ const CATS = {
    */
   spec: {
     name: "출원냥", row: 2, arow: 3, kind: "atk",
-    dmg: 26, rate: 0.85, range: 118, tag: "중타", cost: 55, weight: 30,
+    dmg: 26, rate: 0.85, range: 118, tag: "중타", cost: 60, weight: 30,
     critC: 0.12, critM: 2.0,
     desc: "한 방이 무겁고 느리다. 방사 피해를 얹으면 무리를 통째로 쓸어 담는다.",
     filter: "none",
@@ -84,41 +97,43 @@ const CATS = {
   },
   /*
    * 특허범위냥 — 가장 느린 저격수. 📐 권리범위 계열의 주인공이다.
-   * 한 발에 몰아 담아(dmg 15 / rate 0.45) 방어무시(pierce)가 실제로 값을 하도록 했다 —
+   * 한 발에 몰아 담아(dmg 20 / rate 0.45) 방어무시(pierce)가 실제로 값을 하도록 했다 —
    * 방어는 **명중마다** 깎이므로, 잘게 여러 번 때리는 냥에게는 방어무시가 큰 의미가 없다.
    */
   claim: {
     name: "특허범위냥", row: 2, arow: 3, kind: "atk",
-    dmg: 15, rate: 0.45, range: 304, pierce: 35, tag: "저격", cost: 85, weight: 15,
+    dmg: 20, rate: 0.45, range: 304, pierce: 45, tag: "저격", cost: 70, weight: 15,
     critC: 0.22, critM: 2.2,
     desc: "아주 느리지만 사거리가 길고 방어를 무시한다. 사거리·방어무시를 쌓을수록 세진다.",
     filter: "hue-rotate(195deg) saturate(1.25)",
     icon: "📐",
     /* 대전장 — 저격수. 맨 뒤에 서는 대신 몸이 약하고, 한 방은 3.3배 무겁다.
      * 청사 판에서의 값어치(긴 사거리로 통로를 오래 덮는 것)가 대전장에서는 거의 뜻이 없어
-     * 그대로 옮기면 출원냥의 1/4 값밖에 못 한다 — 방어무시 35 가 탱커를 뚫는 것과 함께 이걸로 맞춘다 */
-    duel: { hp: 0.85, dmg: 3.3 },
+     * 그대로 옮기면 출원냥의 1/4 값밖에 못 한다 — 방어무시 45 가 탱커를 뚫는 것과 함께 이걸로 맞춘다 */
+    // 임용가 85→65 · dmg 15→20 · 방어무시 35→45 뒤에도 대전 체력(≈269)·한 방(≈53)이 그대로 되도록 맞춘 값
+    duel: { hp: 1.0, dmg: 2.45 },
   },
   pct: {
     name: "국제출원냥", row: 2, arow: 3, kind: "atk",
-    dmg: 7, rate: 1.6, range: 118, targets: 3, tag: "다중조준", cost: 190, weight: 5,
+    dmg: 7, rate: 1.6, range: 118, targets: 3, tag: "다중조준", cost: 75, weight: 5,
     critC: 0.12, critM: 1.6,
     desc: "한 번에 여러 마리를 동시에 공격한다.",
     filter: "hue-rotate(40deg) saturate(1.45)",
     icon: "🌐",
-    duel: { dmg: 2.9 },   // 대전장 — 셋을 같이 노리는 값이 임용가(190)를 따라오도록 한 방을 키운다
+    // 대전장 — 셋을 같이 노리는 값을 한 방으로 키운다. hp 는 임용가 190→70 전의 체력(≈548)을 유지
+    duel: { hp: 1.93, dmg: 2.9 },
   },
   /*
    * 우선심사냥 — 가장 빠르고 가장 가벼운 연사형. 🎯 입증(치명타) 계열의 주인공이다.
-   * 한 방이 3밖에 안 되므로 방어가 두꺼운 적에게는 거의 통하지 않는다(최소 피해 1).
+   * 한 방이 5밖에 안 되므로 방어가 두꺼운 적에게는 거의 통하지 않는다(최소 피해 1).
    * 대신 **초당 열네 번 굴리는 치명타 주사위**를 갖는다 — 치명타 확률·배율을 쌓을수록
    * 다른 어떤 냥보다 이득이 크고, 「고의침해 인정」(치명타 시 재장전 −40%)에 닿으면
    * 치명타가 치명타를 부르며 눈덩이처럼 불어난다.
    */
   fast: {
     name: "우선심사냥", row: 2, arow: 3, kind: "atk",
-    dmg: 3, rate: 6.4, range: 118, tag: "연사", cost: 65, weight: 24,
-    critC: 0.30, critM: 1.45,
+    dmg: 5, rate: 6.4, range: 118, tag: "연사", cost: 65, weight: 24,
+    critC: 0.30, critM: 1.7,
     desc: "쉬지 않고 연타한다. 한 방은 가볍지만 치명타를 쌓을수록 폭발적으로 세진다. 대전장에서는 근접 탱커로 앞을 막는다.",
     filter: "hue-rotate(315deg) saturate(1.3)",
     icon: "⚡",
@@ -127,7 +142,8 @@ const CATS = {
      * 저절로 맨 앞에 서서 몸으로 막고, 그 뒤에서 출원냥·특허범위냥이 쏜다.
      * 공격력은 0.7배 — 맞아 주는 냥이 때리는 것까지 잘하면 다른 냥을 뽑을 이유가 없어진다.
      * (판의 능력치는 그대로고 대전 명세(makeRoster)를 만들 때만 갈아 씌운다) */
-    duel: { hp: 1.6, dmg: 0.7, range: 38, armor: 0.30, tank: true },
+    // hp 1.6→1.67 · dmg 0.7→0.42: 임용가 65→60 · dmg 3→5 뒤에도 대전 체력(≈437)·한 방(≈2.1)이 그대로
+    duel: { hp: 1.67, dmg: 0.42, range: 38, armor: 0.30, tank: true },
   },
   /*
    * 보정명령냥 — 유일한 둔화형.
@@ -139,22 +155,23 @@ const CATS = {
    */
   delay: {
     name: "보정명령냥", row: 2, arow: 3, kind: "atk",
-    dmg: 5, rate: 1.5, range: 138, slow: 42, tag: "둔화", cost: 75, weight: 18,
+    dmg: 5, rate: 1.5, range: 138, slow: 42, tag: "둔화", cost: 65, weight: 18,
     critC: 0.14, critM: 1.6,
     desc: "맞은 침입자를 1.6초 동안 42% 느리게 만든다.",
     filter: "hue-rotate(255deg) saturate(1.4)",
     icon: "⏳",
     /* 대전장 — 둔화에 더해 **명중마다 12% 확률로 0.35초 정지**. 둔화는 상대의 걸음과 공속을
      * 같이 늦추지만 그것만으로는 값이 모자라, 아주 짧은 정지를 얹어 「발을 묶는 냥」으로 못 박는다 */
-    duel: { dmg: 3.4, stunC: 0.12, stunD: 0.35 },
+    duel: { hp: 1.13, dmg: 3.4, stunC: 0.12, stunD: 0.35 },   // hp — 임용가 75→60 보정(체력 ≈295 유지)
   },
   agent: {
     name: "변리사냥", row: 0, arow: 1, kind: "buff",
-    dmg: 0, rate: 0, range: 0, auraDmg: 1.25, auraRate: 1.15, tag: "보좌", cost: 145, weight: 8,
+    dmg: 0, rate: 0, range: 0, auraDmg: 1.25, auraRate: 1.15, tag: "보좌", cost: 80, weight: 8,
     desc: "비공격. 실제로 이어진 심사관 터(보통 좌우, 모서리에서는 꺾이는 방향)의 화력과 공속을 끌어올린다. 대전장에서는 뒤에서 다친 아군을 회복시킨다.",
     filter: "hue-rotate(15deg) saturate(1.5)",
     icon: "💼",
-    duel: { hp: 1.3, healer: true },   // 회복 담당 — 먼저 죽으면 회복이 끊기니 조금 튼튼하게
+    // 회복 담당 — 먼저 죽으면 회복이 끊기니 튼튼하게. 1.3 이었다가 임용가 145→75 보정으로 2.0 (체력 ≈584 유지)
+    duel: { hp: 2.0, healer: true },
   },
 
   /* ══ 특수 냥타워 ══ **지금은 판에 나오지 않는다** ══
@@ -3877,7 +3894,7 @@ function onSpriteReady(fn) {
   }
 }
 
-return { SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS,
+return { SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS, CAT_SHEET_SRC,
          sheetOf, sheetReady, sheetCellW, sheetCellH, cellW, cellH,
          jumpOf, jumpReady, motionFrame,
          onSpriteReady, sprite };
@@ -3893,7 +3910,7 @@ const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {auraCells} = __req("core/stats.js");
 const {sprite, onSpriteReady,
-       SPEC_FRAMES, SPEC_FRAME_MS,
+       SPEC_FRAMES, SPEC_FRAME_MS, CAT_SHEET_SRC,
        sheetOf, sheetReady, sheetCellW, sheetCellH, cellW, cellH,
        motionFrame} = __req("web/sprite.js");
 const $ = (s) => /** @type {HTMLElement} */ (document.querySelector(s));
@@ -7233,12 +7250,13 @@ function renderPromoteList() {
     const key = id.slice(0, id.lastIndexOf(":")), lv = +id.slice(id.lastIndexOf(":") + 1);
     const d = CATS[key];
     const top = lv >= BAL.promoteLv;
-    const need = BAL.mergeNeed - (count[id] % BAL.mergeNeed);
-    return `<div class="prow2 lvrow${top ? " top" : ""}${d.special ? " spec" : ""}" data-k="${key}">
-      <span class="ic">${d.icon}</span>
-      <span class="meta"><b>${d.name} <em>Lv${lv}</em></b>
-        <i>${d.special ? `특수 · ${d.tag}` : top ? "승진냥 — 샷건 방사 피해" : `합성까지 ${need}명`}</i></span>
-      <span class="pct">×${count[id]}</span>
+    /* 글자 없이 판 위와 같은 원화(시트 0번 칸)만 타일로 늘어놓는다.
+     * 레벨·수는 타일 귀퉁이 딱지로만 남긴다 — 시트가 없는 종류는 아이콘으로 대신한다. */
+    const src = CAT_SHEET_SRC[key];
+    return `<div class="lvtile${top ? " top" : ""}${d.special ? " spec" : ""}" data-k="${key}" title="${d.name} Lv${lv} ×${count[id]}">
+      ${src ? `<span class="spr" style="background-image:url('${src}')"></span>`
+            : `<span class="ic">${d.icon}</span>`}
+      <em>Lv${lv}</em><b>×${count[id]}</b>
     </div>`;
   }).join("");
 }
@@ -7253,23 +7271,27 @@ function renderPromoteList() {
 function renderCatRoster() {
   const el = $("#catRoster");
   const prep = game.phase === "prep" && !game.awaitingPassive && !game.awaitingAugment;
-  el.innerHTML = DRAW_KEYS.map((k) => {
+  // 싼 냥이 위 — 임용가 오름차순
+  const keys = DRAW_KEYS.slice().sort((a, b) => game.catCost(a) - game.catCost(b));
+  el.innerHTML = keys.map((k) => {
     const d = CATS[k];
     const cost = game.catCost(k);
     const afford = prep && game.gold >= cost;
+    /* 판에 실제로 서는 원화(전용 시트 0번 칸 = 평상시 자세)를 그대로 보여준다.
+     * 시트는 한 줄 4컷이라 배경을 가로 400% 로 늘리고 왼쪽 끝을 보이면 첫 칸만 잘린다.
+     * 시트가 없는 종류는 예전처럼 아이콘으로 되돌아간다. 설명(desc)은 카드에서 빼고
+     * 원화에 마우스를 올렸을 때 말풍선(showTip)으로만 보여준다. */
+    const src = CAT_SHEET_SRC[k];
     return `<div class="pick catpick${afford ? "" : " off"}" data-k="${k}">
       ${prep && !afford ? '<span class="nogold">자금 부족</span>' : ""}
       <div class="row1">
-        <span class="ic">${d.icon}</span>
+        ${src ? `<span class="spr" style="background-image:url('${src}')"></span>`
+              : `<span class="ic">${d.icon}</span>`}
         <div class="who">
-          <span class="nm">${d.name}</span>
-          <span class="ef">${d.tag}${d.kind === "buff"
-            ? (game.augSet.has("agentWar") ? " · 전투참전" : " · 비공격")
-            : d.slow ? ` · 둔화 ${d.slow}%` : ` · 치명타 ${Math.round((d.critC || 0) * 100)}%`}</span>
+          <span class="nm">${d.icon} ${d.name}</span>
         </div>
         <span class="cost">₩${cost.toLocaleString()}</span>
       </div>
-      <span class="fl">${d.desc}</span>
     </div>`;
   // 이종 합성을 잠갔으므로 처방표도 붙이지 않는다 — 되살릴 때는 `+ recipeBookHtml()` 을 되돌린다
   }).join("") /* + recipeBookHtml() */;
@@ -7290,9 +7312,13 @@ function renderCatRoster() {
       }
     });
   });
-  el.querySelectorAll(".catpick, .rbrow").forEach((row) => {
-    row.addEventListener("pointerenter", (e) => showTip(e, { key: /** @type {HTMLElement} */ (row).dataset.k }));
-    row.addEventListener("pointerleave", hideTip);
+  /* 말풍선은 카드의 **원화부터 가격까지 한 줄(.row1)** 위에 올렸을 때 뜬다 — 설명이 카드에서 빠졌으므로
+   * 자금이 모자라 흐려진 카드에서도 똑같이 떠야 한다 (.off 는 클릭만 막고 hover 는 막지 않는다). */
+  el.querySelectorAll(".catpick .row1, .rbrow").forEach((node) => {
+    const key = /** @type {HTMLElement} */ (node.closest("[data-k]")).dataset.k;
+    node.addEventListener("pointerenter", (e) => showTip(e, { key }));
+    node.addEventListener("pointermove", (e) => showTip(e, { key }));
+    node.addEventListener("pointerleave", hideTip);
   });
 }
 
