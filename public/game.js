@@ -3789,6 +3789,21 @@ for (const key of Object.keys(CAT_SHEET_SRC)) {
   catSheets[key] = im;
 }
 /**
+ * 프로필 초상화 — 좌측 임용 카드(renderCatRoster)에 얹는 정면 일러스트.
+ * tools/cut-info-portrait.js 가 원화(img/src/cat{n}_info.png)의 흰 배경을 지우고 정사각형(192px)으로
+ * 오려 둔 것이라 칸에 contain 으로 그대로 담으면 된다. 번호는 공격 시트와 같다 (cat_info1 = 출원냥).
+ * 판 위에 서는 모습(CAT_SHEET_SRC 0번 칸)과 다른 그림이지만, 카드는 「누구를 살지」 고르는 자리라
+ * 정면 얼굴이 더 알아보기 쉽다. 없는 종류는 예전처럼 시트 0번 칸으로 되돌아간다.
+ */
+const CAT_INFO_SRC = {
+  spec:  "img/game/cat_info1.png",   // 출원냥
+  claim: "img/game/cat_info2.png",   // 특허범위냥
+  agent: "img/game/cat_info3.png",   // 변리사냥
+  pct:   "img/game/cat_info4.png",   // 국제출원냥
+  fast:  "img/game/cat_info5.png",   // 우선심사냥
+  delay: "img/game/cat_info6.png",   // 보정명령냥
+};
+/**
  * 점프 모션 시트 — 웨이브가 도는 동안 제자리에서 뛰는 냥만 여기에 적는다.
  * 지금은 **변리사냥 하나뿐**이다. 비공격 보좌형이라 공격 모션이 돌 일이 거의 없어
  * 판이 돌아가는 내내 0번 칸에 굳어 있었는데, 그 자리를 점프가 채운다.
@@ -3896,7 +3911,7 @@ function onSpriteReady(fn) {
   }
 }
 
-return { SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS, CAT_SHEET_SRC,
+return { SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS, CAT_SHEET_SRC, CAT_INFO_SRC,
          sheetOf, sheetReady, sheetCellW, sheetCellH, cellW, cellH,
          jumpOf, jumpReady, motionFrame,
          onSpriteReady, sprite };
@@ -3912,7 +3927,7 @@ const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {auraCells} = __req("core/stats.js");
 const {sprite, onSpriteReady,
-       SPEC_FRAMES, SPEC_FRAME_MS, CAT_SHEET_SRC,
+       SPEC_FRAMES, SPEC_FRAME_MS, CAT_SHEET_SRC, CAT_INFO_SRC,
        sheetOf, sheetReady, sheetCellW, sheetCellH, cellW, cellH,
        motionFrame} = __req("web/sprite.js");
 const $ = (s) => /** @type {HTMLElement} */ (document.querySelector(s));
@@ -7279,16 +7294,17 @@ function renderCatRoster() {
     const d = CATS[k];
     const cost = game.catCost(k);
     const afford = prep && game.gold >= cost;
-    /* 판에 실제로 서는 원화(전용 시트 0번 칸 = 평상시 자세)를 그대로 보여준다.
-     * 시트는 한 줄 4컷이라 배경을 가로 400% 로 늘리고 왼쪽 끝을 보이면 첫 칸만 잘린다.
-     * 시트가 없는 종류는 예전처럼 아이콘으로 되돌아간다. 설명(desc)은 카드에서 빼고
-     * 원화에 마우스를 올렸을 때 말풍선(showTip)으로만 보여준다. */
-    const src = CAT_SHEET_SRC[k];
+    /* 프로필은 정면 초상화(CAT_INFO_SRC)를 먼저 쓴다. 초상화가 없는 종류는 판에 서는 원화
+     * (전용 시트 0번 칸 = 평상시 자세)로 — 시트는 한 줄 4컷이라 배경을 가로 400% 로 늘리고
+     * 왼쪽 끝을 보이면 첫 칸만 잘린다. 그것도 없으면 예전처럼 아이콘으로 되돌아간다.
+     * 설명(desc)은 카드에서 빼고 원화에 마우스를 올렸을 때 말풍선(showTip)으로만 보여준다. */
+    const port = CAT_INFO_SRC[k], src = CAT_SHEET_SRC[k];
     return `<div class="pick catpick${afford ? "" : " off"}" data-k="${k}">
       ${prep && !afford ? '<span class="nogold">자금 부족</span>' : ""}
       <div class="row1">
-        ${src ? `<span class="spr" style="background-image:url('${src}')"></span>`
-              : `<span class="ic">${d.icon}</span>`}
+        ${port ? `<span class="spr port" style="background-image:url('${port}')"></span>`
+              : src ? `<span class="spr" style="background-image:url('${src}')"></span>`
+                    : `<span class="ic">${d.icon}</span>`}
         <div class="who">
           <span class="nm">${d.icon} ${d.name}</span>
         </div>

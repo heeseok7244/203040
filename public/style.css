@@ -682,6 +682,8 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   background-repeat:no-repeat;background-size:400% 100%;background-position:0 0;
   background-color:rgba(183,208,175,.35);border:1px solid rgba(43,36,24,.18);
   image-rendering:auto}
+/* 정면 초상화(cat_info{n}.png) — 정사각형 한 장이라 칸에 그대로 담고, 테두리에 살짝 여백을 둔다 */
+.catpick .spr.port{background-size:88% 88%;background-position:center}
 .catpick .spr:hover{background-color:rgba(183,208,175,.7);border-color:#3f5a2f}
 .catpick .who{min-width:0}
 .catpick .nm{display:block}
