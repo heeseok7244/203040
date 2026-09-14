@@ -12,6 +12,12 @@
  * (MOTIONS 의 align 참고) — 제자리 공격은 발끝을 같은 바닥선에, 점프는 시트의 높이차를
  * 그대로 살린다.
  *
+ * **소품은 프로필 초상화에서 입힌다.** 모션 원화는 소품 없는 맨 냥이지만 프로필 원화
+ * (cat{n}_info.png)에는 서류·저격총·모노클 같은 소품이 붙어 있다. 소품 달린 모션 원화가 따로
+ * 없으므로, 초상화에서 몸통을 지워 소품층만 남기고(dress-cat.js) 그걸 컷마다 냥 뒤(또는 위)에
+ * 얹는다 — 판 위·카드·컷인의 냥이 전부 같은 얼굴이 되도록. 초상화가 없는 번호는 맨 냥으로 굽는다.
+ * 그 대신 소품이 들어갈 자리가 필요해 몸통은 초상화와 같은 창(WIN) 비율로 조금 작게 앉는다.
+ *
  * 시트를 새로 뽑았다면 아래 상수와 MOTIONS 만 다시 보면 된다.
  * PNG 읽기·쓰기는 png.js, 배경 지우기는 sprite.js 가 맡는다.
  */
@@ -19,6 +25,7 @@ const fs = require("fs");
 const path = require("path");
 const { decode, encode } = require("./png");
 const { cutout } = require("./sprite");
+const { splitProps } = require("./dress-cat");
 
 /** 원화는 public/img/src, 구운 게임용 시트는 public/img/game 에 둔다 */
 const SRC_DIR = path.join(__dirname, "../public/img/src");
@@ -57,6 +64,53 @@ const MOTIONS = {
     out: (i) => `cat_jump${i}.png`,
     num: /^cat(\d+)_jump\.png$/i,
   },
+};
+
+/* ═══════ 소품 — 프로필 초상화에서 떼어 와 입힌다 ═══════ */
+
+/** 번호 → 프로필 초상화 원화 (cut-info-portrait.js 와 같은 파일) */
+const PORTRAIT = (i) => `cat${i}_info.png`;
+
+/**
+ * 초상화에서 셀 한 칸이 되는 창(px, 초상화 좌표). 이 창을 CELL 로 줄여 셀에 앉힌다.
+ *
+ * 여섯 초상화는 몸통이 같은 자리·같은 크기(y 320~860)로 그려져 있고 소품이 그 둘레로 뻗는다.
+ * 창을 몸통에 딱 맞추면 소품이 전부 잘리고, 소품을 다 담으면(저격총은 폭 1000px) 냥이 절반으로
+ * 줄어 판에서 안 보인다. 704 는 출원냥 머리 위 서류(y 232~)가 딱 들어가는 크기로,
+ * cut-info-portrait.js 의 CAT_WIN 과 같다 — 카드의 초상화와 판 위의 냥이 같은 비율로 잘린다.
+ * 몸통은 셀의 81% (예전 FIT 150 의 90% 쯤) 가 되고, 그보다 멀리 뻗은 소품(총열·바깥쪽 수리검)은
+ * 잘린다. **여섯 냥이 모두 같은 창을 써야** 판 위 크기가 같다.
+ */
+const WIN = { cx: 520, cy: 560, side: 704 };
+
+/**
+ * 번호별 소품 분리 설정 (dress-cat.js splitProps 참고).
+ *
+ * `seeds` 몸통 채색을 채워 나갈 시작점 — 첫째는 가슴, 둘째는 꼬리 (꼬리는 외곽선으로 몸통과
+ *         갈려 있어 따로 채워야 한다). 보정명령냥(6)은 꼬리가 검은 데다 폭탄·기름통과 붙어
+ *         있어 씨앗을 안 주고 컷 실루엣 쪽에 맡긴다.
+ * `props` 컷 실루엣 안에 들어와 있어 몸통으로 오인되는 소품의 자리(사각형) — 우선심사냥(5)의
+ *         오른쪽 개틀링이 꼬리 자리에 겹친다. 꼬리(y 680~)는 넣지 않도록 두 조각으로 나눴다.
+ * `front` 냥 **앞에** 와야 할 소품의 자리 — 우선심사냥이 앞발로 쥔 개틀링 둘. 뒤에 깔면 컷의
+ *         통통한 몸통에 총열 끝만 남는다.
+ * `over`  몸통 **안쪽**에 그려진 소품 — 변리사냥(3)의 모노클·사슬·나비넥타이, 우선심사냥(5)의
+ *         선글라스. 몸통을 지우면 같이 사라지므로 자리를 집어 따로 떼어 냥 위에 얹는다. 모노클은
+ *         원판째(렌즈 속 눈까지) 가져와 감은 눈 위에도 뜬 눈이 비치게 하고, 사슬·넥타이·선글라스는
+ *         몸통 색만 뺀다. 선글라스는 감은 눈 컷에서도 그대로 쓰고 있는 셈이 된다.
+ */
+const DRESS = {
+  1: { seeds: [[600, 640], [770, 720]] },
+  2: { seeds: [[600, 640], [770, 740]] },
+  3: { seeds: [[600, 640], [770, 720]],
+       over: [{ disc: { cx: 434, cy: 511, r: 56 } },
+              { rect: [360, 495, 405, 605], notColor: [53, 53, 53], tol: 30 },
+              { rect: [420, 625, 605, 764], notColor: [53, 53, 53], tol: 30 }] },
+  4: { seeds: [[600, 640], [770, 720]] },
+  5: { seeds: [[600, 640], [800, 760]],
+       props: [[640, 520, 900, 675], [640, 680, 760, 780]],
+       front: [[0, 500, 360, 800], [640, 500, 1023, 800]],
+       over: [{ rect: [348, 465, 668, 532], notColor: [214, 214, 214], tol: 40 }] },
+  6: { seeds: [[600, 640]] },
 };
 
 /* ═══════ 시트 좌표 — 시트를 새로 뽑으면 여기만 다시 잰다 ═══════ */
@@ -150,12 +204,21 @@ function boxOf(img, a, b) {
  * 원본의 box 영역을 dw×dh 로 줄여 out 의 (dx,dy) 에 얹는다.
  * 색은 알파를 곱해 평균 낸 뒤 되돌린다 — 그냥 평균 내면 투명한 바깥쪽의 흰색이
  * 섞여 들어와 검은 테두리가 하얗게 바랜다.
+ *
+ * 이미 그려진 픽셀 위에는 알파 합성(source-over)으로 얹는다 — 소품층 위에 냥, 그 위에
+ * 다시 소품을 겹쳐 그리기 위해서다. clip 은 그려도 되는 셀의 가로 범위 [x0, x1) — 소품은
+ * 셀보다 넓게 뻗을 수 있어, 자르지 않으면 옆 칸으로 새어 들어간다.
  */
-function blit(src, box, out, dx, dy, dw, dh) {
+function blit(src, box, out, dx, dy, dw, dh, clip) {
   const sw = box.w / dw, sh = box.h / dh;
+  const cx0 = clip ? clip.x0 : 0, cx1 = clip ? clip.x1 : out.w;
   for (let j = 0; j < dh; j++) {
+    const oy = dy + j;
+    if (oy < 0 || oy >= out.h) continue;
     const ya = box.y0 + j * sh, yb = box.y0 + (j + 1) * sh;
     for (let i = 0; i < dw; i++) {
+      const ox = dx + i;
+      if (ox < cx0 || ox >= cx1) continue;
       const xa = box.x0 + i * sw, xb = box.x0 + (i + 1) * sw;
       let r = 0, g = 0, b = 0, a = 0, n = 0;
       for (let y = Math.floor(ya); y < Math.ceil(yb); y++) {
@@ -168,11 +231,14 @@ function blit(src, box, out, dx, dy, dw, dh) {
         }
       }
       if (!n || a <= 0) continue;
-      const q = ((dy + j) * out.w + (dx + i)) * 4;
-      out.data[q] = Math.round(r / a);
-      out.data[q + 1] = Math.round(g / a);
-      out.data[q + 2] = Math.round(b / a);
-      out.data[q + 3] = Math.round((a / n) * 255);
+      const sa = a / n;                                   // 새 픽셀의 알파 (0~1)
+      const q = (oy * out.w + ox) * 4, da = out.data[q + 3] / 255;
+      const oa = sa + da * (1 - sa);                      // 합성 후 알파
+      const mix = (s, d) => Math.round((s * sa + d * da * (1 - sa)) / oa);
+      out.data[q] = mix(r / a, out.data[q]);
+      out.data[q + 1] = mix(g / a, out.data[q + 1]);
+      out.data[q + 2] = mix(b / a, out.data[q + 2]);
+      out.data[q + 3] = Math.round(oa * 255);
     }
   }
 }
@@ -206,13 +272,32 @@ function alreadyCut(img) {
 
 /* ═══════ 굽기 ═══════ */
 
-/** 시트 한 장을 모션 규칙대로 구워 out_ 에 쓴다 */
-function bake(src, out_, motion) {
+/**
+ * 번호 i 의 프로필 초상화 — 배경을 지운 그림과 소품 분리 설정. 초상화가 없거나 DRESS 에 설정이
+ * 없으면 null — 그 냥은 맨 냥으로 굽는다 (초상화를 하나씩 넣는 중에도 도구가 돌아가도록).
+ */
+function portraitOf(i) {
+  const src = path.join(SRC_DIR, PORTRAIT(i));
+  if (!DRESS[i] || !fs.existsSync(src)) return null;
+  return { img: deflare(cutout(decode(src))), cfg: DRESS[i] };
+}
+
+/**
+ * 시트 한 장을 모션 규칙대로 구워 out_ 에 쓴다.
+ *
+ * portrait(portraitOf) 를 주면 소품을 입힌다. 그때는 셀이 초상화의 창(WIN)에 대응하므로 컷의 배율도
+ * FIT 이 아니라 **초상화 몸통 높이**에 맞춘다 — 컷의 몸통이 초상화 몸통과 같은 크기·같은 자리에
+ * 앉아야 지운 자리에 정확히 들어간다. 소품층은 컷의 몸통이 초상화 몸통에서 벗어난 만큼(점프의 lift,
+ * 웅크린 컷) 따라 움직인다. 뒤 소품은 발끝, 위 소품(모노클)은 머리에 붙여 옮긴다.
+ */
+function bake(src, out_, motion, portrait) {
   const { n, align } = motion;
   const raw = decode(src);
   const clean = alreadyCut(raw);
   const cut = deflare(clean ? raw : cutout(raw));
   const boxes = columns(cut, n).map(([a, b]) => boxOf(cut, a, b));
+  // 0번 컷(앉은 자세)의 실루엣으로 초상화의 몸통과 소품을 가른다
+  const props = portrait ? splitProps(portrait.img, portrait.cfg, { img: cut, box: boxes[0] }) : null;
 
   // 컷 전부가 같은 배율을 쓴다 — 가장 넓은 컷과, 모션이 세로로 차지하는 폭이 셀 안에 들어가는 배율.
   // align:"base" 는 컷을 각자 바닥선에 앉히므로 가장 높은 컷만 보면 되지만,
@@ -221,23 +306,61 @@ function bake(src, out_, motion) {
   const top = Math.min(...boxes.map((b) => b.y0));
   const floor = Math.max(...boxes.map((b) => b.y1));
   const spanH = align === "sheet" ? floor - top + 1 : Math.max(...boxes.map((b) => b.h));
-  const scale = Math.min(FIT_W / maxW, FIT_H / spanH);
+  let scale = Math.min(FIT_W / maxW, FIT_H / spanH);
+  let center = CELL / 2, base = BASE, head = 0;
+
+  // 초상화 창 → 셀. k 는 초상화 px 하나가 셀에서 차지하는 크기, (ox,oy) 는 창의 왼쪽 위.
+  const k = CELL / WIN.side, ox = WIN.cx - WIN.side / 2, oy = WIN.cy - WIN.side / 2;
+  if (props) {
+    const body = props.body;
+    // 0번 컷(앉은 자세)의 높이를 초상화 몸통 높이에 맞춘다. 너비가 아니라 높이인 것은 꼬리 때문이다 —
+    // 컷과 초상화의 꼬리는 뻗은 길이가 달라 너비를 믿을 수 없다. 컷이 초상화보다 통통하게 그려진
+    // 냥(변리사냥)은 그만큼 넓어지는데, 셀을 넘지는 않도록 FIT_W 로 막는다.
+    scale = Math.min((body.h * k) / boxes[0].h, FIT_W / maxW);
+    // 몸통의 가로 가운데 — 초상화 몸통 상자의 오른쪽 끝은 꼬리라 컷과 길이가 다를 수 있다.
+    // 왼쪽 끝은 늘 왼쪽 볼이므로 거기서 0번 컷의 너비만큼 간 자리의 절반을 가운데로 삼는다.
+    center = (body.x0 - ox) * k + (boxes[0].w * scale) / 2;
+    base = (body.y1 + 1 - oy) * k;
+    head = (body.y0 - oy) * k;
+  }
+
+  // 컷마다 줄인 크기와 뜬 높이. 소품을 입힐 때는 배율이 FIT 이 아니라 초상화에 매여 있어 뜬 컷이
+  // 셀 위로 넘칠 수 있다 (국제출원냥 점프의 3컷처럼 위로 쭉 뻗은 컷). 그때는 뜬 높이를 모두 같은
+  // 비율로 줄여 가장 높이 뜬 컷의 머리가 셀 안에 들게 한다 — 도약이 조금 낮아질 뿐 모양은 그대로다.
+  const dims = boxes.map((box) => ({
+    dw: Math.max(1, Math.round(box.w * scale)),
+    dh: Math.max(1, Math.round(box.h * scale)),
+    lift: align === "sheet" ? Math.round((floor - box.y1) * scale) : 0,
+  }));
+  const spill = Math.max(0, ...dims.map((d) => d.lift + d.dh - Math.round(base)));  // 셀 위로 넘치는 px
+  if (spill > 0) {
+    const worst = dims.find((d) => d.lift + d.dh - Math.round(base) === spill);
+    const f = worst.lift > spill ? (worst.lift - spill) / worst.lift : 0;
+    for (const d of dims) d.lift = Math.round(d.lift * f);
+    console.log(`  ⚠ 뜬 컷이 셀 위로 ${spill}px 넘쳐 뜬 높이를 ${(f * 100).toFixed(0)}% 로 줄였습니다`);
+  }
 
   const out = { w: CELL * n, h: CELL, data: Buffer.alloc(CELL * n * CELL * 4) };
+  const whole = (img) => ({ x0: 0, y0: 0, w: img.w, h: img.h });
   boxes.forEach((box, i) => {
-    const dw = Math.max(1, Math.round(box.w * scale));
-    const dh = Math.max(1, Math.round(box.h * scale));
-    const dx = i * CELL + Math.round((CELL - dw) / 2);        // 가로는 컷마다 가운데로
-    const lift = align === "sheet" ? Math.round((floor - box.y1) * scale) : 0;
-    const dy = BASE - lift - dh;                              // 세로는 발끝을 바닥선에서 lift 만큼 띄워
-    blit(cut, box, out, dx, dy, dw, dh);
+    const { dw, dh, lift } = dims[i];
+    const dx = i * CELL + Math.round(center - dw / 2);        // 가로는 컷마다 가운데로
+    const dy = Math.round(base) - lift - dh;                  // 세로는 발끝을 바닥선에서 lift 만큼 띄워
+    const clip = { x0: i * CELL, x1: (i + 1) * CELL };
+    // 초상화 전체를 창 기준으로 셀에 얹는다 — 몸통을 지운 자리에 컷이 들어간다
+    const layer = (img, sy) => blit(img, whole(img), out, i * CELL + Math.round(-ox * k),
+                                    Math.round(-oy * k + sy), Math.round(img.w * k), Math.round(img.h * k), clip);
+    if (props) layer(props.behind, -lift);
+    blit(cut, box, out, dx, dy, dw, dh, clip);
+    if (props && props.over) layer(props.over, dy - Math.round(head));
     console.log(`  ${i + 1}컷\t원본 ${box.w}×${box.h} @x${box.x0}\t→ ${dw}×${dh} @(${dx - i * CELL},${dy})` +
-                (lift ? `\t↑${lift}` : ""));
+                (lift ? `\t↑${lift}` : "") + (dy < 0 ? "\t⚠ 머리가 셀 위로 잘립니다" : ""));
   });
 
   encode(out, out_);
   console.log(`${path.basename(src)} → ${path.basename(out_)}\t${out.w}×${out.h}` +
-              ` (${CELL}px × ${n}컷, 배율 ${scale.toFixed(3)}${clean ? ", 배경 이미 지워짐" : ""})`);
+              ` (${CELL}px × ${n}컷, 배율 ${scale.toFixed(3)}${clean ? ", 배경 이미 지워짐" : ""}` +
+              `${props ? `, 소품 입힘(몸통 ${props.body.w}×${props.body.h})` : ", 맨 냥"})`);
   if (scale > 1) {
     console.log(`  ⚠ 원화가 셀보다 작아 ${scale.toFixed(2)}배로 늘렸습니다 — 외곽선이 흐려질 수 있습니다.`);
   }
@@ -248,9 +371,12 @@ function bake(src, out_, motion) {
  * 이름이 규칙과 다르면 1번으로 본다 — 시트 하나만 손으로 굽는 자리라 출력 경로를
  * 직접 줄 수도 있다.
  */
-function defaultOut(src, motion) {
+function numOf(src, motion) {
   const m = motion.num.exec(path.basename(src));
-  return path.join(OUT_DIR, motion.out(m ? m[1] : 1));
+  return m ? +m[1] : 1;
+}
+function defaultOut(src, motion) {
+  return path.join(OUT_DIR, motion.out(numOf(src, motion)));
 }
 
 /**
@@ -267,7 +393,7 @@ function bakeAll(motion) {
     const src = path.join(SRC_DIR, name);
     if (!fs.existsSync(src)) { console.log(`${name}\t없음 — 건너뜁니다`); continue; }
     try {
-      bake(src, path.join(OUT_DIR, motion.out(i)), motion);
+      bake(src, path.join(OUT_DIR, motion.out(i)), motion, portraitOf(i));
       n++;
     } catch (e) {
       console.log(`${name}\t❌ ${e.message}`);
@@ -278,10 +404,11 @@ function bakeAll(motion) {
   if (failed.length) process.exitCode = 1;
 }
 
-/** 도구 하나의 명령줄 처리 — 인자가 있으면 한 장만, 없으면 전부 굽는다 */
+/** 도구 하나의 명령줄 처리 — 인자가 있으면 한 장만(파일명의 번호로 소품을 찾는다), 없으면 전부 굽는다 */
 function main(motion) {
-  if (process.argv[2]) bake(process.argv[2], process.argv[3] || defaultOut(process.argv[2], motion), motion);
+  const src = process.argv[2];
+  if (src) bake(src, process.argv[3] || defaultOut(src, motion), motion, portraitOf(numOf(src, motion)));
   else bakeAll(motion);
 }
 
-module.exports = { MOTIONS, CELL, bake, bakeAll, defaultOut, main };
+module.exports = { MOTIONS, CELL, WIN, DRESS, portraitOf, bake, bakeAll, defaultOut, main };

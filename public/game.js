@@ -1897,7 +1897,8 @@ function step(g, dt, now) {
                        col: "#ff9a5c", life: 0.2, max: 0.2 });
       }
 
-      g.shots.push({ x1: cx, y1: cy, x2: target.x, y2: target.y,
+      // key 는 렌더러가 투사체 모양(서류·저격탄·수리검…)을 고르는 데 쓴다 — 냥마다 제 소품을 던진다
+      g.shots.push({ x1: cx, y1: cy, x2: target.x, y2: target.y, key: c.key,
                      col: crit ? "#cda43a" : col, w: crit ? 3 : 2, life, max: life, crit, long: isLong });
       damage(g, target, amount, c.st, crit);
       // 명중 연출 — 몸통이 잠깐 번쩍이고 살짝 튕긴다. 타이밍은 발사와 동시(즉발 데미지),
@@ -2698,7 +2699,7 @@ class DuelSim {
         if (crit) anyCrit = true;
         const raw = u.dmg * (crit ? u.cm : 1);
         this.shots.push({ x1: u.x, dep1: this.depOf(u), x2: target.x, dep2: this.depOf(target),
-                          side: u.side, crit, life: 0.13, max: 0.13 });
+                          side: u.side, key: u.k, crit, life: 0.13, max: 0.13 });
         hits.push([target, this.afterArmor(u, target, raw * this.ampSlow(u, target), { crit }), crit, u.x, u.ex]);
         if (crit) this.events.push({ t: "crit", x: u.x, side: u.side, dep: this.depOf(u), id: u.id });
         if (u.sl) slows.push([target, u.sl / 100]);
@@ -5202,182 +5203,316 @@ function drawBlastRing(g, s) {
   g.restore();
 }
 
-/** 미사일 발사 이펙트 — 타워→적을 잇는 직선 대신, 살짝 포물선을 그리며 날아가는 발광 구슬 + 궤적 + 명중 폭발.
- *  s.life가 s.max에서 0으로 줄어드는 걸 진행도로 삼는다 (0=발사 직후, 1=명중). */
-function drawMissile(g, s) {
-  if (s.ring) return drawBlastRing(g, s);
-  if (s.long) return drawLongMissile(g, s);
-  const p = 1 - Math.max(0, s.life / s.max);          // 0..1 진행도
-  const crit = s.col === "#cda43a";
-  const dx = s.x2 - s.x1, dy = s.y2 - s.y1;
-  const dist = Math.hypot(dx, dy) || 1;
-  const arcH = Math.min(16, dist * 0.12);
-  const ang = Math.atan2(dy, dx);
+/* ═══════ 투사체 — 냥마다 제 소품을 던진다 ═══════
+ *
+ * 예전에는 모든 냥이 같은 「발광 미사일」을 쏘고 특허범위냥만 창 모양 장거리탄을 썼다. 프로필이
+ * 소품 달린 냥으로 바뀌면서(서류·저격총·모노클·수리검·개틀링·폭탄) 판 위의 냥도 그 소품을 입었으니,
+ * 날아가는 것도 그 소품이어야 「누가 쐈는지」가 한눈에 읽힌다.
+ *
+ * 탄환 자료(g.shots)는 core/combat.js 가 만들고 여기서는 그리기만 한다 — 판정·수명·궤적 길이는 그대로고
+ * `key`(쏜 냥의 종류)만 보고 모양을 고른다. key 가 없는 탄(연쇄 가닥·샷건 산탄)은 예전 미사일이다.
+ */
 
-  const posAt = (t) => ({
-    x: s.x1 + dx * t,
-    y: s.y1 + dy * t - Math.sin(t * Math.PI) * arcH,
-  });
+/**
+ * 냥 종류 → 투사체 모양. 특수(합성) 냥은 **원화를 물려준 재료 냥의 투사체**를 쓴다 —
+ * CAT_SHEET_SRC 의 짝과 같다 (같은 얼굴이면 같은 것을 던져야 헷갈리지 않는다).
+ */
+const SHOT_STYLE = {
+  spec: "paper",     fee: "paper",         // 📄 출원냥 · 💰 수수료징수냥 — 출원 서류
+  claim: "bullet",   citation: "bullet",   // 📐 특허범위냥 · 🔗 인용문헌냥 — 저격탄
+  agent: "monocle",  invalid: "monocle",   // 💼 변리사냥 · ☠️ 무효사유냥 — 모노클
+  pct: "shuriken",   panel: "shuriken",    // 🌐 국제출원냥 · ⚖️ 심판합의체냥 — 수리검
+  fast: "slug",      rush: "slug",         // ⚡ 우선심사냥 · ⏱️ 조기공개냥 — 개틀링 탄
+  delay: "bomb",                           // ⏳ 보정명령냥 — 폭탄
+};
 
-  const MSCALE = 2; // 미사일 몸체 전체 크기 배율 — 도파민용으로 2배 키움
-  if (p < 0.9) {
-    // 배기 궤적 — 지나온 자리에 옅어지는 잔상
-    for (let i = 1; i <= 5; i++) {
-      const tp = Math.max(0, p - i * 0.045);
-      const tpos = posAt(tp);
-      g.fillStyle = crit ? `rgba(205,164,58,${0.4 * (1 - i / 5)})` : `rgba(105,182,214,${0.4 * (1 - i / 5)})`;
-      g.beginPath(); g.arc(tpos.x, tpos.y, (3.4 - i * 0.45) * MSCALE, 0, 7); g.fill();
-    }
-    // 진행 방향 접선 각도 (포물선을 따라 기수가 향하도록)
-    const t0 = Math.max(0, p - 0.02), t1 = Math.min(1, p + 0.02);
-    const a0 = posAt(t0), a1 = posAt(t1);
-    const heading = Math.atan2(a1.y - a0.y, a1.x - a0.x);
-    const mp = posAt(p);
+/**
+ * 모양별 성격.
+ *   arc   포물선 높이 (거리 대비 비율, 상한 px) — 저격탄은 직선, 폭탄은 높이 던진다
+ *   spin  날아가는 동안 도는 바퀴 수 — 수리검은 빨리, 서류는 팔랑, 저격탄·개틀링 탄은 안 돈다(진행 방향을 본다)
+ *   size  기준 크기(px) — 판 위 냥이 64px, 쥐가 40px 안팎이라 12~14 면 눈에 띄면서 판을 가리지 않는다
+ *   col   궤적·발광·착탄에 쓰는 그 소품의 색, ring 은 착탄 고리
+ *   blast 착탄 크기 배율 — 폭탄은 이름값을 해야 한다
+ */
+const SHOT_LOOK = {
+  paper:    { arc: [0.12, 16], spin: 1.2, size: 13, col: "rgba(120,170,235,", ring: "#6aa6e8", blast: 1 },
+  bullet:   { arc: [0, 0],     spin: 0,   size: 14, col: "rgba(240,150,40,",  ring: "#f0a030", blast: 1.2 },
+  monocle:  { arc: [0.10, 14], spin: 0.5, size: 12, col: "rgba(245,200,60,",  ring: "#f2c230", blast: 1 },
+  shuriken: { arc: [0.08, 12], spin: 3,   size: 14, col: "rgba(60,190,255,",  ring: "#3ac0ff", blast: 0.9 },
+  slug:     { arc: [0.04, 6],  spin: 0,   size: 10, col: "rgba(255,170,80,",  ring: "#ffa04a", blast: 0.7 },
+  bomb:     { arc: [0.28, 40], spin: 0.6, size: 14, col: "rgba(255,130,60,",  ring: "#ff7a3a", blast: 1.6 },
+  /** key 가 없는 탄 — 예전 발광 미사일 그대로 */
+  missile:  { arc: [0.12, 16], spin: 0,   size: 12, col: "rgba(105,182,214,", ring: "#96d2eb", blast: 1 },
+};
 
-    g.save();
-    g.translate(mp.x, mp.y);
-    g.rotate(heading);
-    const len = s.w * 5 * MSCALE, wid = s.w * 1.9 * MSCALE;
-    // 발광
-    g.fillStyle = crit ? "rgba(233,203,140,.5)" : "rgba(150,210,235,.45)";
-    g.beginPath(); g.arc(0, 0, len * 0.9, 0, 7); g.fill();
-    // 화염 꼬리
-    g.fillStyle = crit ? "#e9a23a" : "#5bc8e8";
-    g.beginPath();
-    g.moveTo(-len * 0.55, -wid * 0.32); g.lineTo(-len * 1.15, 0); g.lineTo(-len * 0.55, wid * 0.32);
-    g.closePath(); g.fill();
-    // 몸체 (뾰족한 탄두)
-    g.fillStyle = "#fff8e6"; g.strokeStyle = crit ? "#a9791e" : "#2f7a9e"; g.lineWidth = 1;
-    g.beginPath();
-    g.moveTo(len * 0.62, 0);
-    g.lineTo(len * 0.05, -wid * 0.5);
-    g.lineTo(-len * 0.5, -wid * 0.34);
-    g.lineTo(-len * 0.5, wid * 0.34);
-    g.lineTo(len * 0.05, wid * 0.5);
-    g.closePath(); g.fill(); g.stroke();
-    g.fillStyle = crit ? "#e9a23a" : "#5bc8e8";
-    g.beginPath(); g.arc(len * 0.1, 0, wid * 0.22, 0, 7); g.fill();
-    g.restore();
-  } else {
-    // 명중 폭발 — 순간 백색 코어 플래시 + 확산하는 충격파 + 튀는 파편, 치명타는 한 단계 더 크고 진하게.
-    // 화면 흔들림은 걸지 않는다 — 착탄마다 판 전체가 흔들리면 맞지 않은 쥐까지 떨려 보인다.
-    // 「맞았다」는 맞은 쥐의 피격 펀치(drawMonster: 찌그러짐·넉백·플래시)가 혼자 보여 준다.
-    if (!s.burst) { s.burst = true; spawnSparks(s.x2, s.y2, crit); }
-    const bp = (p - 0.9) / 0.1;
-    const rad = s.w * 2.4 + bp * (crit ? 30 : 18);
-    const alpha = 1 - bp;
+/** 탄 하나의 모양 — key 로 고르고, 없으면 예전 미사일 */
+const shotLook = (s) => SHOT_LOOK[SHOT_STYLE[s.key] || "missile"];
 
-    // 코어 플래시 — 터지는 첫 순간 확 밝아졌다가 빠르게 잦아든다
-    const flash = Math.max(0, 1 - bp * 3.2);
-    if (flash > 0) {
-      g.fillStyle = crit ? `rgba(255,235,190,${flash})` : `rgba(255,255,255,${flash * 0.9})`;
-      g.beginPath(); g.arc(s.x2, s.y2, rad * (0.55 + flash * 0.5), 0, 7); g.fill();
-    }
-
-    g.fillStyle = crit ? `rgba(233,203,140,${alpha * 0.55})` : `rgba(150,210,235,${alpha * 0.5})`;
-    g.beginPath(); g.arc(s.x2, s.y2, rad * 0.65, 0, 7); g.fill();
-    g.strokeStyle = crit ? `rgba(255,215,120,${alpha})` : `rgba(150,210,235,${alpha})`;
-    g.lineWidth = crit ? 3 : 2;
-    g.beginPath(); g.arc(s.x2, s.y2, rad, 0, 7); g.stroke();
-    const spokes = crit ? 10 : 6;
-    for (let i = 0; i < spokes; i++) {
-      const a = i * (Math.PI * 2 / spokes);
+/**
+ * 소품 하나를 원점에 그린다. 진행 방향이 +x 이고, 도는 소품은 이미 돌려져 있다.
+ * S 는 기준 크기(px), crit 이면 금빛 테두리로 한 단계 돋보인다.
+ */
+function drawShotBody(g, style, S, crit) {
+  const out = crit ? "#a9791e" : "#26221c";
+  g.lineJoin = "round"; g.lineCap = "round";
+  switch (style) {
+    case "paper": {
+      // 출원 서류 — 흰 종이, 접힌 귀, 글줄 셋, 발도장. 프로필 속 머리 위 아이콘 그대로.
+      const w = S * 0.8, h = S, f = S * 0.28;
+      g.fillStyle = "#fff"; g.strokeStyle = crit ? out : "#26324a"; g.lineWidth = 1.2;
       g.beginPath();
-      g.moveTo(s.x2 + Math.cos(a) * rad * 0.35, s.y2 + Math.sin(a) * rad * 0.35);
-      g.lineTo(s.x2 + Math.cos(a) * rad, s.y2 + Math.sin(a) * rad);
-      g.stroke();
+      g.moveTo(-w / 2, -h / 2); g.lineTo(w / 2 - f, -h / 2); g.lineTo(w / 2, -h / 2 + f);
+      g.lineTo(w / 2, h / 2); g.lineTo(-w / 2, h / 2); g.closePath(); g.fill(); g.stroke();
+      g.beginPath(); g.moveTo(w / 2 - f, -h / 2); g.lineTo(w / 2 - f, -h / 2 + f); g.lineTo(w / 2, -h / 2 + f); g.stroke();
+      g.strokeStyle = "#26324a"; g.lineWidth = 1.1;
+      for (let i = 0; i < 3; i++) {
+        const y = -h * 0.22 + i * h * 0.2, len = i === 1 ? w * 0.5 : w * 0.34;
+        g.beginPath(); g.moveTo(-w * 0.3, y); g.lineTo(-w * 0.3 + len, y); g.stroke();
+      }
+      g.fillStyle = "#5aa9f0";
+      g.beginPath(); g.arc(w * 0.2, h * 0.3, S * 0.13, 0, 7); g.fill();
+      g.beginPath(); g.arc(w * 0.08, h * 0.2, S * 0.06, 0, 7); g.fill();
+      g.beginPath(); g.arc(w * 0.32, h * 0.2, S * 0.06, 0, 7); g.fill();
+      break;
+    }
+    case "bullet": {
+      // 저격탄 — 놋쇠 탄피에 검은 탄두. 길쭉해서 빠르다는 느낌이 난다.
+      const L = S * 1.6, W = S * 0.42;
+      g.fillStyle = crit ? "#e9c25a" : "#c9a45a"; g.strokeStyle = out; g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(-L * 0.5, -W / 2); g.lineTo(L * 0.1, -W / 2); g.lineTo(L * 0.1, W / 2); g.lineTo(-L * 0.5, W / 2);
+      g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = "#2b2b2b";
+      g.beginPath();
+      g.moveTo(L * 0.1, -W / 2); g.quadraticCurveTo(L * 0.42, -W * 0.45, L * 0.55, 0);
+      g.quadraticCurveTo(L * 0.42, W * 0.45, L * 0.1, W / 2); g.closePath(); g.fill(); g.stroke();
+      g.strokeStyle = "rgba(255,255,255,.55)"; g.lineWidth = 0.8;
+      g.beginPath(); g.moveTo(-L * 0.42, -W * 0.22); g.lineTo(L * 0.05, -W * 0.22); g.stroke();
+      break;
+    }
+    case "monocle": {
+      // 모노클 — 금테 렌즈에 사슬 세 알이 뒤로 끌린다
+      const r = S * 0.42;
+      g.fillStyle = "rgba(255,255,255,.35)"; g.strokeStyle = out; g.lineWidth = 1;
+      g.beginPath(); g.arc(0, 0, r, 0, 7); g.fill();
+      g.strokeStyle = crit ? "#ffe08a" : "#f2c230"; g.lineWidth = S * 0.18;
+      g.beginPath(); g.arc(0, 0, r, 0, 7); g.stroke();
+      g.strokeStyle = out; g.lineWidth = 0.9;
+      g.beginPath(); g.arc(0, 0, r + S * 0.09, 0, 7); g.stroke();
+      g.beginPath(); g.arc(0, 0, r - S * 0.09, 0, 7); g.stroke();
+      g.fillStyle = "rgba(255,255,255,.8)";
+      g.beginPath(); g.ellipse(-r * 0.35, -r * 0.35, r * 0.22, r * 0.14, -0.7, 0, 7); g.fill();
+      g.fillStyle = "#f2c230";
+      for (let i = 1; i <= 3; i++) {
+        g.beginPath(); g.arc(-r - S * 0.12 - i * S * 0.2, S * 0.08 * i, S * 0.09, 0, 7); g.fill(); g.stroke();
+      }
+      break;
+    }
+    case "shuriken": {
+      // 수리검 — 세 갈래 굽은 날, 가운데 파란 구슬. 프로필에서 냥 둘레를 도는 그것.
+      const R = S * 0.62;
+      g.fillStyle = crit ? "#fff0c2" : "#efe6d6"; g.strokeStyle = out; g.lineWidth = 1.1;
+      g.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const a = i * (Math.PI * 2 / 3);
+        const tip = [Math.cos(a) * R, Math.sin(a) * R];
+        const nxt = a + Math.PI * 2 / 3;
+        g.lineTo(tip[0], tip[1]);
+        g.quadraticCurveTo(Math.cos(a + 0.9) * R * 0.75, Math.sin(a + 0.9) * R * 0.75,
+                           Math.cos(nxt) * R * 0.28, Math.sin(nxt) * R * 0.28);
+      }
+      g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = "#4a2c22";
+      g.beginPath(); g.arc(0, 0, R * 0.34, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = "#1fb2ff";
+      g.beginPath(); g.arc(0, 0, R * 0.2, 0, 7); g.fill();
+      break;
+    }
+    case "slug": {
+      // 개틀링 탄 — 짧은 놋쇠 탄에 주황 탄두. 작고 많다.
+      const L = S * 1.1, W = S * 0.4;
+      g.fillStyle = crit ? "#e9c25a" : "#d9a24a"; g.strokeStyle = out; g.lineWidth = 0.9;
+      g.beginPath(); g.rect(-L * 0.5, -W / 2, L * 0.6, W); g.fill(); g.stroke();
+      g.fillStyle = "#ff8c3a";
+      g.beginPath();
+      g.moveTo(L * 0.1, -W / 2); g.quadraticCurveTo(L * 0.45, -W * 0.4, L * 0.5, 0);
+      g.quadraticCurveTo(L * 0.45, W * 0.4, L * 0.1, W / 2); g.closePath(); g.fill(); g.stroke();
+      break;
+    }
+    case "bomb": {
+      // 폭탄 — 검은 쇠구슬에 뚜껑, 심지 끝에 불꽃. 심지째 천천히 구르며 날아간다.
+      const r = S * 0.5;
+      g.fillStyle = crit ? "#4a4256" : "#3b4250"; g.strokeStyle = out; g.lineWidth = 1.2;
+      g.beginPath(); g.arc(0, r * 0.15, r, 0, 7); g.fill(); g.stroke();
+      g.fillStyle = "rgba(255,255,255,.45)";
+      g.beginPath(); g.ellipse(-r * 0.38, -r * 0.2, r * 0.26, r * 0.16, -0.6, 0, 7); g.fill();
+      g.fillStyle = "#5b6270";
+      g.beginPath(); g.rect(-r * 0.3, -r * 1.05, r * 0.6, r * 0.32); g.fill(); g.stroke();
+      g.strokeStyle = "#e8d5a8"; g.lineWidth = 1.6;
+      g.beginPath(); g.moveTo(0, -r * 1.05); g.quadraticCurveTo(r * 0.25, -r * 1.45, r * 0.55, -r * 1.35); g.stroke();
+      const fl = 0.7 + Math.random() * 0.6;                    // 불꽃은 프레임마다 흔들린다
+      g.fillStyle = "#ff8a2a";
+      g.beginPath(); g.ellipse(r * 0.6, -r * 1.55, r * 0.26 * fl, r * 0.4 * fl, 0, 0, 7); g.fill();
+      g.fillStyle = "#ffe066";
+      g.beginPath(); g.ellipse(r * 0.6, -r * 1.5, r * 0.13 * fl, r * 0.22 * fl, 0, 0, 7); g.fill();
+      break;
+    }
+    default: {
+      // 예전 발광 미사일 — 화염 꼬리 + 뾰족한 탄두
+      const len = S * 1.7, wid = S * 0.65;
+      g.fillStyle = crit ? "#e9a23a" : "#5bc8e8";
+      g.beginPath();
+      g.moveTo(-len * 0.55, -wid * 0.32); g.lineTo(-len * 1.15, 0); g.lineTo(-len * 0.55, wid * 0.32);
+      g.closePath(); g.fill();
+      g.fillStyle = "#fff8e6"; g.strokeStyle = crit ? "#a9791e" : "#2f7a9e"; g.lineWidth = 1;
+      g.beginPath();
+      g.moveTo(len * 0.62, 0); g.lineTo(len * 0.05, -wid * 0.5); g.lineTo(-len * 0.5, -wid * 0.34);
+      g.lineTo(-len * 0.5, wid * 0.34); g.lineTo(len * 0.05, wid * 0.5);
+      g.closePath(); g.fill(); g.stroke();
+      g.fillStyle = crit ? "#e9a23a" : "#5bc8e8";
+      g.beginPath(); g.arc(len * 0.1, 0, wid * 0.22, 0, 7); g.fill();
     }
   }
 }
 
-/** 특허범위냥 전용 — 사거리가 2배로 길어진 만큼, "멀리서 크게 날아온다"는 게 한눈에 보이도록
- *  전용 궤적(창 모양 탄두 + 전체 경로를 잇는 연막)과 더 육중한 착탄을 그린다. */
-function drawLongMissile(g, s) {
-  const p = 1 - Math.max(0, s.life / s.max);
-  const crit = s.col === "#cda43a";
+/**
+ * 총구 화염 — 저격탄·개틀링 탄이 막 떠났을 때 발사 지점에 별 모양으로 번쩍인다.
+ * k 는 0(막 쐈다)~1(꺼졌다).
+ */
+function drawMuzzle(g, x, y, ang, k, S) {
+  const a = 1 - k, r = S * (0.9 + k * 0.8);
+  g.save();
+  g.translate(x, y); g.rotate(ang);
+  g.fillStyle = `rgba(255,150,40,${a * 0.95})`;                 // 종이 판(크림색) 위에서도 보이는 주황
+  g.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const t = i * Math.PI / 4, rr = i % 2 ? r * 0.4 : r * (i === 0 ? 1.6 : 1);
+    g.lineTo(Math.cos(t) * rr, Math.sin(t) * rr);
+  }
+  g.closePath(); g.fill();
+  g.fillStyle = `rgba(255,255,255,${a})`;
+  g.beginPath(); g.arc(0, 0, r * 0.3, 0, 7); g.fill();
+  g.restore();
+}
+
+/**
+ * 착탄 — 순간 백색 코어 플래시 + 확산하는 충격파 + 살 몇 가닥, 치명타는 한 단계 더 크고 진하게.
+ * 화면 흔들림은 걸지 않는다 — 착탄마다 판 전체가 흔들리면 맞지 않은 쥐까지 떨려 보인다.
+ * 「맞았다」는 맞은 쥐의 피격 펀치(drawMonster: 찌그러짐·넉백·플래시)가 혼자 보여 준다.
+ * bp 는 0(막 닿았다)~1(사라진다), mul 은 크기 배율(소품별 blast × 장거리탄 보정).
+ */
+function drawImpact(g, x, y, bp, crit, look, mul) {
+  const rad = (4 + bp * (crit ? 30 : 18)) * mul;
+  const alpha = 1 - bp;
+  const flash = Math.max(0, 1 - bp * 3.2);
+  if (flash > 0) {
+    g.fillStyle = crit ? `rgba(255,235,190,${flash})` : `rgba(255,255,255,${flash * 0.9})`;
+    g.beginPath(); g.arc(x, y, rad * (0.55 + flash * 0.5), 0, 7); g.fill();
+  }
+  g.fillStyle = crit ? `rgba(233,203,140,${alpha * 0.55})` : look.col + `${alpha * 0.5})`;
+  g.beginPath(); g.arc(x, y, rad * 0.65, 0, 7); g.fill();
+  g.strokeStyle = crit ? `rgba(255,215,120,${alpha})` : hexA(look.ring, alpha);
+  g.lineWidth = (crit ? 3 : 2) * Math.min(1.5, mul);
+  g.beginPath(); g.arc(x, y, rad, 0, 7); g.stroke();
+  const spokes = crit ? 10 : 6;
+  for (let i = 0; i < spokes; i++) {
+    const a = i * (Math.PI * 2 / spokes);
+    g.beginPath();
+    g.moveTo(x + Math.cos(a) * rad * 0.35, y + Math.sin(a) * rad * 0.35);
+    g.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad);
+    g.stroke();
+  }
+}
+
+/** 탄환 한 발 — 포물선을 그리며 날아가는 소품 + 궤적 + 착탄. s.life 가 s.max 에서 0 으로 줄어드는 것을
+ *  진행도로 삼는다 (0=발사 직후, 1=명중). 장거리탄(s.long — 특허범위냥)은 수명이 길어 그만큼 천천히 멀리 간다. */
+function drawMissile(g, s) {
+  if (s.ring) return drawBlastRing(g, s);
+  const p = 1 - Math.max(0, s.life / s.max);          // 0..1 진행도
+  const crit = !!s.crit || s.col === "#cda43a";
+  const style = SHOT_STYLE[s.key] || "missile";
+  const look = shotLook(s);
   const dx = s.x2 - s.x1, dy = s.y2 - s.y1;
   const dist = Math.hypot(dx, dy) || 1;
-  const arcH = Math.min(46, dist * 0.16);              // 일반 미사일보다 훨씬 높은 포물선 — 장거리임을 눈으로 알린다
-  const posAt = (t) => ({
-    x: s.x1 + dx * t,
-    y: s.y1 + dy * t - Math.sin(t * Math.PI) * arcH,
-  });
+  const arcH = Math.min(look.arc[1] * (s.long ? 2.5 : 1), dist * look.arc[0]);
+  const S = look.size * (crit ? 1.15 : 1) * (s.long ? 1.15 : 1);
+  const posAt = (t) => ({ x: s.x1 + dx * t, y: s.y1 + dy * t - Math.sin(t * Math.PI) * arcH });
+  const HIT = s.long ? 0.92 : 0.9;                    // 이 진행도부터는 착탄 연출
 
-  if (p < 0.92) {
-    // 전체 경로를 잇는 연막 — 뒤로 갈수록(발사 지점 쪽) 옅어져 "먼 거리를 날아왔다"가 보인다
-    g.save();
-    g.lineCap = "round"; g.lineJoin = "round";
-    const steps = 26, upto = Math.max(1, Math.round(steps * p));
-    for (let i = 0; i < upto; i++) {
-      const t0 = p * (i / steps), t1 = p * ((i + 1) / steps);
-      const a0 = posAt(t0), a1 = posAt(t1);
-      const k = i / steps;
-      g.strokeStyle = crit ? `rgba(233,203,140,${0.05 + k * 0.4})` : `rgba(150,210,235,${0.05 + k * 0.4})`;
-      g.lineWidth = 2.5 + k * 4.5;
-      g.beginPath(); g.moveTo(a0.x, a0.y); g.lineTo(a1.x, a1.y); g.stroke();
-    }
-    g.restore();
-
-    const t0 = Math.max(0, p - 0.015), t1 = Math.min(1, p + 0.015);
+  if (p < HIT) {
+    const mp = posAt(p);
+    const t0 = Math.max(0, p - 0.02), t1 = Math.min(1, p + 0.02);
     const a0 = posAt(t0), a1 = posAt(t1);
     const heading = Math.atan2(a1.y - a0.y, a1.x - a0.x);
-    const mp = posAt(p);
+    const straight = Math.atan2(dy, dx);
+    let muzzle = -1;                                  // 0 이상이면 총구 화염을 (소품 위에) 그린다
 
+    // 궤적 — 소품마다 다르다
+    if (style === "bullet") {
+      // 예광 — 발사 지점부터 탄까지 한 줄로 잇되, 뒤로 갈수록 옅어진다. 직선이라 「저격」이 읽힌다.
+      const tail = posAt(Math.max(0, p - (s.long ? 0.35 : 0.5)));
+      const grad = g.createLinearGradient(tail.x, tail.y, mp.x, mp.y);
+      grad.addColorStop(0, look.col + "0)"); grad.addColorStop(1, look.col + (crit ? "0.95)" : "0.8)"));
+      g.strokeStyle = grad; g.lineWidth = crit ? 3 : 2; g.lineCap = "round";
+      g.beginPath(); g.moveTo(tail.x, tail.y); g.lineTo(mp.x, mp.y); g.stroke();
+      if (p < 0.14) muzzle = p / 0.14;
+    } else if (style === "slug") {
+      // 개틀링 — 짧은 예광, 총구 화염. 한 발 뒤에 한 발 더 그려 연사로 보인다.
+      const tail = posAt(Math.max(0, p - 0.18));
+      g.strokeStyle = look.col + "0.5)"; g.lineWidth = 1.6; g.lineCap = "round";
+      g.beginPath(); g.moveTo(tail.x, tail.y); g.lineTo(mp.x, mp.y); g.stroke();
+      if (p < 0.2) muzzle = p / 0.2;
+    } else if (style === "shuriken") {
+      // 바람 — 프로필의 파란 호처럼, 지나온 자리에 짧은 곡선 둘
+      g.strokeStyle = look.col + "0.55)"; g.lineWidth = 1.8; g.lineCap = "round";
+      for (const k of [-1, 1]) {
+        const b = posAt(Math.max(0, p - 0.06));
+        g.beginPath();
+        g.arc(b.x, b.y, S * 0.7, heading + Math.PI + k * 0.5, heading + Math.PI + k * 1.4, k < 0);
+        g.stroke();
+      }
+    } else if (style === "bomb") {
+      // 심지 연기 — 뒤로 옅어지는 회색 연기 방울
+      for (let i = 1; i <= 4; i++) {
+        const b = posAt(Math.max(0, p - i * 0.05));
+        g.fillStyle = `rgba(120,120,130,${0.35 * (1 - i / 5)})`;
+        g.beginPath(); g.arc(b.x, b.y - S * 0.6, S * (0.18 + i * 0.06), 0, 7); g.fill();
+      }
+    } else {
+      // 서류·모노클·예전 미사일 — 지나온 자리에 옅어지는 잔상
+      for (let i = 1; i <= 5; i++) {
+        const b = posAt(Math.max(0, p - i * 0.045));
+        g.fillStyle = crit ? `rgba(205,164,58,${0.4 * (1 - i / 5)})` : look.col + `${0.4 * (1 - i / 5)})`;
+        g.beginPath(); g.arc(b.x, b.y, (S * 0.5 - i * 0.7), 0, 7); g.fill();
+      }
+    }
+
+    // 소품 본체 — 발광 위에 얹는다. 도는 소품은 진행도만큼 돌리고, 아닌 것은 진행 방향을 본다.
     g.save();
     g.translate(mp.x, mp.y);
-    g.rotate(heading);
-    const len = 42, wid = 9;                            // 일반 미사일보다 훨씬 길고 뾰족한 창 모양
-    g.fillStyle = crit ? "rgba(233,203,140,.55)" : "rgba(150,210,235,.5)";
-    g.beginPath(); g.arc(0, 0, len * 0.6, 0, 7); g.fill();
-    // 화염 꼬리 — 더 길게 늘어진다
-    g.fillStyle = crit ? "#e9a23a" : "#5bc8e8";
-    g.beginPath();
-    g.moveTo(-len * 0.5, -wid * 0.3); g.lineTo(-len * 1.5, 0); g.lineTo(-len * 0.5, wid * 0.3);
-    g.closePath(); g.fill();
-    // 몸체 — 가늘고 긴 창끝
-    g.fillStyle = "#fff8e6"; g.strokeStyle = crit ? "#a9791e" : "#2f7a9e"; g.lineWidth = 1.3;
-    g.beginPath();
-    g.moveTo(len * 0.62, 0);
-    g.lineTo(0, -wid * 0.5);
-    g.lineTo(-len * 0.62, -wid * 0.32);
-    g.lineTo(-len * 0.62, wid * 0.32);
-    g.lineTo(0, wid * 0.5);
-    g.closePath(); g.fill(); g.stroke();
-    g.fillStyle = crit ? "#e9a23a" : "#5bc8e8";
-    g.beginPath(); g.arc(len * 0.15, 0, wid * 0.22, 0, 7); g.fill();
+    g.fillStyle = crit ? "rgba(233,203,140,.5)" : look.col + "0.35)";
+    g.beginPath(); g.arc(0, 0, S * 0.9, 0, 7); g.fill();
+    g.rotate(look.spin ? p * look.spin * Math.PI * 2 + (style === "bomb" ? 0 : heading) : heading);
+    drawShotBody(g, style, S, crit);
     g.restore();
+    if (style === "slug" && p > 0.2) {
+      // 연사의 둘째 발
+      const q = posAt(p - 0.2);
+      g.save(); g.translate(q.x, q.y); g.rotate(heading); drawShotBody(g, style, S * 0.9, crit); g.restore();
+    }
+    // 총구 화염은 맨 위에 — 막 떠난 탄을 잠깐 가릴 만큼 밝다
+    if (muzzle >= 0) drawMuzzle(g, s.x1, s.y1, straight, muzzle, S * (style === "slug" ? 0.9 : 1));
   } else {
-    // 착탄 — 장거리 탄약답게 일반 미사일보다 한 단계 더 크고 묵직하게 터진다 (화면 흔들림은 위와 같은 이유로 없음)
-    if (!s.burst) { s.burst = true; spawnSparks(s.x2, s.y2, crit); }
-    const bp = (p - 0.92) / 0.08;
-    const rad = 12 + bp * (crit ? 46 : 30);
-    const alpha = 1 - bp;
-
-    const flash = Math.max(0, 1 - bp * 3);
-    if (flash > 0) {
-      g.fillStyle = crit ? `rgba(255,235,190,${flash})` : `rgba(255,255,255,${flash * 0.9})`;
-      g.beginPath(); g.arc(s.x2, s.y2, rad * (0.55 + flash * 0.55), 0, 7); g.fill();
-    }
-
-    g.fillStyle = crit ? `rgba(233,203,140,${alpha * 0.55})` : `rgba(150,210,235,${alpha * 0.5})`;
-    g.beginPath(); g.arc(s.x2, s.y2, rad * 0.65, 0, 7); g.fill();
-    g.strokeStyle = crit ? `rgba(255,215,120,${alpha})` : `rgba(150,210,235,${alpha})`;
-    g.lineWidth = crit ? 3.5 : 2.5;
-    g.beginPath(); g.arc(s.x2, s.y2, rad, 0, 7); g.stroke();
-    const spokes = crit ? 12 : 8;
-    for (let i = 0; i < spokes; i++) {
-      const a = i * (Math.PI * 2 / spokes);
-      g.beginPath();
-      g.moveTo(s.x2 + Math.cos(a) * rad * 0.3, s.y2 + Math.sin(a) * rad * 0.3);
-      g.lineTo(s.x2 + Math.cos(a) * rad, s.y2 + Math.sin(a) * rad);
-      g.stroke();
-    }
+    if (!s.burst) { s.burst = true; spawnSparks(s.x2, s.y2, crit, look.ring); }
+    const bp = (p - HIT) / (1 - HIT);
+    drawImpact(g, s.x2, s.y2, bp, crit, look, look.blast * (s.long ? 1.5 : 1));
   }
 }
 
 /* ═══════ 타격 파편 & 화면 흔들림 — 명중 순간의 "묵직함"을 담당 ═══════ */
 let sparks = [];
-function spawnSparks(x, y, crit) {
+/** col 은 튀는 파편의 색 — 소품(투사체)마다 제 색으로 튄다. 치명타는 늘 금빛. */
+function spawnSparks(x, y, crit, col = "#bfe6f5") {
   const n = crit ? 14 : 8;
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2;
@@ -5385,7 +5520,7 @@ function spawnSparks(x, y, crit) {
     sparks.push({
       x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
       life: 0.22 + Math.random() * 0.16, max: 0.38,
-      col: crit ? "#ffd782" : "#bfe6f5",
+      col: crit ? "#ffd782" : col,
     });
   }
 }
@@ -6660,6 +6795,17 @@ function drawDuel(now) {
     g.moveTo(x1, y1); g.lineTo(x2, y2);
     g.stroke();
     g.setLineDash([]);
+    // 줄 위를 날아가는 소품 — 청사 판과 같은 것을 던진다 (SHOT_STYLE). 줄은 진영 색 예광으로 남긴다.
+    if (s.key && SHOT_STYLE[s.key]) {
+      const p = 1 - a, style = SHOT_STYLE[s.key], look = SHOT_LOOK[style];
+      const heading = Math.atan2(y2 - y1, x2 - x1);
+      g.save();
+      g.globalAlpha = 1;
+      g.translate(x1 + (x2 - x1) * p, y1 + (y2 - y1) * p);
+      g.rotate(look.spin ? p * look.spin * Math.PI * 2 + (style === "bomb" ? 0 : heading) : heading);
+      drawShotBody(g, style, look.size * 0.8 * duelScale(s.dep1), !!s.crit);
+      g.restore();
+    }
   }
   g.globalAlpha = 1;
 
