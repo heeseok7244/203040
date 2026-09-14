@@ -55,7 +55,8 @@ __mods["core/data.js"] = (function(){
  * critC/critM  치명타 확률 / 배율
  * slow      명중 시 적용하는 둔화 % (0~100)
  * kind      "atk" 공격형 · "buff" 비공격 보좌형 (인접 심사관 강화)
- * auraDmg/auraRate  buff 타입이 실제로 이어진 터(보통 좌우, 모서리에선 꺾이는 방향)에 맞닿은 심사관에게 곱하는 배율
+ * auraDmg/auraRate  buff 타입이 실제로 이어진 터(보통 좌우, 모서리에선 꺾이는 방향)에 맞닿은 심사관에게 주는 배율
+ *                   (1.25 = +25%p. 다른 공격력 % 와 **합연산**으로 쌓인다 — stats.js 의 dmgPct 참고)
  * weight    0 이면 임용 카드에 나오지 않는다 (= 합성으로만 얻는 특수 냥타워).
  *           0 이 아닌 값은 「흔한 냥을 위에」 놓는 정렬 힌트로만 쓴다.
  * @type {Record<string, {name:string,row:number,arow:number,dmg:number,rate:number,range:number,
@@ -115,11 +116,16 @@ const CATS = {
     // 임용가 85→70 · dmg 15→26 · rate 0.45→0.5 · 방어무시 35→45 뒤에도 대전 체력(≈269)·초당 피해(≈24)가 그대로 되도록 맞춘 값
     duel: { hp: 1.0, dmg: 1.7 },
   },
+  /*
+   * 국제출원냥 — 다중조준. 「여러 건을 한꺼번에 들이대는」 냥이라 🩸 고의 입증(연사형 카드)을
+   * 우선심사냥과 함께 받는다 (BAL.rapidTargets). 그 대신 사거리를 118 → 106 으로 조금 줄였다 —
+   * 앞줄에 붙어야 값을 하는 냥이 뒤에서도 셋을 노리면 카드까지 얹어 너무 셌다.
+   */
   pct: {
     name: "국제출원냥", row: 2, arow: 3, kind: "atk",
-    dmg: 7, rate: 1.6, range: 118, targets: 3, tag: "다중조준", cost: 75, weight: 5,
+    dmg: 7, rate: 1.6, range: 106, targets: 3, tag: "다중조준", cost: 75, weight: 5,
     critC: 0.12, critM: 1.6,
-    desc: "한 번에 여러 마리를 동시에 공격한다.",
+    desc: "한 번에 여러 마리를 동시에 공격한다. 사거리는 조금 짧다.",
     filter: "hue-rotate(40deg) saturate(1.45)",
     icon: "🌐",
     // 대전장 — 셋을 같이 노리는 값을 한 방으로 키운다. hp 는 임용가 190→70 전의 체력(≈548)을 유지
@@ -446,8 +452,8 @@ const PASSIVES = [
     desc: "치명타 배율 +0.45",
     detail: "고의가 인정되면 배상이 몇 배로 뛴다. 치명타가 터졌을 때의 피해 배율이 0.45 올라간다. 확률을 이미 쌓아 둔 덱일수록 값이 크다." },
   { key: "willful", name: "고의 입증", icon: "🩸", line: "crit", stat: "rapid", amount: 1,
-    desc: "연사형 냥타워 치명타 확률 +16%p",
-    detail: "여러 건을 들이대야 고의가 드러난다. <b>기본 공속이 초당 3회 이상</b>인 냥타워(⚡ 우선심사냥 · ⏱️ 조기공개냥)의 치명타 확률이 16%p 오른다. 고를 때마다 누적된다." },
+    desc: "연사형·다중조준 냥타워 치명타 확률 +16%p",
+    detail: "여러 건을 들이대야 고의가 드러난다. <b>기본 공속이 초당 3회 이상</b>이거나 <b>한 번에 둘 이상을 조준</b>하는 냥타워(⚡ 우선심사냥 · 🌐 국제출원냥 · ⏱️ 조기공개냥 · ⚖️ 심판합의체냥)의 치명타 확률이 16%p 오른다 — 대전장 앞줄에 서는 둘이 같이 받는다. 고를 때마다 누적된다." },
 
   /* ── 📐 권리범위 계열 — 멀리서, 방어를 뚫고 ── */
   { key: "longspec", name: "명세서 보정", icon: "📏", line: "pierce", stat: "range", amount: 0.18,
@@ -943,10 +949,19 @@ const BAL = {
 
   /* 조건부 강화가 보는 기준선 — 「무거운 한 방」·「연사」·「장사거리」의 경계 */
   refRange: 118,                       // 「기본 사거리」의 기준선(px, 약 1.4칸) — 📐 5단계가 이걸 넘는 만큼 값을 매긴다
-  heavyRate: 1.35, heavyDmg: 0.40,     // 기본 공속 ≤1.35회/초 → 공격력 +40%/장
+  heavyRate: 1.35, heavyDmg: 0.40,     // 기본 공속 ≤1.35회/초 → 공격력 +40%p/장 (합연산)
   rapidRate: 3.0,  rapidCrit: 0.16,    // 기본 공속 ≥3회/초  → 치명타 확률 +16%p/장
-  longRange: 200,  longDmg: 0.35,      // 실제 사거리 ≥200px → 공격력 +35%/장
+  rapidTargets: 2,                     // 기본 동시조준 ≥2 도 「연사형」으로 친다 — 🌐 국제출원냥이 앞줄 카드를 같이 받는다
+  longRange: 200,  longDmg: 0.35,      // 실제 사거리 ≥200px → 공격력 +35%p/장 (합연산)
   auraDmgUp: 0.22, auraRateUp: 0.14,   // 「대리인 증원」 한 장당 보좌 배율 상승폭
+  /* ── 곱연산 축 ──
+   * 공격력 % 를 올리는 것(보정 · 손해액 산정 · 선행조사 · 원천특허 · 보좌 · 총동원)은 **전부 더한 뒤
+   * 한 번만 곱한다.** 예전에는 하나하나 따로 곱해서, 각각은 +12~40% 라 얌전해 보여도 저격수
+   * (특허범위냥)가 넷을 다 받으면 6배가 나와 앞줄이 서자마자 녹았다. 곱으로 남는 축은
+   * 공격력 · 공속 · 치명타 셋뿐이다 (동시조준은 배율이 아니라 표적 수, 레벨·승진은 냥 자체의 성장).
+   * auraStack  같은 냥이 변리사냥 여럿에게 보좌를 받을 때 **가장 센 하나만 100%**, 나머지는 이 비율.
+   *            변리사냥끼리는 서로 보좌하지 않는다 (버퍼가 버퍼를 버프하면 여기서 제일 자주 터진다) */
+  auraStack: 0.5,
   stunDur: 0.45,                       // 「보정기간 연장」으로 얻는 정지의 지속시간
 
   /* 계열 특수효과(3단계·5단계)가 푸는 상한과 값 */
@@ -1527,7 +1542,8 @@ function computeStats(b) {
   const bonus = b.bonus || {};
   /** 누적된 강화값 하나 (없으면 0) */
   const B = (k) => bonus[k] || 0;
-  const bMul = (k) => Math.max(0.2, 1 + B(k));
+  /** %p 를 다 더한 뒤 한 번만 곱하는 배율. 「−70%」 같은 감점이 겹쳐도 0.2 아래로는 안 내려간다 */
+  const pctMul = (p) => Math.max(0.2, 1 + p);
   const ATTACK_RATE_MULT = 2.2;   // 공속 상향 — 균형을 위해 WAVES 스폰 수도 함께 늘렸다
   /** 선택한 증강 (Set). 증강이 없으면 아래 분기는 전부 건너뛴다. */
   const AUG = b.augSet || new Set();
@@ -1547,6 +1563,15 @@ function computeStats(b) {
     let critC = base.critC || 0, critM = base.critM || 1;
     let auraDmg = base.auraDmg || 0, auraRate = base.auraRate || 0;
     const isAide = !!(auraDmg || auraRate);   // 보좌 능력을 가진 냥 (변리사냥)
+
+    /* ── 공격력 % 는 한 그릇(dmgPct)에 모아 **합연산** ──
+     * 보정(+12%) · 손해액 산정(+40%) · 선행조사(+35%) · 원천특허 · 총동원 · 변리사냥 보좌가 전부
+     * 여기 %p 로 더해지고, 맨 끝에서 한 번만 곱한다 (20%+20% = +40%, 1.2×1.2 가 아니다).
+     * 예전처럼 하나하나 곱하면 각각은 얌전해 보여도 겹치는 순간 터진다 — 📐 덱의 특허범위냥이
+     * 네 가지를 다 받아 6배가 되어 대전장 앞줄을 서자마자 녹였다. 공속 % 도 같은 식(ratePct)이다.
+     * 곱으로 남는 축은 공격력 · 공속 · 치명타 셋뿐이고, 레벨·승진·「직권보정」은 냥 자체의 성장이라
+     * 그대로 곱한다 (골라서 쌓는 것이 아니다). */
+    let dmgPct = 0, ratePct = 0;
 
     /* ── 합성 레벨 ──
      * 같은 종류 셋을 합치면 레벨이 하나 오른다. 공격력은 크게, 공속·사거리는 조금만 오른다 —
@@ -1571,13 +1596,13 @@ function computeStats(b) {
         dmg = Math.max(dmg, 32 * Math.pow(BAL.lvDmg, lv - 1));
         rate = Math.max(rate, 1.1 * Math.pow(BAL.lvRate, lv - 1));
         range = Math.max(range, 210 * Math.pow(BAL.lvRange, lv - 1));
-      } else dmg *= 0.65;
+      } else dmgPct -= 0.35;
     }
-    if (AUG.has("overwork")) { rate *= 1.65; dmg *= 0.8; }
+    if (AUG.has("overwork")) { ratePct += 0.65; dmgPct -= 0.2; }
     if (AUG.has("longspec")) range *= 1.4;
     if (AUG.has("isr")) pierce += 40;
     if (AUG.has("precision")) { critC += 0.15; critM += 0.6; }
-    if (AUG.has("mono") && sameKind[c.key] >= 3) dmg *= 1.5;
+    if (AUG.has("mono") && sameKind[c.key] >= 3) dmgPct += 0.5;
     const golden = AUG.has("golden") && b.goldenUid === c.uid;
     if (golden) dmg *= 3;
     if (AUG.has("auraWide") && isAide) { auraDmg = Math.max(auraDmg, 1.55); auraRate = Math.max(auraRate, 1.35); }
@@ -1600,18 +1625,22 @@ function computeStats(b) {
      * 📐 권리범위 덱의 재미 그 자체이기 때문이다. */
     const baseRate = base.rate || 0;
     // 🔨 손해액 산정 — 한 방이 무거운 냥일수록 배상액이 크다
-    if (B("heavy") && baseRate > 0 && baseRate <= BAL.heavyRate) dmg *= 1 + BAL.heavyDmg * B("heavy");
-    // 🩸 고의 입증 — 여러 건을 들이대야 고의가 드러난다 (연사형 전용)
-    if (B("rapid") && baseRate >= BAL.rapidRate) critC += BAL.rapidCrit * B("rapid");
+    if (B("heavy") && baseRate > 0 && baseRate <= BAL.heavyRate) dmgPct += BAL.heavyDmg * B("heavy");
+    /* 🩸 고의 입증 — 여러 건을 들이대야 고의가 드러난다. 연사형(공속 ≥3)과 **다중조준(동시조준 ≥2)**
+     * 둘 다 「여러 건」이다 — 대전장 앞줄에 서는 ⚡ 우선심사냥 · 🌐 국제출원냥이 같은 카드를 받는다 */
+    const isRapid = baseRate >= BAL.rapidRate || (base.targets || 1) >= BAL.rapidTargets;
+    if (B("rapid") && isRapid) critC += BAL.rapidCrit * B("rapid");
 
     // 사거리를 먼저 확정한다 — 아래 두 줄이 「확정된 사거리」를 보고 값을 매기기 때문이다
-    range *= bMul("range");
+    range *= pctMul(B("range"));
     if (tier("pierce") >= 1) range *= 1 + BAL.tierRangeUp;      // 📐 3단계 「균등론」
     // 🔍 선행조사 — 멀리까지 뒤져 본 만큼 날카롭다
-    if (B("longR") && range >= BAL.longRange) dmg *= 1 + BAL.longDmg * B("longR");
+    if (B("longR") && range >= BAL.longRange) dmgPct += BAL.longDmg * B("longR");
     // 📐 5단계 「원천특허」 — 기본 사거리를 넘긴 만큼 그대로 공격력이 된다
     if (tier("pierce") >= 2 && range > BAL.refRange)
-      dmg *= 1 + (range - BAL.refRange) / 100 * BAL.tierLongDmg;
+      dmgPct += (range - BAL.refRange) / 100 * BAL.tierLongDmg;
+    // 📈 보정 · ⚡ 전자출원 — 계열 없는 공통 %
+    dmgPct += B("dmg"); ratePct += B("rate");
 
     // 🌍 국제조사보고서 — 방어무시. 📐 3단계에 닿으면 상한이 풀린다
     pierce += B("pierce");
@@ -1669,7 +1698,9 @@ function computeStats(b) {
     } : null;
 
     c.st = {
-      dmg: dmg * bMul("dmg"), rate: rate * ATTACK_RATE_MULT * bMul("rate"), range,
+      // 공격력·공속 % 는 아직 안 곱했다 — 보좌 %p 까지 dmgPct/ratePct 에 모은 뒤 아래에서 한 번만 곱한다
+      dmg, rate: rate * ATTACK_RATE_MULT, range,
+      dmgPct, ratePct,
       pierce: Math.min(pierceCap, pierce),
       targets,
       critC: Math.min(critCap, Math.max(0, critC)),
@@ -1699,31 +1730,39 @@ function computeStats(b) {
       stunD,
       exec: Math.min(0.4, (base.exec || 0) * Math.pow(1.25, lv - 1)),
       bounty: (base.bounty || 0) * Math.pow(1.3, lv - 1),
-      buffDmg: 1, buffRate: 1,
+      // 보좌로 받은 %p (화력·공속). 0 이면 아무에게도 보좌받지 않은 것
+      buffDmg: 0, buffRate: 0,
     };
-    // 연쇄가 또 연쇄를 부르면 한 발이 판 전체를 쓸어버린다 — 튄 피해에 쓸 사본을 미리 만들어 둔다
-    // (매 발 객체를 새로 만들면 초당 수백 개가 쌓인다)
-    if (c.st.chain) c.st.chainSrc = Object.assign({}, c.st, { chain: null, splash: null });
   }
 
-  // 인접 보좌 — 실제로 이어진 터 칸에만 배율을 곱한다.
-  // 「심사 병합」 증강을 고르면 통로를 건너 반경 2칸까지 퍼진다.
+  /* ── 인접 보좌 — 실제로 이어진 터 칸에만 실린다 (「심사 병합」·💼 5단계면 반경 2칸) ──
+   * 보좌도 「공격력 %」라 dmgPct 와 같은 그릇에 %p 로 더해진다 — 곱하지 않는다.
+   * 변리사냥 여럿 사이에 끼면 **가장 센 하나만 100%**, 나머지는 BAL.auraStack(50%) 만 받는다.
+   * 그리고 **변리사냥은 변리사냥을 보좌하지 않는다** — 「변리사 개업」으로 직접 싸우게 되어도
+   * 버퍼가 버퍼를 버프하는 고리는 만들지 않는다 (곱연산이 제일 자주 터지는 구멍이 이 자리다). */
+  const auraOn = {};   // uid → [{d, r}] 이 냥에 닿은 보좌 목록
   for (const a of live) {
     if (!a.st.auraDmg && !a.st.auraRate) continue;
     const adjSet = auraCells(b, a);
     for (const c of live) {
-      if (c === a) continue;
-      if (pieceCells(c).some((k) => adjSet.has(k))) {
-        c.st.buffDmg *= a.st.auraDmg || 1;
-        c.st.buffRate *= a.st.auraRate || 1;
-      }
+      if (c === a || c.st.auraDmg || c.st.auraRate) continue;
+      if (pieceCells(c).some((k) => adjSet.has(k)))
+        (auraOn[c.uid] || (auraOn[c.uid] = [])).push({ d: (a.st.auraDmg || 1) - 1, r: (a.st.auraRate || 1) - 1 });
     }
   }
   const report = [];
   for (const c of live) {
-    c.st.dmg *= c.st.buffDmg;
-    c.st.rate *= c.st.buffRate;
-    report.push({ cat: c, buffed: c.st.buffDmg > 1 || c.st.buffRate > 1 });
+    const got = (auraOn[c.uid] || []).sort((p, q) => (q.d + q.r) - (p.d + p.r));
+    got.forEach((g, i) => {
+      const eff = i === 0 ? 1 : BAL.auraStack;
+      c.st.buffDmg += g.d * eff; c.st.buffRate += g.r * eff;
+    });
+    c.st.dmg *= pctMul(c.st.dmgPct + c.st.buffDmg);
+    c.st.rate *= pctMul(c.st.ratePct + c.st.buffRate);
+    // 연쇄가 또 연쇄를 부르면 한 발이 판 전체를 쓸어버린다 — 튄 피해에 쓸 사본을 미리 만들어 둔다
+    // (매 발 객체를 새로 만들면 초당 수백 개가 쌓인다). 최종 수치가 확정된 뒤에 떠야 한다
+    if (c.st.chain) c.st.chainSrc = Object.assign({}, c.st, { chain: null, splash: null });
+    report.push({ cat: c, buffed: c.st.buffDmg > 0 || c.st.buffRate > 0 });
   }
 
   // 경제는 유물이 없으니 항상 고정값
@@ -4220,7 +4259,7 @@ function render() {
 function pieceEl(p, onBoard) {
   const el = document.createElement("div");
   // 변리사냥의 보좌를 받고 있으면 배경이 은은하게 반짝인다 (실제로 이어진 터에만 적용됨)
-  const buffed = p.st && (p.st.buffDmg > 1 || p.st.buffRate > 1);
+  const buffed = p.st && (p.st.buffDmg > 0 || p.st.buffRate > 0);
   const lv = Math.max(1, p.lv || 1);
   const promoted = lv >= BAL.promoteLv;      // 승진은 합성의 마지막 단계다 (별도 플래그가 아니다)
   el.className = "piece cat" + (buffed ? " buffed" : "") + (lv > 1 ? " lv" + lv : "") +
