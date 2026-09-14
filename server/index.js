@@ -61,17 +61,24 @@ const httpServer = http.createServer((req, res) => {
 
 /**
  * roomCode -> {
- *   conns: [conn1, conn2|null],
- *   seed,                       // 두 클라이언트가 공유하는 판 시드 (웨이브 구성·증강 후보가 같아진다)
+ *   mode,                       // 'duel' 1:1 · 'team' 2:2 더블업 · 'ffa' 1:1:1:1 대난투
+ *   size,                       // 방 인원 (MODE_SIZE)
+ *   conns: [conn|null × size],  // 슬롯 순서 = p1..p4. 팀 모드는 슬롯 0·1 이 한 팀, 2·3 이 한 팀
+ *   started,                    // 다 모여 판이 열렸는가 (그 뒤로 나간 자리는 비워 두고 채우지 않는다)
+ *   gone:  [bool × size],       // 판이 열린 뒤 나간 슬롯 — 준비 판정에서 늘 「준비됨」으로 친다
+ *   seed,                       // 모든 클라이언트가 공유하는 판 시드 (웨이브 구성이 같아진다)
  *   prepWave,                   // 지금 준비를 맞추고 있는 웨이브 번호
- *   prep:  [bool, bool],        // 각자 준비 단계에 들어섰는가
- *   ready: [bool, bool],        // 각자 개시 버튼을 눌렀는가
+ *   prep:  [bool × size],       // 각자 준비 단계에 들어섰는가
+ *   ready: [bool × size],       // 각자 개시 버튼을 눌렀는가
  *   prepTimer,                  // 준비시간 마감 타이머
  * }
  */
 const rooms = new Map();
 
-/** 양쪽 모두 준비 단계에 들어선 뒤 주어지는 최대 준비시간(초). 클라이언트의 BAL.prepSecs 와 맞춘다. */
+/** 모드별 인원. 클라이언트(core/data.js 의 MODES)와 같은 표다. */
+const MODE_SIZE = { duel: 2, team: 4, ffa: 4 };
+
+/** 모두 준비 단계에 들어선 뒤 주어지는 최대 준비시간(초). 클라이언트의 BAL.prepSecs 와 맞춘다. */
 const PREP_SECS = 15;
 
 function makeCode() {
@@ -84,61 +91,102 @@ function makeCode() {
 }
 
 function send(conn, obj) { try { conn.send(JSON.stringify(obj)); } catch (_) {} }
-function otherOf(room, conn) { return room.conns[0] === conn ? room.conns[1] : room.conns[0]; }
-function broadcast(room, obj) { for (const c of room.conns) if (c) send(c, obj); }
+function broadcast(room, obj, except) { for (const c of room.conns) if (c && c !== except) send(c, obj); }
+/** 슬롯마다 참/거짓 하나씩 */
+const flags = (n, v) => Array.from({ length: n }, () => v);
+/** 아직 붙어 있는 인원 */
+const present = (room) => room.conns.filter(Boolean).length;
+/** 그 슬롯이 「준비 판정에서 셈에 들어가는가」 — 나간 자리는 늘 준비된 것으로 친다 */
+const counts = (room, i) => !!room.conns[i] && !room.gone[i];
 
 function clearPrepTimer(room) {
   if (room.prepTimer) { clearTimeout(room.prepTimer); room.prepTimer = null; }
 }
 
 /**
- * 웨이브 개시 신호. 양쪽이 정확히 같은 순간에 웨이브를 시작한다.
- * 둘 다 준비를 눌렀거나, 준비시간이 다 되면 여기로 온다.
+ * 웨이브 개시 신호. 모두가 정확히 같은 순간에 웨이브를 시작한다.
+ * 다들 준비를 눌렀거나, 준비시간이 다 되면 여기로 온다.
  */
 function goWave(room) {
   if (!room.prepWave) return;
   clearPrepTimer(room);
   const wave = room.prepWave;
   room.prepWave = 0;
-  room.prep = [false, false];
-  room.ready = [false, false];
+  room.prep = flags(room.size, false);
+  room.ready = flags(room.size, false);
   broadcast(room, { t: 'waveGo', wave });
 }
 
-/** 둘 다 준비 단계에 들어섰고 둘 다 준비를 눌렀으면 곧바로 개시한다 */
+/** 남아 있는 모두가 준비 단계에 들어섰는가 / 준비를 눌렀는가 */
+const allPrep = (room) => room.conns.every((c, i) => !counts(room, i) || room.prep[i]);
+const allReady = (room) => room.conns.every((c, i) => !counts(room, i) || room.ready[i]);
+
+/** 모두 준비 단계에 들어섰고 모두 준비를 눌렀으면 곧바로 개시한다 */
 function maybeGo(room) {
-  if (room.prep[0] && room.prep[1] && room.ready[0] && room.ready[1]) goWave(room);
+  if (allPrep(room) && allReady(room)) goWave(room);
 }
 
 /**
- * 준비 상황을 양쪽에 그대로 내려 준다.
+ * 준비 상황을 모두에게 그대로 내려 준다.
  * "상대가 준비했다"를 개별 알림으로 보내면, 한 쪽이 웨이브를 훨씬 늦게 끝냈을 때
  * 이미 지나간 알림을 못 받아 상태가 어긋난다. 항상 전체 상태를 보내면 그럴 일이 없다.
+ * 나간 자리는 준비된 것으로 채워 보낸다 — 클라이언트가 그 자리를 기다리지 않도록.
  */
 function pushPrepState(room) {
-  broadcast(room, { t: 'prepState', wave: room.prepWave, prep: room.prep, ready: room.ready });
+  const prep = room.prep.map((v, i) => v || !counts(room, i));
+  const ready = room.ready.map((v, i) => v || !counts(room, i));
+  broadcast(room, { t: 'prepState', wave: room.prepWave, prep, ready, gone: room.gone });
+}
+
+/** 방 인원 현황 — 대기 화면이 「2/4 모였습니다」를 그리는 데 쓴다 */
+function pushRoomState(room, code) {
+  broadcast(room, { t: 'roomState', code, mode: room.mode, size: room.size, count: present(room),
+                    slots: room.conns.map((c) => !!c) });
 }
 
 function leaveRoom(conn) {
   if (!conn._room) return;
   const room = rooms.get(conn._room);
-  if (!room) return;
-  clearPrepTimer(room);
-  const other = otherOf(room, conn);
-  if (other) { send(other, { t: 'oppLeft' }); other._room = null; }
-  rooms.delete(conn._room);
+  const code = conn._room;
   conn._room = null;
+  if (!room) return;
+  const me = room.conns.indexOf(conn);
+  if (me < 0) return;
+  room.conns[me] = null;
+  if (!present(room)) { clearPrepTimer(room); rooms.delete(code); return; }
+
+  if (!room.started) {
+    // 아직 모이는 중 — 자리를 비워 두면 다음 사람이 그 자리에 들어온다
+    pushRoomState(room, code);
+    return;
+  }
+  /* 판이 열린 뒤 나갔다. 1:1 이면 남은 쪽의 판은 상대 없이 이어질 수 없으니 그대로 끝낸다(oppLeft).
+   * 넷이 붙는 판에서는 나간 자리만 비우고 계속 간다 — 그 사람 몫의 대전 명세는 클라이언트가
+   * 쥐 침입단으로 대신 세운다. 준비 판정에서는 늘 준비된 것으로 친다. */
+  room.gone[me] = true;
+  broadcast(room, { t: 'oppLeft', from: me });
+  if (room.size === 2) { clearPrepTimer(room); rooms.delete(code); for (const c of room.conns) if (c) c._room = null; return; }
+  // 남은 사람들이 나간 사람을 기다리고 있었을 수 있다 — 준비 판정을 다시 본다
+  if (room.prepWave) {
+    pushPrepState(room);
+    if (allPrep(room) && !room.prepTimer) {
+      room.prepTimer = setTimeout(() => goWave(room), PREP_SECS * 1000);
+      broadcast(room, { t: 'prepSync', wave: room.prepWave, secs: PREP_SECS });
+    }
+    maybeGo(room);
+  }
 }
 
-// 방(room) 안에서 상대에게 그대로 중계하는 메시지 타입 → 상대가 받을 때의 타입
-// 스테이지 5·11 의 1:1 대전(오토배틀러)에서 오가는 것 둘.
-//   duel        전투 시작 전 서로에게 보내는 「내 냥타워 명세」. 오토배틀러라 이것 하나면
-//               양쪽 화면이 같은 싸움을 굴린다 — 전투 중에는 오갈 것이 없다
-//   duelResult  p1 이 내린 판정. 시뮬레이션은 결정적이지만 브라우저마다 부동소수점 끝자리가
-//               다를 수 있어 승패는 한쪽 계산을 정본으로 삼는다 — 서버는 여기서도 판정하지
-//               않고 그대로 넘기기만 한다
-// (예전의 duelDeploy 는 특허료를 내고 카드를 내던 시절의 것이라 이제 없다.
-//  스테이지 강화 효과는 넷 다 자기 냥타워를 키우는 것이라 상대에게 걸 것이 없어 passive 도 없다)
+// 방(room) 안에서 다른 사람에게 그대로 중계하는 메시지 타입 → 받을 때의 타입.
+// 보내는 사람의 슬롯 번호(from)를 붙여 넘기고, msg.to 가 있으면 그 슬롯 하나에게만 보낸다
+// (방해 공작은 표적이 하나다). 없으면 방의 나머지 전부에게 간다.
+//   state       내 판의 스냅샷 — 상대 청사 미니맵용
+//   sabotage    방해 공작 (to: 표적 슬롯)
+//   duel        대전 시작 전 서로에게 보내는 「내 냥타워 명세」. 오토배틀러라 이것 하나면
+//               모든 화면이 같은 싸움을 굴린다 — 전투 중에는 오갈 것이 없다
+//   duelResult  판정하는 슬롯(가장 앞 슬롯)이 내린 결과. 시뮬레이션은 결정적이지만 브라우저마다
+//               부동소수점 끝자리가 다를 수 있어 승패는 한쪽 계산을 정본으로 삼는다 — 서버는
+//               여기서도 판정하지 않고 그대로 넘기기만 한다
 const RELAY = {
   state: 'oppState', sabotage: 'oppSabotage',
   duel: 'oppDuel', duelResult: 'oppDuelResult',
@@ -153,45 +201,59 @@ attachWebSocketServer(httpServer, (conn) => {
     try { msg = JSON.parse(raw); } catch (_) { return; }
 
     if (msg.t === 'create') {
+      const mode = MODE_SIZE[msg.mode] ? msg.mode : 'duel';
+      const size = MODE_SIZE[mode];
       const code = makeCode();
-      rooms.set(code, {
-        conns: [conn, null],
+      const room = {
+        mode, size,
+        conns: flags(size, null), started: false, gone: flags(size, false),
         seed: (Math.random() * 1e9) | 0,
-        prepWave: 0, prep: [false, false], ready: [false, false], prepTimer: null,
-      });
+        prepWave: 0, prep: flags(size, false), ready: flags(size, false), prepTimer: null,
+      };
+      room.conns[0] = conn;
+      rooms.set(code, room);
       conn._room = code;
-      send(conn, { t: 'created', code });
+      send(conn, { t: 'created', code, mode, size });
+      pushRoomState(room, code);
       return;
     }
 
     if (msg.t === 'join') {
       const code = String(msg.code || '').toUpperCase();
       const room = rooms.get(code);
-      if (!room || room.conns[1]) {
-        send(conn, { t: 'joinError', reason: room ? '방이 가득 찼습니다' : '존재하지 않는 방입니다' });
+      const slot = room ? room.conns.indexOf(null) : -1;
+      if (!room || room.started || slot < 0) {
+        send(conn, { t: 'joinError', reason: !room ? '존재하지 않는 방입니다'
+                                          : room.started ? '이미 시작된 판입니다' : '방이 가득 찼습니다' });
         return;
       }
-      room.conns[1] = conn;
+      room.conns[slot] = conn;
       conn._room = code;
-      // 같은 시드를 내려 준다 — 양쪽의 웨이브 구성과 증강 후보가 완전히 같아진다
-      send(room.conns[0], { t: 'start', youAre: 'p1', seed: room.seed });
-      send(room.conns[1], { t: 'start', youAre: 'p2', seed: room.seed });
+      pushRoomState(room, code);
+      if (present(room) < room.size) return;     // 아직 더 와야 한다
+      // 다 모였다. 같은 시드를 내려 준다 — 모두의 웨이브 구성이 완전히 같아진다
+      room.started = true;
+      room.conns.forEach((c, i) => send(c, { t: 'start', youAre: 'p' + (i + 1), slot: i,
+                                             seed: room.seed, mode: room.mode, size: room.size }));
       return;
     }
 
     if (!conn._room) return;
     const room = rooms.get(conn._room);
     if (!room) return;
-    const other = otherOf(room, conn);
     const me = room.conns.indexOf(conn);
     if (me < 0) return;
 
-    // 판이 끝나면 남아 있는 준비시간 타이머가 뒤늦게 개시 신호를 쏘지 않도록 정리한다
-    if (msg.t === 'won' || msg.t === 'lost') { clearPrepTimer(room); room.prepWave = 0; }
+    // 판을 끝낸 사람은 더 기다릴 것이 없다 — 준비 판정에서 빼고, 1:1 이면 타이머도 정리한다
+    if (msg.t === 'won' || msg.t === 'lost') {
+      room.gone[me] = true;
+      if (room.size === 2) { clearPrepTimer(room); room.prepWave = 0; }
+      else if (room.prepWave) { pushPrepState(room); maybeGo(room); }
+    }
 
     /* ── 웨이브 동시 개시 ──
-     * 「준비 완료」를 눌러도 상대가 누르기 전에는 시작되지 않는다.
-     * 준비시간 15초는 양쪽이 다 준비 단계에 들어선 뒤에야 흐르기 시작하므로,
+     * 「준비 완료」를 눌러도 남들이 누르기 전에는 시작되지 않는다.
+     * 준비시간 15초는 모두가 준비 단계에 들어선 뒤에야 흐르기 시작하므로,
      * 웨이브를 먼저 끝냈다고 해서 혼자 앞서 나갈 수 없다. */
     if (msg.t === 'prep') {
       const wave = Number(msg.wave) || 0;
@@ -199,12 +261,12 @@ attachWebSocketServer(httpServer, (conn) => {
       if (room.prepWave !== wave) {          // 새 라운드 — 이전 상태를 버리고 다시 맞춘다
         clearPrepTimer(room);
         room.prepWave = wave;
-        room.prep = [false, false];
-        room.ready = [false, false];
+        room.prep = flags(room.size, false);
+        room.ready = flags(room.size, false);
       }
       room.prep[me] = true;
       pushPrepState(room);
-      if (room.prep[0] && room.prep[1] && !room.prepTimer) {
+      if (allPrep(room) && !room.prepTimer) {
         room.prepTimer = setTimeout(() => goWave(room), PREP_SECS * 1000);
         broadcast(room, { t: 'prepSync', wave, secs: PREP_SECS });
       }
@@ -220,9 +282,15 @@ attachWebSocketServer(httpServer, (conn) => {
       return;
     }
 
-    if (!other) return;
     const relayType = RELAY[msg.t];
-    if (relayType) send(other, Object.assign({}, msg, { t: relayType }));
+    if (!relayType) return;
+    const out = Object.assign({}, msg, { t: relayType, from: me });
+    if (msg.to != null) {
+      const target = room.conns[Number(msg.to)];
+      if (target && target !== conn) send(target, out);
+    } else {
+      broadcast(room, out, conn);
+    }
   });
 
   conn.on('close', () => leaveRoom(conn));
@@ -238,7 +306,7 @@ httpServer.listen(PORT, '0.0.0.0', () => {
 function shutdown(sig) {
   console.log(`[patent-siege] ${sig} 수신 — 종료합니다`);
   for (const [code, room] of rooms) {
-    for (const conn of room.conns) if (conn) send(conn, { t: 'oppLeft' });
+    for (const conn of room.conns) if (conn) send(conn, { t: 'serverDown' });
     rooms.delete(code);
   }
   httpServer.close(() => process.exit(0));

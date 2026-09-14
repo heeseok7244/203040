@@ -78,6 +78,9 @@ const CATS = {
     desc: "한 방이 무겁고 느리다. 방사 피해를 얹으면 무리를 통째로 쓸어 담는다.",
     filter: "none",
     icon: "📄",
+    /* 대전장 — **중근거리 딜러**. 사거리를 탱커 바로 뒤(70px)까지 줄여 두 번째 줄에 서고,
+     * 그만큼 맞을 일이 잦아 체력을 조금(1.15배) 얹었다. 저격수(특허범위냥)가 맨 뒤에서 쏜다 */
+    duel: { hp: 1.15, range: 70 },
   },
   /*
    * 특허범위냥 — 가장 느린 저격수. 📐 권리범위 계열의 주인공이다.
@@ -91,6 +94,10 @@ const CATS = {
     desc: "아주 느리지만 사거리가 길고 방어를 무시한다. 사거리·방어무시를 쌓을수록 세진다.",
     filter: "hue-rotate(195deg) saturate(1.25)",
     icon: "📐",
+    /* 대전장 — 저격수. 맨 뒤에 서는 대신 몸이 약하고, 한 방은 3.3배 무겁다.
+     * 청사 판에서의 값어치(긴 사거리로 통로를 오래 덮는 것)가 대전장에서는 거의 뜻이 없어
+     * 그대로 옮기면 출원냥의 1/4 값밖에 못 한다 — 방어무시 35 가 탱커를 뚫는 것과 함께 이걸로 맞춘다 */
+    duel: { hp: 0.85, dmg: 3.3 },
   },
   pct: {
     name: "국제출원냥", row: 2, arow: 3, kind: "atk",
@@ -99,6 +106,7 @@ const CATS = {
     desc: "한 번에 여러 마리를 동시에 공격한다.",
     filter: "hue-rotate(40deg) saturate(1.45)",
     icon: "🌐",
+    duel: { dmg: 2.9 },   // 대전장 — 셋을 같이 노리는 값이 임용가(190)를 따라오도록 한 방을 키운다
   },
   /*
    * 우선심사냥 — 가장 빠르고 가장 가벼운 연사형. 🎯 입증(치명타) 계열의 주인공이다.
@@ -111,9 +119,15 @@ const CATS = {
     name: "우선심사냥", row: 2, arow: 3, kind: "atk",
     dmg: 3, rate: 6.4, range: 118, tag: "연사", cost: 65, weight: 24,
     critC: 0.30, critM: 1.45,
-    desc: "쉬지 않고 연타한다. 한 방은 가볍지만 치명타를 쌓을수록 폭발적으로 세진다.",
+    desc: "쉬지 않고 연타한다. 한 방은 가볍지만 치명타를 쌓을수록 폭발적으로 세진다. 대전장에서는 근접 탱커로 앞을 막는다.",
     filter: "hue-rotate(315deg) saturate(1.3)",
     icon: "⚡",
+    /* 대전장 전용 성격 — **근접 탱커**. 청사 판에서는 사거리 118의 연사형이지만, 대전장에 서면
+     * 사거리를 코앞(38px)까지 줄이고 대신 체력 1.6배 · 방어 30% 를 얻는다. 진형은 사거리 순이라
+     * 저절로 맨 앞에 서서 몸으로 막고, 그 뒤에서 출원냥·특허범위냥이 쏜다.
+     * 공격력은 0.7배 — 맞아 주는 냥이 때리는 것까지 잘하면 다른 냥을 뽑을 이유가 없어진다.
+     * (판의 능력치는 그대로고 대전 명세(makeRoster)를 만들 때만 갈아 씌운다) */
+    duel: { hp: 1.6, dmg: 0.7, range: 38, armor: 0.30, tank: true },
   },
   /*
    * 보정명령냥 — 유일한 둔화형.
@@ -130,13 +144,17 @@ const CATS = {
     desc: "맞은 침입자를 1.6초 동안 42% 느리게 만든다.",
     filter: "hue-rotate(255deg) saturate(1.4)",
     icon: "⏳",
+    /* 대전장 — 둔화에 더해 **명중마다 12% 확률로 0.35초 정지**. 둔화는 상대의 걸음과 공속을
+     * 같이 늦추지만 그것만으로는 값이 모자라, 아주 짧은 정지를 얹어 「발을 묶는 냥」으로 못 박는다 */
+    duel: { dmg: 3.4, stunC: 0.12, stunD: 0.35 },
   },
   agent: {
     name: "변리사냥", row: 0, arow: 1, kind: "buff",
     dmg: 0, rate: 0, range: 0, auraDmg: 1.25, auraRate: 1.15, tag: "보좌", cost: 145, weight: 8,
-    desc: "비공격. 실제로 이어진 심사관 터(보통 좌우, 모서리에서는 꺾이는 방향)의 화력과 공속을 끌어올린다.",
+    desc: "비공격. 실제로 이어진 심사관 터(보통 좌우, 모서리에서는 꺾이는 방향)의 화력과 공속을 끌어올린다. 대전장에서는 뒤에서 다친 아군을 회복시킨다.",
     filter: "hue-rotate(15deg) saturate(1.5)",
     icon: "💼",
+    duel: { hp: 1.3, healer: true },   // 회복 담당 — 먼저 죽으면 회복이 끊기니 조금 튼튼하게
   },
 
   /* ══ 특수 냥타워 ══ **지금은 판에 나오지 않는다** ══
@@ -454,7 +472,8 @@ const PASSIVE_BY_KEY = Object.fromEntries(PASSIVES.map((p) => [p.key, p]));
  *   sl        명중 시 둔화 % · sp/spf 방사 피해 반경·비율
  * @type {Record<string,{nm:string,hp:number,spd:number,def:number,r:number,col:string,rw:number,
  *   leak:number,fee?:number,desc:string,icon:string,
- *   duel:{w:number,hpS:number,dpsS:number,rate:number,range:number,sl?:number,sp?:number,spf?:number}}>}
+ *   ar        대전장 방어(0~1) — 받는 피해를 이 비율만큼 깎는다. 방어무시(pierce)가 이걸 뚫는다
+ *   duel:{w:number,hpS:number,dpsS:number,rate:number,range:number,sl?:number,sp?:number,spf?:number,ar?:number}}>}
  */
 const ENEMIES = {
   copy: { nm:"도용업자",       hp:42,  spd:106, def:1, r:18, col:"#8fa6bd", rw:3,  leak:1, icon:"🥷",
@@ -465,10 +484,10 @@ const ENEMIES = {
     duel:{ w:26, hpS:0.6, dpsS:1.3, rate:3.0, range:86 } },
   tank: { nm:"무효심판 청구인", hp:190, spd:75,  def:8, r:24, col:"#7d5a8f", rw:9,  leak:5, icon:"⚖️",
     desc:"내 권리를 통째로 없애려 든다. <br>돌파 시 등록원부 내구를 5 깎는다.",
-    duel:{ w:16, hpS:2.4, dpsS:1.1, rate:0.85, range:140, sl:30 } },
+    duel:{ w:16, hpS:2.4, dpsS:1.1, rate:0.85, range:140, sl:30, ar:0.25 } },
   boss: { nm:"특허괴물",       hp:1150, spd:62, def:13, r:34, col:"#c4322a", rw:70, leak:8, fee:100, icon:"👹",
     desc:"특허만 사서 소송으로 돈을 받아낸다. <br>돌파 시 합의금 명목으로 특허료 100을 가져간다. <br>— 잔고가 모자라면 빚으로 남는다.",
-    duel:{ w:4, hpS:4.0, dpsS:2.4, rate:1.0, range:130, sp:92, spf:0.5 } }
+    duel:{ w:4, hpS:4.0, dpsS:2.4, rate:1.0, range:130, sp:60, spf:0.35, ar:0.25 } }
 };
 
 /**
@@ -679,7 +698,18 @@ const DUEL_WAVES = [4, 7, 10];
  * rangeMul   청사 판(84px 간격) 사거리를 대전장으로 옮기는 배율
  * moveSpd    걷는 속도(px/s)
  * hp*        유닛 체력 = (hpBase + 임용가 × hpPerCost) × hpLv^(레벨-1) × (승진이면 hpPromo)
- * aide*      비전투 변리사냥이 대전장에서 맡는 역할 — 가장 다친 아군을 회복시킨다
+ *            × 종류별 배율(CATS[k].duel.hp). **예전(60 + 임용가 × 1.1)의 두 배 남짓**이다 —
+ *            여덟 명씩 붙어도 5~8초에 끝나 「무엇이 통했는지」를 볼 틈이 없었다
+ * dmgMul     대전장에서 공격력에 곱하는 배율. 체력을 키운 것과 함께 싸움을 **네댓 배 길게** 늘인다
+ * pierceDmg  방어무시 100%p 당 공격력 보너스. 방어무시는 이제 실제로 방어(armor)를 뚫지만,
+ *            방어가 없는 유닛을 상대할 때도 완전히 헛되지는 않도록 조금 남겨 둔다
+ * heal       비전투 변리사냥이 대전장에서 맡는 역할 — 가장 다친 아군을 회복시킨다.
+ *              every  회복 주기(초) · flat 한 번의 고정 회복 · pct 대상 최대 체력의 비율만큼 추가
+ *              range  회복이 닿는 거리(px) · lv 레벨마다 곱하는 배율
+ *              auraUp 💼 「대리인 증원」 한 장마다 +이만큼 · tierMul 💼 5단계 「특허법인 설립」 배율
+ *            한 명이 초당 10 남짓 — 공격 한 명이 내는 피해(30 언저리)의 1/3 이라, 셋이 붙어야
+ *            공격 한 명을 상쇄한다. 탱커(방어 30%)에게 들어가면 그만큼 더 값을 한다.
+ *            「과하지 않고 적당히」가 이 값이다 — 힐러 둘이 탱커 위에 서면 받는 피해의 1/4 쯤을 되돌린다
  * rows       진형의 줄 수. 한 칸(열)에 이만큼씩 쌓아 세우고, 줄 번호가 곧 깊이(dep)가 된다
  *            — 뒤로 얼마나 물러나 서는지는 아래 depthRise·depthScale 이 정한다
  * colGap     열 사이의 가로 간격(px). 덱이 크면 이 값을 줄여 진형을 formDepth 안에 욱여넣는다
@@ -698,11 +728,21 @@ const DUEL = {
   campX: 76, spawnPad: 34,
   rangeMul: 0.76,
   moveSpd: 46,
-  timeLimit: 90,
+  timeLimit: 110,
   waitSecs: 12,           // 상대 명세를 기다리는 최대 시간. 넘기면 쥐 침입단으로 대신한다
   dt: 1 / 60,             // 고정 시간간격 — 프레임이 흔들려도 싸움의 속도는 같다
-  hpBase: 60, hpPerCost: 1.1, hpLv: 1.9, hpPromo: 1.3,
-  aideHeal: 7, aideHealR: 150,
+  hpBase: 130, hpPerCost: 2.2, hpLv: 1.9, hpPromo: 1.3,
+  dmgMul: 0.62,
+  pierceDmg: 0.2,
+  heal: { every: 0.5, flat: 6, pct: 0.025, range: 170, lv: 1.3, auraUp: 0.25, tierMul: 1.4 },
+  /* ── 대난투(4인) 전용 지형 ──
+   * 1:1 · 2:2 는 옆에서 본 한 줄짜리 전장(line)이라 x 하나로 거리를 잰다. 대난투는 네 진영이
+   * 한가운데로 몰려드는 **2차원 난전(brawl)**이다 — 왼쪽·오른쪽·뒤·앞 네 귀퉁이에서 출발해
+   * 가장 가까운 적을 향해 걷는다. depthPx 는 그 깊이 축의 길이(전장 좌표), 화면에는
+   * depthRise(108px) 로 눌려 그려진다.
+   * brawlRows/brawlColGap/brawlFormDepth 는 난전용 진형 — 네 덱이 한 화면에 서야 하므로 촘촘하다 */
+  depthPx: 300,
+  brawlRows: 5, brawlColGap: 16, brawlFormDepth: 64, brawlSpawnPad: 12,
   /* rows 를 5로, formDepth 를 260으로 늘린 것은 스케치의 모양을 맞추기 위해서다 —
    * 진형이 자기 **영역의 절반쯤을 채우고** 가운데가 비어 있어야 「두 영역이 마주 본다」로 읽힌다.
    * 예전(4줄·170px)에는 양 끝에 뭉쳐 서서 화면 한가운데가 통째로 비어 있었다. */
@@ -713,7 +753,10 @@ const DUEL = {
    * 돌아온다 (RANK.duelWin/duelDraw) — 판 안의 자원 격차가 아니라 성적표에 남는다. */
   prize: 0, drawPrize: 0,
   leakBase: 30, leakPer: 0,
-  soloBase: 0.95, soloPerWave: 0.015,
+  /* 쥐 침입단은 전부 사거리가 길어(86~140) 근접 탱커·중근거리 출원냥이 걸어 들어가는 동안 먼저 맞는다 —
+   * 대신 내 덱은 진형(탱커가 앞, 힐러가 뒤)의 이점을 누리므로 총량은 1.15배로 잡는다 — 짜임새 있는 덱이
+   * 7할쯤 이기는 값이다. 마지막(특허괴물) 대전은 soloBossMul 만큼 덜어 낸다 */
+  soloBase: 1.13, soloPerWave: 0.006, soloBossMul: 0.83,
 
   /* ── 화면 (영역 2분할 + 원근감 지면) ──
    * 예전에는 유닛이 4줄짜리 일직선으로 딱 붙어 서서, 스물몇 명이 나와도 「줄 선 종이 타일」로만
@@ -758,6 +801,10 @@ const DUEL = {
  */
 const RANK = {
   duelWin: 1200, duelDraw: 500, duelLose: 0,
+  /* 대난투(4인) — 승/무/패가 아니라 **등수**다. 1등이 1:1 승리와 같은 점수를 받고
+   * 아래로 갈수록 줄어든다. 내구 손실도 등수를 따른다 (1등은 무손실, 4등은 1:1 패배와 같다). */
+  ffaPts: [1200, 700, 300, 0],
+  ffaDmg: [0, 10, 20, 30],
   deckMul: 0.8,              // 덱 지수 1점당 점수
   speedPerWave: 600,         // 전투 라운드 하나의 속도 만점
   parPad: 9,                 // 파 타임 = 마지막 스폰 시각 + 이 여유(초)
@@ -770,6 +817,35 @@ const RANK = {
     { at: 3600, g: "C", col: "#c9b26a", say: "덱의 축이 아직 흐릿합니다." },
     { at: 0,    g: "D", col: "#e0574d", say: "무엇을 모을지부터 정해 봅시다." },
   ],
+};
+
+/**
+ * 게임 모드(MODES) — 몇 명이 어떻게 붙는가.
+ *
+ *   solo  혼자. 대전 라운드의 상대는 쥐 침입단
+ *   duel  1:1. 예전부터 있던 그 대전
+ *   team  2:2 더블업. 슬롯 0·1 이 한 팀, 2·3 이 한 팀. 대전장에서는 팀의 덱이 **한 진영에 합쳐져** 선다
+ *   ffa   1:1:1:1 대난투. 넷이 각자 진영으로 서서 한가운데로 와르르 몰려든다 (2차원 난전)
+ *
+ * size    방 인원 · teams 진영 수 · teamOf(slot) 그 슬롯이 서는 진영 번호(0~)
+ * topo    대전장 지형 — "line" 옆에서 본 한 줄 / "brawl" 네 귀퉁이 난전
+ * 서버(server/index.js 의 MODE_SIZE)도 같은 인원 표를 본다.
+ * @type {Record<string,{key:string,name:string,short:string,size:number,teams:number,
+ *   topo:"line"|"brawl",desc:string,teamOf:(slot:number)=>number}>}
+ */
+const MODES = {
+  solo: { key: "solo", name: "솔로 플레이", short: "솔로", size: 1, teams: 2, topo: "line",
+    desc: "혼자 10라운드를 치르고 랭킹 점수를 받습니다. 대전 라운드에는 쥐 침입단이 나옵니다.",
+    teamOf: () => 0 },
+  duel: { key: "duel", name: "1v1 대전", short: "1v1", size: 2, teams: 2, topo: "line",
+    desc: "둘이 같은 판·같은 웨이브를 치르고, 라운드 4·7·10 에 덱을 맞댑니다.",
+    teamOf: (s) => s },
+  team: { key: "team", name: "2v2 더블업", short: "2v2", size: 4, teams: 2, topo: "line",
+    desc: "넷이 두 팀으로 갈립니다 (먼저 들어온 둘이 한 팀). 대전장에서는 팀의 덱이 한 진영에 합쳐져 싸웁니다.",
+    teamOf: (s) => (s < 2 ? 0 : 1) },
+  ffa: { key: "ffa", name: "대난투", short: "4인", size: 4, teams: 4, topo: "brawl",
+    desc: "넷이 각자 싸웁니다. 대전장에서는 네 덱이 네 귀퉁이에서 한가운데로 몰려들어 마지막까지 남는 쪽이 이깁니다.",
+    teamOf: (s) => s },
 };
 
 /** 밸런스 상수. 시뮬레이터가 이 객체를 통째로 덮어써서 스윕할 수 있다. */
@@ -856,7 +932,7 @@ const BAL = {
 };
 
 return { AUGMENTS, AUGMENT_WAVES, BAL, CATS, CAT_SKILLS, CAT_WEIGHT_TOTAL, catDrawChance,
-         DRAW_KEYS, DUEL, DUEL_WAVES, ENEMIES, LINES, LINE_TIER_AT, PASSIVES, PASSIVE_BY_KEY,
+         DRAW_KEYS, DUEL, DUEL_WAVES, ENEMIES, LINES, LINE_TIER_AT, MODES, PASSIVES, PASSIVE_BY_KEY,
          RANK, RECIPES, SABOTAGE, SKILL_CD_LV, SKILL_MUL_LV, WAVES };
 })();
 __mods["core/maps.js"] = (function(){
@@ -1910,7 +1986,7 @@ return { damage, step };
 __mods["core/duel.js"] = (function(){
 // @ts-check
 /**
- * 1:1 대전(DUEL) — **오토배틀러**. 덱 대 덱.
+ * 대전(DUEL) — **오토배틀러**. 덱 대 덱.
  *
  * ── 어떤 싸움인가 ──
  * 옆에서 본 한 줄짜리 전장이다. 양끝에 진영 깃발이 하나씩 서 있고, 시작하면 양쪽이 지금까지
@@ -1922,18 +1998,27 @@ __mods["core/duel.js"] = (function(){
  * 승부가 새기 때문이다. 여기서는 덱과 덱만 남는다.
  *
  * 손댈 것이 아무것도 없다 — 특허료도 없고 출격 카드도 없다. 그래서 승부를 가르는 것은
- * **오직 「무엇을 만들었는가」** 하나다: 증강 · 스테이지 강화 · 합성 레벨이 전부 실린
- * 두 덱을 그대로 붙여 자웅을 가리는 자리다.
+ * **오직 「무엇을 만들었는가」** 하나다: 스테이지 강화 · 합성 레벨이 전부 실린
+ * 덱들을 그대로 붙여 자웅을 가리는 자리다.
  *
+ * ── 진영이 둘이 아닐 수도 있다 ──
+ * 1:1 과 2:2 더블업은 진영이 둘(a·b)이고 한 줄짜리 전장(topo "line")이다 — 2:2 는 팀의 두 덱이
+ * **한 진영에 합쳐져** 선다. 대난투(1:1:1:1)는 진영이 넷(a·b·c·d)이고 **2차원 난전**(topo "brawl")이다:
+ * 왼쪽·오른쪽·뒤·앞 네 귀퉁이에서 출발해 가장 가까운 적을 향해 걷고, 마지막까지 남는 진영이
+ * 1등이다. 전멸한 순서가 곧 등수가 된다.
+ *
+ * ── 역할 ──
  * 진형은 **사거리 순**으로 선다 — 짧은 냥이 앞에서 몸으로 막고, 긴 냥이 뒤에서 쏘고,
- * 비전투 변리사냥은 맨 뒤에서 다친 아군을 손본다. 그래서 무엇을 얼마나 뽑았는지뿐 아니라
- * **덱의 구성**(앞을 세울 것이 있는지, 뒤에서 때릴 것이 있는지)도 그대로 승부에 실린다.
+ * 비전투 변리사냥은 맨 뒤에서 다친 아군을 손본다. ⚡ 우선심사냥은 대전장에서 **근접 탱커**가
+ * 된다(사거리 38 · 체력 2.6배 · 방어 40%) — 사거리 순이라 저절로 맨 앞에 서고, 방어는 📐 권리범위
+ * 계열의 방어무시가 뚫는다. 그래서 「무엇을 얼마나 뽑았는가」뿐 아니라 **덱의 구성**(앞을 세울
+ * 것이 있는지, 뒤에서 때릴 것이 있는지, 회복이 있는지)도 그대로 승부에 실린다.
  *
  * ── 결과를 어떻게 맞추나 ──
- * 서버는 전투를 계산하지 않는다(중계만 한다). 이제는 사람이 손댈 일이 없어 시뮬레이션이 완전히
- * 결정적이므로, 같은 명세 · 같은 시드를 넣은 두 화면은 원래 같은 결과에 닿는다. 그래도
- * **승패는 p1 쪽 계산을 정본으로 삼는다** — 브라우저마다 Math.pow 같은 초월함수의 끝자리가
- * 다를 수 있어, 「나는 이겼는데 상대도 이겼다」가 만에 하나라도 생기지 않게 못 박아 둔다.
+ * 서버는 전투를 계산하지 않는다(중계만 한다). 사람이 손댈 일이 없어 시뮬레이션이 완전히
+ * 결정적이므로, 같은 명세 · 같은 시드를 넣은 화면들은 원래 같은 결과에 닿는다. 그래도
+ * **승패는 가장 앞 슬롯(p1) 쪽 계산을 정본으로 삼는다** — 브라우저마다 Math.pow 같은 초월함수의
+ * 끝자리가 다를 수 있어, 「나는 이겼는데 상대도 이겼다」가 만에 하나라도 생기지 않게 못 박아 둔다.
  * (솔로에서는 붙을 사람이 없으니 내 계산이 곧 정본이다.)
  *
  * 시간간격은 여전히 고정(DUEL.dt)이다 — 프레임이 끊겨도 싸움의 속도가 달라지지 않도록.
@@ -1943,10 +2028,30 @@ const {CATS, ENEMIES, BAL, DUEL} = __req("core/data.js");
 const {cats} = __req("core/board.js");
 
 const W = DUEL.w, DT = DUEL.dt;
-/** 진영 기준선 x. a 는 왼쪽, b 는 오른쪽. 진형이 여기서부터 앞으로 서고, 벽 노릇도 한다. */
-const campX = (side) => (side === "a" ? DUEL.campX : W - DUEL.campX);
-/** 그 편이 나아가는 방향 (+1 오른쪽 / −1 왼쪽) */
+/** 진영 이름 — 이 순서가 곧 슬롯·팀 번호다 */
+const SIDES = ["a", "b", "c", "d"];
+/** 진영 기준선 x. a 는 왼쪽, b 는 오른쪽 (c·d 는 난전에서 가운데 뒤·앞). 벽 노릇도 한다. */
+const campX = (side) => (side === "a" ? DUEL.campX : side === "b" ? W - DUEL.campX : W / 2);
+/** 그 편이 나아가는 방향 (+1 오른쪽 / −1 왼쪽). 한 줄 전장에서만 뜻이 있다 */
 const dirOf = (side) => (side === "a" ? 1 : -1);
+
+/**
+ * 진영의 출발 지점과 방향 — 지형(topo)에 따라 다르다.
+ *   line   a 왼쪽 → 오른쪽, b 오른쪽 → 왼쪽. 줄(row)은 깊이(z)축으로 흩어진다
+ *   brawl  a 왼쪽, b 오른쪽, c 뒤(z 큰 쪽) → 앞, d 앞 → 뒤. c·d 의 줄은 x축으로 흩어진다
+ * @returns {{cx:number, cz:number, fx:number, fz:number, px:number, pz:number, spread:number}}
+ *   c*: 진영 기준점 · f*: 전진 방향(단위벡터) · p*: 줄이 흩어지는 방향 · spread: 그 폭(px)
+ */
+function campOf(side, topo) {
+  const D = DUEL.depthPx;
+  if (topo !== "brawl" || side === "a" || side === "b") {
+    const dir = dirOf(side);
+    return { cx: campX(side), cz: D / 2, fx: dir, fz: 0, px: 0, pz: 1, spread: D };
+  }
+  // 뒤(c)는 z 가 큰 쪽에서 앞으로, 앞(d)은 z 가 작은 쪽에서 뒤로 걸어 들어온다
+  const back = side === "c";
+  return { cx: W / 2, cz: back ? D + 40 : -40, fx: 0, fz: back ? -1 : 1, px: 1, pz: 0, spread: 220 };
+}
 
 /**
  * 내 판을 대전장 명세로 옮긴다.
@@ -1954,42 +2059,61 @@ const dirOf = (side) => (side === "a" ? 1 : -1);
  * 여기서 나오는 객체가 그대로 상대에게 전송되고, 내 시뮬레이션에도 그대로 들어간다.
  * 키를 짧게 쓴 것은 판을 가득 채우면 27명이라 그냥 두면 payload 가 꽤 커지기 때문이다.
  *
- * 방어무시(pierce)는 대전장에서 쓸 데가 없다 — 유닛에는 침입자 같은 방어력이 없다.
- * 그렇다고 특허범위냥의 특성과 「국제조사보고서」 증강을 통째로 죽이면 아까우니,
- * 방어무시 100%p 당 공격력 +50% 로 환산해 공격력에 미리 녹여 둔다.
+ * 방어무시(pr)는 이제 대전장에서도 **실제로 방어를 뚫는다** — ⚡ 우선심사냥(탱커)·무효심판
+ * 청구인·특허괴물이 방어(ar)를 갖기 때문이다. 방어가 없는 유닛에게도 헛되지 않도록
+ * 100%p 당 공격력 +20%(DUEL.pierceDmg)를 조금 얹어 둔다.
+ *
+ * 종류별 대전 성격(CATS[k].duel)이 여기서 갈아 씌워진다 — 판의 능력치는 그대로 두고 명세를 만들
+ * 때만 체력 배율·사거리·방어를 바꾼다. 그래서 청사 판의 우선심사냥은 여전히 사거리 118 연사형이고,
+ * 대전장에 서는 순간에만 근접 탱커가 된다.
  *
  * @param {any} game
  * @returns {any[]}
  */
 function makeRoster(game) {
+  const bonus = game.bonus || {};
+  const tier = (k) => (game.lineTier && game.lineTier[k]) || 0;
   return cats(game).filter((c) => c.st).map((c) => {
     const d = CATS[c.key], s = c.st, lv = s.lv || 1;
+    const prof = d.duel || {};
     const hp = Math.round((DUEL.hpBase + d.cost * DUEL.hpPerCost) *
-      Math.pow(DUEL.hpLv, lv - 1) * (s.promoted ? DUEL.hpPromo : 1));
+      Math.pow(DUEL.hpLv, lv - 1) * (s.promoted ? DUEL.hpPromo : 1) * (prof.hp || 1));
     const r3 = (v) => +(+v).toFixed(3);
+    // 회복 — 비전투 변리사냥만. 💼 대리인 증원 한 장마다 25%, 💼 5단계면 1.4배가 더 붙는다
+    const healer = !s.atk && !!prof.healer;
+    const hl = healer
+      ? r3(Math.pow(DUEL.heal.lv, lv - 1) * (1 + DUEL.heal.auraUp * (bonus.aura || 0)) *
+           (tier("aide") >= 2 ? DUEL.heal.tierMul : 1))
+      : 0;
     return {
       k: c.key, lv, pr: !!s.promoted, hp,
       // 값어치 — 청사에서의 임용가에 합성 레벨을 얹은 값. 싸움에는 쓰이지 않고,
       // 「내 덱이 얼마짜리인가」를 덱 표시줄에 적는 데만 쓴다.
       cost: Math.round(d.cost * Math.pow(BAL.mergeNeed, lv - 1)),
-      dmg: r3(s.dmg * (1 + (s.pierce || 0) / 200)),
+      dmg: r3(s.dmg * DUEL.dmgMul * (prof.dmg || 1) * (1 + (s.pierce || 0) / 100 * DUEL.pierceDmg)),
       rate: r3(s.rate),
-      range: Math.round(s.range * DUEL.rangeMul),
+      // 대전 성격에 사거리가 적혀 있으면(근접 탱커) 그것을 쓴다 — 판의 사거리 강화도 여기서는 안 실린다
+      range: prof.range != null ? prof.range : Math.round(s.range * DUEL.rangeMul),
       tg: s.targets || 1,
       cc: r3(s.critC), cm: r3(s.critM),
       sl: s.slow || 0,
       sp: s.splash ? Math.round(s.splash.r * DUEL.rangeMul) : 0,
       spf: s.splash ? r3(s.splash.f) : 0,
+      // 방어(0~1)와 방어무시(%p). 방어무시는 상대 방어를 그 비율만큼 깎는다
+      ar: prof.armor || 0,
+      pi: Math.round(s.pierce || 0),
+      // 💥 3단계 — 방사가 방어를 완전히 무시 · 🎯 3단계 — 치명타가 방어를 무시
+      spp: !!s.splashPierce, cp: !!s.critPierce,
+      hl,
       // 특수 냥타워의 규칙은 대전장에서도 그대로 산다 — 연쇄는 옆 유닛으로 튀고,
       // 정지는 그 유닛의 차례를 통째로 건너뛰게 하고, 즉사는 다 죽어가는 유닛을 끝낸다.
       // 징수(bounty)만은 대전장에 처치 보상이 없어 빠진다.
       ch: s.chain ? { n: s.chain.n, r: Math.round(s.chain.r * DUEL.rangeMul), f: r3(s.chain.f) } : null,
-      stC: r3(s.stunC || 0), stD: r3(s.stunD || 0),
+      // 정지 — 판에서 얻은 것(⏱️ 보정기간 연장 등)에 대전 성격의 것(보정명령냥의 짧은 정지)을 더한다
+      stC: r3(Math.min(0.85, (s.stunC || 0) + (prof.stunC || 0))),
+      stD: r3(s.stunD || prof.stunD || 0),
       ex: r3(s.exec || 0),
-      /* ── 빌드 계열 중 대전장에서도 뜻이 있는 것들 ──
-       * 방어를 뚫는 효과(💥 3단계·🎯 3단계)는 여기서는 실을 곳이 없다 — 대전장 유닛에는
-       * 침입자 같은 방어력이 아예 없고, 방어무시는 이미 위에서 공격력으로 환산해 녹였다.
-       * 반면 둔화 피해 증폭(sd)과 치명타 재장전 단축(ccd)은 그대로 산다. */
+      // 둔화 피해 증폭(sd)과 치명타 재장전 단축(ccd)도 그대로 산다
       sd: r3(s.slowDmg || 0),
       ccd: r3(s.critCd || 0),
       /* 합성 냥타워의 고유 스킬. 사거리 관련 값만 대전장 배율로 옮겨 담는다 —
@@ -2005,10 +2129,24 @@ function makeRoster(game) {
 }
 
 /**
+ * 명세에 딸려 보내는 **덱의 이력** — 무슨 계열을 몇 단계까지 열었고 강화를 무엇을 골랐는가.
+ * 싸움에는 쓰이지 않는다(그건 명세의 숫자에 이미 녹아 있다). 대전장 아래에 「이 덱은 이런
+ * 덱이다」를 적어, 고른 강화가 대전에 실려 있다는 것이 **눈으로 보이게** 하는 용도다.
+ * @param {any} game
+ */
+function makeMeta(game) {
+  return {
+    lines: Object.assign({}, game.lineTier || {}),
+    score: Object.assign({}, game.lineScore || {}),
+    passives: (game.myPassives || []).map((p) => (typeof p === "string" ? p : p.key)),
+  };
+}
+
+/**
  * 유닛 번호에서 뽑는 **결정적인** 흔들림 0~1.
  *
  * 진형을 자로 잰 듯한 행렬이 아니라 조금씩 흩어져 서게 하는 데 쓴다. 여기서 나온 값이
- * 유닛의 x 좌표를 미세하게 옮기므로 **판정에 영향을 준다** — 그래서 Math.random 은 물론
+ * 유닛의 좌표를 미세하게 옮기므로 **판정에 영향을 준다** — 그래서 Math.random 은 물론
  * Math.sin 같은 초월함수도 쓰면 안 된다. 브라우저마다 끝자리가 다를 수 있어 두 화면이
  * 어긋나기 때문이다. 정수 연산만으로 섞는다.
  * @param {number} n
@@ -2046,15 +2184,16 @@ function mobRoster(mine, wave, seed, forceBoss) {
   };
 
   // ── 얼마나 세게 나올 것인가 ── 내 총량을 재서 거기에 맞춘다
-  const mul = DUEL.soloBase + wave * DUEL.soloPerWave;
+  // 특허괴물이 끼는 마지막 대전은 같은 총량이어도 훨씬 버겁다(방어·방사·긴 사거리) — 그만큼 덜어 준다
+  const mul = (DUEL.soloBase + wave * DUEL.soloPerWave) * (forceBoss ? DUEL.soloBossMul : 1);
   let hpSum = 0, dpsSum = 0;
   for (const u of mine) {
-    hpSum += u.hp;
+    hpSum += u.hp * (1 + (u.ar || 0));      // 방어는 체력의 값어치로 친다
     if (u.atk) dpsSum += u.dmg * u.rate * (u.tg || 1) * (1 + (u.cc || 0) * ((u.cm || 1) - 1));
   }
   // 판이 텅 비어 있어도 상대는 서 있어야 한다 — 그때는 스테이지만 보고 최소치를 잡는다
-  if (hpSum <= 0) hpSum = 260 * (1 + 0.3 * wave);
-  if (dpsSum <= 0) dpsSum = 90 * (1 + 0.3 * wave);
+  if (hpSum <= 0) hpSum = 520 * (1 + 0.3 * wave);
+  if (dpsSum <= 0) dpsSum = 56 * (1 + 0.3 * wave);
   const hpTotal = hpSum * mul, dpsTotal = dpsSum * mul;
 
   // ── 몇 마리로 나눌 것인가 ── 내 인원 언저리에서 흔들리게 둔다.
@@ -2072,16 +2211,18 @@ function mobRoster(mine, wave, seed, forceBoss) {
 
   return squad.map((k) => {
     const d = ENEMIES[k].duel;
-    const hp = Math.max(20, Math.round(hpTotal * d.hpS / hpShare));
+    // 방어를 가진 종류는 그만큼 체력을 덜 받는다 — 총량 계산이 어긋나지 않도록
+    const hp = Math.max(20, Math.round(hpTotal * d.hpS / hpShare / (1 + (d.ar || 0))));
     const dps = dpsTotal * d.dpsS / dpsShare;
     return {
       k, mob: true, lv: 1, pr: false, hp,
       // 침입자에게는 임용가가 없다 — 덩치에서 값어치를 뽑는다 (덱 표시줄에만 쓴다)
-      cost: Math.round(40 + hp * 0.32),
+      cost: Math.round(40 + hp * 0.2),
       dmg: r3(Math.max(1, dps / d.rate)),
       rate: r3(d.rate), range: d.range, tg: 1,
       cc: 0.1, cm: 1.5, sl: d.sl || 0,
       sp: d.sp || 0, spf: d.spf || 0,
+      ar: d.ar || 0, pi: 0, spp: false, cp: false, hl: 0,
       ch: null, stC: 0, stD: 0, ex: 0,
       atk: true,
     };
@@ -2109,46 +2250,55 @@ function deckGroups(roster) {
  *
  * 오토배틀러에서 군대의 값어치는 체력과 화력의 **곱**에 가깝다(란체스터). 한쪽만 높은 덱은
  * 실제로도 약하고, 이 식은 그걸 그대로 반영한다. 제곱근을 씌우는 것은 눈에 익은 자릿수로
- * 내리기 위해서일 뿐이다. 화면의 「덱 지수」와 시작 로그에 쓴다 — 판정에는 관여하지 않는다.
+ * 내리기 위해서일 뿐이다. 방어는 체력의 값어치로, 회복은 화력이 아니라 체력 쪽에 조금 얹는다.
+ * 화면의 「덱 지수」와 시작 로그에 쓴다 — 판정에는 관여하지 않는다.
  */
 function deckPower(roster) {
-  let hp = 0, dps = 0;
+  let hp = 0, dps = 0, heal = 0;
   for (const u of roster) {
-    hp += u.hp;
+    hp += u.hp * (1 + (u.ar || 0));
     if (u.atk) dps += u.dmg * u.rate * (u.tg || 1) * (1 + (u.cc || 0) * ((u.cm || 1) - 1));
+    if (u.hl) heal += u.hl;
   }
-  return Math.round(Math.sqrt(hp * dps));
+  return Math.round(Math.sqrt(hp * (1 + 0.12 * heal) * dps));
 }
 
 class DuelSim {
   /**
-   * @param {any[]} rosterA p1 의 명세 @param {any[]} rosterB p2 의 명세
-   * @param {number} seed 공유 시드 (치명타·정지 판정에 쓴다 — 양쪽 화면이 같아야 한다)
+   * @param {Record<string, any[]>} rosters 진영별 명세 {a:[...], b:[...], c?:..., d?:...}.
+   *   2:2 는 팀 두 덱을 미리 이어 붙여 한 진영으로 넘긴다. 유닛에 own(슬롯 번호)이 있으면 그대로 싣는다
+   * @param {number} seed 공유 시드 (치명타·정지 판정에 쓴다 — 모든 화면이 같아야 한다)
+   * @param {"line"|"brawl"} [topo] 지형. line(기본) 한 줄 전장 · brawl 네 귀퉁이 난전
    */
-  constructor(rosterA, rosterB, seed) {
+  constructor(rosters, seed, topo) {
     this.rng = new Rng(seed >>> 0);
+    this.topo = topo === "brawl" ? "brawl" : "line";
     this.t = 0;
     this._id = 0;
+    /** @type {string[]} 이 판에 선 진영 (명세가 있는 것만, a→d 순) */
+    this.sides = SIDES.filter((s) => Array.isArray(rosters[s]));
     /** @type {any[]} */ this.units = [];
     /** @type {any[]} 화면 연출용 탄환 (판정에 영향을 주지 않는다) */ this.shots = [];
     /** @type {any[]} 렌더러가 꺼내가는 연출 이벤트 */ this.events = [];
     this.over = false;
-    /** @type {"a"|"b"|null} */ this.winner = null;
+    /** @type {string|null} */ this.winner = null;
     this.reason = "";
+    /** @type {string[]} 전멸한 순서 — 등수의 뼈대다 (먼저 죽은 쪽이 꼴찌) */
+    this.elim = [];
 
     /** 화면 아래 덱 표시줄에 쓰는 요약 (싸움에는 관여하지 않는다) */
-    this.deck = { a: deckGroups(rosterA), b: deckGroups(rosterB) };
-    /** 덱 지수 — 두 덱의 세기를 한 숫자로 비교해 보여 주는 값 */
-    this.power = { a: deckPower(rosterA), b: deckPower(rosterB) };
+    this.deck = {};
+    /** 덱 지수 — 진영들의 세기를 한 숫자로 비교해 보여 주는 값 */
+    this.power = {};
+    for (const s of this.sides) { this.deck[s] = deckGroups(rosters[s]); this.power[s] = deckPower(rosters[s]); }
 
     // ── 전군 배치 ── 오토배틀러라 여기서 한 번에 다 세우고, 그 뒤로는 손댈 것이 없다
-    this.form(rosterA, "a");
-    this.form(rosterB, "b");
+    for (const s of this.sides) this.form(rosters[s], s);
 
     /* 시작 병력 — 「남은 병력 비율」의 분모다. 덱이 크든 작든 같은 잣대로 재려면
      * 절대량이 아니라 **자기 시작 병력 대비 얼마가 남았는가**로 봐야 한다. */
-    this.startHp = { a: this.armyHp("a"), b: this.armyHp("b") };
-    this.startN = { a: this.alive("a").length, b: this.alive("b").length };
+    this.startHp = {}; this.startN = {};
+    for (const s of this.sides) { this.startHp[s] = this.armyHp(s); this.startN[s] = this.alive(s).length; }
   }
 
   /**
@@ -2162,49 +2312,114 @@ class DuelSim {
    * 사거리에 든 유닛은 멈추고 아직 못 닿는 유닛은 계속 걸으므로, 긴 냥은 뒤에서 멈추고
    * 짧은 냥은 앞까지 걸어 나간다. 그래서 진형이 조금 깊어도 싸움 모양은 흐트러지지 않는다.
    *
-   * 앞줄은 **양쪽 다 같은 자리**에서 시작하고, 덱이 클수록 뒤(진영 쪽)로 늘어난다.
+   * 앞줄은 **어느 진영이나 같은 거리**에서 시작하고, 덱이 클수록 뒤(진영 쪽)로 늘어난다.
    * 앞줄을 덱 크기에 따라 움직이면 큰 덱이 그만큼 먼저 닿아 두 번 유리해지기 때문이다.
    * 열이 많아 진형이 formDepth 를 넘칠 것 같으면 열 간격을 좁혀 그 안에 욱여넣는다.
    *
-   * @param {any[]} roster @param {"a"|"b"} side
+   * 좌표는 (x, z) 두 축이다. z 는 깊이(0 = 맨 앞·아래, depthPx = 맨 뒤·위)로, 한 줄 전장에서는
+   * 줄(row)이 여기로 흩어지고 거리 계산에는 쓰이지 않는다. 난전에서는 실제 거리 축이다.
+   *
+   * @param {any[]} roster @param {string} side
    */
   form(roster, side) {
-    const dir = dirOf(side);
+    const brawl = this.topo === "brawl";
+    const camp = campOf(side, this.topo);
     // 비전투(변리사냥)를 맨 뒤로 밀고, 나머지는 사거리 오름차순. 동률은 명세 순서로 못 박는다.
     const order = roster.map((u, i) => ({ u, i })).sort((p, q) =>
       (p.u.atk === q.u.atk ? 0 : p.u.atk ? -1 : 1) ||
       ((p.u.range || 0) - (q.u.range || 0)) || (p.i - q.i));
 
-    const rows = DUEL.rows;
+    const rows = brawl ? DUEL.brawlRows : DUEL.rows;
+    const colGap = brawl ? DUEL.brawlColGap : DUEL.colGap;
+    const formDepth = brawl ? DUEL.brawlFormDepth : DUEL.formDepth;
+    const spawnPad = brawl ? DUEL.brawlSpawnPad : DUEL.spawnPad;
     const cols = Math.max(1, Math.ceil(order.length / rows));
-    const gap = cols > 1 ? Math.min(DUEL.colGap, DUEL.formDepth / (cols - 1)) : 0;
-    const frontX = campX(side) + dir * (DUEL.spawnPad + DUEL.formDepth);
-    const seed = side === "a" ? 0 : 977;
+    const gap = cols > 1 ? Math.min(colGap, formDepth / (cols - 1)) : 0;
+    // 앞줄 = 진영 기준점에서 전진 방향으로 (spawnPad + formDepth) 만큼
+    const frontX = camp.cx + camp.fx * (spawnPad + formDepth);
+    const frontZ = camp.cz + camp.fz * (spawnPad + formDepth);
+    const seed = SIDES.indexOf(side) * 977;
+    /* 난전의 **출발 대기** — 전장은 가로가 깊이보다 훨씬 길어서(1000 × 300) 뒤·앞 진영(c·d)이
+     * 왼쪽·오른쪽 진영(a·b)보다 한가운데에 훨씬 가깝다. 그대로 두면 c·d 가 먼저 붙어 서로 갈아
+     * 먹고 a·b 가 뒤늦게 와서 쓸어 담는다. 가까운 진영을 그 차이만큼 붙잡아 두어 **네 진영이
+     * 거의 동시에 한가운데에 닿게** 한다 — 「와르르 몰려든다」가 그래야 성립한다. */
+    let hold = 0;
+    if (brawl) {
+      const toCenter = (s) => {
+        const c = campOf(s, "brawl");
+        const fx = c.cx + c.fx * (spawnPad + formDepth), fz = c.cz + c.fz * (spawnPad + formDepth);
+        return Math.abs(c.fx ? fx - W / 2 : fz - DUEL.depthPx / 2);
+      };
+      hold = Math.max(0, (toCenter("a") - toCenter(side)) / DUEL.moveSpd);
+    }
 
     order.forEach((o, n) => {
       const col = Math.floor(n / rows), row = n % rows;
       const u = o.u;
-      /* 깊이(dep 0~1) — 0이 맨 앞(아래·크게), 1이 맨 뒤(위·작게).
-       * 줄 번호를 그대로 쓰면 네 줄이 자로 잰 듯 늘어서서 「종이 타일 행렬」로만 보인다.
+      /* 줄 번호를 그대로 쓰면 다섯 줄이 자로 잰 듯 늘어서서 「종이 타일 행렬」로만 보인다.
        * 번호에서 뽑은 흔들림을 얹어 영역 안에 흩어져 서게 한다 (jitter01 참고 — 난수가 아니다). */
       const j = jitter01(n * 2 + seed), j2 = jitter01(n * 2 + 1 + seed);
-      const dep = Math.min(1, Math.max(0, (row + 0.22 + j * 0.56) / rows));
+      // 줄 방향 오프셋 — 폭(spread) 안에서 0~1 로 흩뿌린 뒤 가운데 정렬
+      const along = ((row + 0.22 + j * 0.56) / rows - 0.5) * camp.spread;
+      const back = col * gap + (j2 - 0.5) * 12;     // 뒤로 물러나는 정도 (열)
+      // 진영 기준점(cz = depthPx/2)을 가운데로 줄이 흩어지므로 a·b 의 z 는 0~depthPx 안에 든다
+      const x = frontX - camp.fx * back + camp.px * along;
+      const z = frontZ - camp.fz * back + camp.pz * along;
       this.units.push({
-        id: this._id++, side, k: u.k, lv: u.lv || 1, pr: !!u.pr, mob: !!u.mob,
-        x: frontX - dir * (col * gap + (j2 - 0.5) * 12), dir, dep,
+        id: this._id++, side, own: u.own == null ? -1 : u.own,
+        k: u.k, lv: u.lv || 1, pr: !!u.pr, mob: !!u.mob,
+        x, z, dir: camp.fx || (camp.fz > 0 ? 1 : -1),
         hp: u.hp, max: u.hp,
         dmg: u.dmg, rate: u.rate, range: u.range, tg: u.tg || 1,
         cc: u.cc || 0, cm: u.cm || 1, sl: u.sl || 0,
         sp: u.sp || 0, spf: u.spf || 0, atk: !!u.atk,
+        ar: u.ar || 0, pi: u.pi || 0, spp: !!u.spp, cp: !!u.cp, hl: u.hl || 0,
         ch: u.ch || null, stC: u.stC || 0, stD: u.stD || 0, ex: u.ex || 0,
         sd: u.sd || 0, ccd: u.ccd || 0,
         // 합성 냥타워의 고유 스킬. 판에 서자마자 터지지 않도록 쿨을 한 번 채워 두고 시작한다.
         sk: u.sk || null, skCd: u.sk ? u.sk.cd : 0, skT: 0,
         // 뒷줄일수록 첫 발이 아주 조금 늦다 — 한 틱에 전군이 동시에 쏘면 화면이 번쩍이기만 한다
         cd: col * 0.05, slowT: 0, slowPct: 0, hitT: 0, atkT: 0, healT: 0, freezeT: 0,
+        holdT: hold,     // 난전 출발 대기 (a·b 는 0)
         dead: false, walking: true,
       });
     });
+  }
+
+  /** 깊이 0~1 (화면이 원근을 그릴 때 쓴다). 난전에서는 진형이 범위를 조금 벗어날 수 있다 */
+  depOf(u) { return u.z / DUEL.depthPx; }
+
+  /**
+   * 두 유닛 사이의 거리 — 지형에 따라 다르다.
+   *   line   x 차이만 본다. 줄(깊이)이 달라도 같은 x 면 닿는다 — 옆에서 본 한 줄 전장이라서
+   *   brawl  평면 거리. Math.hypot 대신 sqrt 를 쓰는 것은 브라우저 간 끝자리 차이를 줄이려는 것이다
+   */
+  dist(u, f) {
+    const dx = f.x - u.x;
+    if (this.topo !== "brawl") return Math.abs(dx);
+    const dz = f.z - u.z;
+    return Math.sqrt(dx * dx + dz * dz);
+  }
+
+  /**
+   * 걷기 한 걸음 — 표적이 있으면 그쪽으로, 없으면 진영의 전진 방향으로. 이동량을 돌려준다.
+   * 한 줄 전장에서도 **표적의 방향**을 본다 — 예전처럼 진영 방향으로만 걸으면, 몸이 튼튼한 냥이
+   * 상대 줄을 지나쳐 버린 뒤 서로 등을 보이고 멀어져 시간 종료까지 아무 일도 안 일어난다.
+   */
+  stepToward(u, target, spd) {
+    if (this.topo !== "brawl") {
+      if (!target) return [spd * u.dir, 0];
+      const dx = target.x - u.x;
+      return [Math.abs(dx) < 1e-6 ? 0 : spd * (dx > 0 ? 1 : -1), 0];
+    }
+    if (!target) {
+      const camp = campOf(u.side, "brawl");
+      return [spd * camp.fx, spd * camp.fz];
+    }
+    const dx = target.x - u.x, dz = target.z - u.z;
+    const d = Math.sqrt(dx * dx + dz * dz);
+    if (d < 1e-6) return [0, 0];
+    return [spd * dx / d, spd * dz / d];
   }
 
   alive(side) { return this.units.filter((u) => u.side === side && !u.dead); }
@@ -2223,38 +2438,80 @@ class DuelSim {
   /**
    * 지금 상태로 승패가 갈렸는지 본다.
    *
-   * **성채가 없다** — 이기는 길은 상대를 전멸시키는 것 하나뿐이다.
-   * 시간 안에 결판이 안 나면 **남은 병력 비율**이 높은 쪽을 올린다.
+   * **성채가 없다** — 이기는 길은 상대를 전멸시키는 것 하나뿐이다. 진영이 셋 이상이면
+   * **하나만 남을 때까지** 이어진다. 시간 안에 결판이 안 나면 **남은 병력 비율**로 등수를 매긴다.
    */
   settle() {
-    const na = this.alive("a").length, nb = this.alive("b").length;
-    if (!na && !nb) { this.finish(null, "양쪽 전멸"); return; }
-    if (!na) { this.finish("b", "전멸"); return; }
-    if (!nb) { this.finish("a", "전멸"); return; }
+    // 방금 전멸한 진영을 순서대로 적어 둔다 — 등수의 뼈대다
+    for (const s of this.sides) {
+      if (!this.elim.includes(s) && !this.alive(s).length) {
+        this.elim.push(s);
+        this.events.push({ t: "elim", side: s });
+      }
+    }
+    const live = this.sides.filter((s) => !this.elim.includes(s));
+    if (!live.length) { this.finish(null, "전멸"); return; }
+    if (live.length === 1) { this.finish(live[0], "전멸"); return; }
     if (this.t >= DUEL.timeLimit) this.judge("시간 종료");
   }
 
   /** 남은 병력 비율 → 남은 체력 순으로 우열을 가린다 */
   judge(why) {
-    const ra = this.ratio("a"), rb = this.ratio("b");
-    if (Math.abs(ra - rb) > 1e-9) { this.finish(ra > rb ? "a" : "b", `${why} · 남은 병력 우세`); return; }
-    const ha = this.armyHp("a"), hb = this.armyHp("b");
-    if (Math.abs(ha - hb) > 1e-9) { this.finish(ha > hb ? "a" : "b", `${why} · 남은 체력 우세`); return; }
-    this.finish(null, `${why} · 완전히 대등`);
+    const st = this.standings();
+    const top = st[0], second = st[1];
+    if (second && top.ratio === second.ratio && top.hp === second.hp) {
+      this.finish(null, `${why} · 완전히 대등`); return;
+    }
+    this.finish(top.side, `${why} · ${top.ratio !== second.ratio ? "남은 병력 우세" : "남은 체력 우세"}`);
   }
   finish(winner, reason) {
     if (this.over) return;
     this.over = true; this.winner = winner; this.reason = reason;
   }
 
-  /** @returns {{winner:"a"|"b"|null, reason:string, aliveA:number, aliveB:number,
-   *             ratioA:number, ratioB:number}} */
+  /**
+   * 진영 등수 — 살아 있는 쪽이 위, 그중에서는 남은 병력 비율 → 남은 체력 순.
+   * 전멸한 쪽은 **늦게 죽은 순**으로 그 아래에 선다. 같은 값이면 같은 등수(place)를 받는다.
+   * @returns {{side:string, place:number, ratio:number, hp:number, alive:number}[]}
+   */
+  standings() {
+    const rows = this.sides.map((s) => ({
+      side: s, ratio: +this.ratio(s).toFixed(6), hp: Math.round(this.armyHp(s)),
+      alive: this.alive(s).length, dead: this.elim.indexOf(s),
+    }));
+    rows.sort((p, q) => {
+      const pd = p.dead >= 0, qd = q.dead >= 0;
+      if (pd !== qd) return pd ? 1 : -1;
+      if (pd && qd) return q.dead - p.dead;           // 늦게 죽은 쪽이 위
+      return (q.ratio - p.ratio) || (q.hp - p.hp);
+    });
+    let place = 0;
+    rows.forEach((r, i) => {
+      const prev = rows[i - 1];
+      const tie = prev && (r.dead >= 0 ? prev.dead === r.dead : (prev.dead < 0 && prev.ratio === r.ratio && prev.hp === r.hp));
+      r.place = tie ? prev.place : (place = i + 1);
+    });
+    return rows.map(({ side, place, ratio, hp, alive }) => ({ side, place, ratio, hp, alive }));
+  }
+
+  /** @returns {{winner:string|null, reason:string, standings:any[], alive:Record<string,number>}} */
   result() {
-    return {
-      winner: this.winner, reason: this.reason,
-      aliveA: this.alive("a").length, aliveB: this.alive("b").length,
-      ratioA: this.ratio("a"), ratioB: this.ratio("b"),
-    };
+    const alive = {};
+    for (const s of this.sides) alive[s] = this.alive(s).length;
+    return { winner: this.winner, reason: this.reason, standings: this.standings(), alive };
+  }
+
+  /**
+   * 방어를 거친 실제 피해. 방어(ar)는 받는 피해를 그 비율만큼 깎고, 때리는 쪽의 방어무시(pi)가
+   * 그 방어를 %p 만큼 깎아 낸다. 🎯 3단계의 치명타와 💥 3단계의 방사는 방어를 통째로 무시한다.
+   * @param {any} u 때리는 쪽 @param {any} f 맞는 쪽 @param {number} raw
+   * @param {{crit?:boolean, splash?:boolean}} [o]
+   */
+  afterArmor(u, f, raw, o) {
+    if (!f.ar) return raw;
+    if (o && ((o.crit && u.cp) || (o.splash && u.spp))) return raw;
+    const ar = f.ar * Math.max(0, 1 - (u.pi || 0) / 100);
+    return raw * (1 - ar);
   }
 
   /**
@@ -2268,11 +2525,11 @@ class DuelSim {
     u.hitT = crit ? 0.2 : 0.12;
     if (exec && u.hp > 0 && u.hp <= u.max * exec) {
       u.hp = 0;
-      this.events.push({ t: "exec", x: u.x, side: u.side, dep: u.dep });
+      this.events.push({ t: "exec", x: u.x, side: u.side, dep: this.depOf(u) });
     }
     if (u.hp <= 0) {
       u.dead = true; u.hp = 0;
-      this.events.push({ t: "die", x: u.x, side: u.side, dep: u.dep, k: u.k });
+      this.events.push({ t: "die", x: u.x, side: u.side, dep: this.depOf(u), k: u.k, own: u.own });
     }
     void fromX;
   }
@@ -2294,11 +2551,11 @@ class DuelSim {
     if (this.over) return;
     this.t += DT;
 
-    /** @type {any[]} [유닛, dx] */ const moves = [];
+    /** @type {any[]} [유닛, dx, dz] */ const moves = [];
     /** @type {any[]} [유닛, 피해, 치명타, 발사 x, 즉사기준] */ const hits = [];
     /** @type {any[]} [유닛, 둔화율, 지속(초)] */ const slows = [];
     /** @type {any[]} [유닛, 정지시간] */ const stuns = [];
-    /** @type {any[]} [유닛, 회복량] */ const heals = [];
+    /** @type {any[]} [유닛, 회복량, 회복한 유닛] */ const heals = [];
 
     for (const u of this.units) {
       if (u.dead) continue;
@@ -2309,6 +2566,9 @@ class DuelSim {
       if (u.skT > 0) u.skT -= DT;
       // 조기공개냥에 묶이면 이번 차례를 통째로 건너뛴다 (걷지도 쏘지도 못한다)
       if (u.freezeT > 0) { u.freezeT -= DT; u.walking = false; continue; }
+      // 난전 출발 대기 — 제자리에 서 있는다 (사거리 안에 적이 들어오면 그때는 쏜다)
+      const held = u.holdT > 0;
+      if (held) u.holdT -= DT;
       const slow = u.slowT > 0 ? Math.max(0.2, 1 - u.slowPct) : 1;
 
       /* ── 합성 냥타워의 고유 스킬 ── 사격 재장전과 별개의 시계다.
@@ -2321,16 +2581,16 @@ class DuelSim {
           const marks = [];
           for (const f of this.units) {
             if (f.dead || f.side === u.side) continue;
-            if (Math.abs(f.x - u.x) > reach) continue;
+            if (this.dist(u, f) > reach) continue;
             marks.push(f);
           }
           if (marks.length) {
-            marks.sort((p, q) => (Math.abs(p.x - u.x) - Math.abs(q.x - u.x)) || (p.id - q.id));
+            marks.sort((p, q) => (this.dist(u, p) - this.dist(u, q)) || (p.id - q.id));
             const pick = u.sk.n ? marks.slice(0, u.sk.n) : marks;
             u.skCd = u.sk.cd;
             u.skT = 0.5;
-            this.events.push({ t: "skill", key: u.sk.k, x: u.x, dep: u.dep, side: u.side,
-                               id: u.id, r: reach, n: pick.length, lv: u.lv });
+            this.events.push({ t: "skill", key: u.sk.k, x: u.x, dep: this.depOf(u), side: u.side,
+                               id: u.id, r: reach, n: pick.length, lv: u.lv, own: u.own });
             const amt = u.dmg * (u.sk.mul || 0);
             for (const f of pick) {
               if (u.sk.st) stuns.push([f, u.sk.st]);
@@ -2340,38 +2600,56 @@ class DuelSim {
                 if (f.mob && f.k === "boss") hits.push([f, f.max * u.sk.bh, true, u.x, 0]);
                 else hits.push([f, 0, true, u.x, u.sk.ex]);
               }
-              if (amt > 0) hits.push([f, amt * this.ampSlow(u, f), true, u.x, u.ex]);
+              if (amt > 0) hits.push([f, this.afterArmor(u, f, amt * this.ampSlow(u, f)), true, u.x, u.ex]);
             }
           }
         }
       }
 
-      // 비전투 변리사냥 — 대전장에서는 아군 뒤를 따라다니며 가장 다친 아군을 손봐 준다.
-      // 청사 판의 보좌(화력·공속)는 이미 명세의 숫자에 녹아 있으므로 여기서 또 얹지 않는다.
+      /* ── 비전투 변리사냥 ── 대전장에서는 아군 뒤를 따라다니며 가장 다친 아군을 손봐 준다.
+       * 청사 판의 보좌(화력·공속)는 이미 명세의 숫자에 녹아 있으므로 여기서 또 얹지 않는다.
+       * 회복량 = (고정 + 대상 최대 체력의 비율) × 회복 배율(hl — 레벨·💼 강화가 녹아 있다).
+       * 「적당한」 회복이다 — 한 명이 공격 한 명의 피해 절반쯤을 되돌린다. */
       if (!u.atk) {
         let worst = null, worstGap = 0;
         for (const f of this.units) {
           if (f.dead || f.side !== u.side || f === u) continue;
-          if (Math.abs(f.x - u.x) > DUEL.aideHealR) continue;
+          if (this.dist(u, f) > DUEL.heal.range) continue;
           const gap = f.max - f.hp;
           if (gap > worstGap || (gap === worstGap && worst && f.id < worst.id)) { worstGap = gap; worst = f; }
         }
         u.healT -= DT;
-        if (u.healT <= 0 && worst) {
-          u.healT = 0.5;
-          heals.push([worst, Math.min(worstGap, DUEL.aideHeal * 0.5 * Math.pow(1.35, u.lv - 1))]);
+        if (u.healT <= 0 && worst && u.hl > 0) {
+          u.healT = DUEL.heal.every;
+          const amt = (DUEL.heal.flat + worst.max * DUEL.heal.pct) * u.hl;
+          heals.push([worst, Math.min(worstGap, amt), u]);
+          u.atkT = 0.3;    // 회복 동작
         }
-        // 손볼 아군이 없으면 앞으로 따라간다 (뒤에 처져 있으면 아무 일도 못 한다)
-        if (!worst) { moves.push([u, DUEL.moveSpd * 0.8 * slow * DT * u.dir]); u.walking = true; }
-        else u.walking = false;
+        // 손볼 아군이 없으면 아군 쪽으로 따라간다 (뒤에 처져 있으면 아무 일도 못 한다)
+        if (!worst) {
+          // 가장 가까운 아군 공격 유닛을 따라간다 — 진형이 흩어져도 뒤를 놓치지 않도록.
+          // 아군이 하나도 남지 않았으면 가장 가까운 적에게 걸어간다 — 혼자 남은 힐러가 구석에서
+          // 시간을 다 쓰게 두면 라운드가 끝나지 않는다.
+          let mate = null, md = Infinity, foe = null, fd = Infinity;
+          for (const f of this.units) {
+            if (f.dead || f === u) continue;
+            const d = this.dist(u, f);
+            if (f.side === u.side) { if (f.atk && d < md) { md = d; mate = f; } }
+            else if (d < fd) { fd = d; foe = f; }
+          }
+          const spd = held ? 0 : DUEL.moveSpd * 0.8 * slow * DT;
+          if (mate) { if (md > 40) moves.push([u, ...this.stepToward(u, mate, spd)]); }
+          else if (foe) moves.push([u, ...this.stepToward(u, foe, spd)]);
+          u.walking = !!(mate ? md > 40 : foe);
+        } else u.walking = false;
         continue;
       }
 
-      // 표적 — 내 앞쪽(진행 방향)에 있는 적 중 가까운 순. 동률이면 id 로 못 박는다.
+      // 표적 — 가까운 적 순. 동률이면 id 로 못 박는다.
       const foes = [];
       for (const f of this.units) {
         if (f.dead || f.side === u.side) continue;
-        foes.push([Math.abs(f.x - u.x), f]);
+        foes.push([this.dist(u, f), f]);
       }
       foes.sort((p, q) => (p[0] - q[0]) || (p[1].id - q[1].id));
 
@@ -2379,7 +2657,9 @@ class DuelSim {
 
       if (near > u.range) {
         // 아직 아무에게도 못 닿는다 — 계속 걸어간다 (두들길 성채 같은 것은 없다)
-        moves.push([u, DUEL.moveSpd * slow * DT * u.dir]);
+        if (held) { u.walking = false; continue; }
+        const spd = DUEL.moveSpd * slow * DT;
+        moves.push([u, ...this.stepToward(u, foes.length ? foes[0][1] : null, spd)]);
         u.walking = true;
         continue;
       }
@@ -2398,21 +2678,21 @@ class DuelSim {
         const crit = this.rng.next() < u.cc;
         if (crit) anyCrit = true;
         const raw = u.dmg * (crit ? u.cm : 1);
-        this.shots.push({ x1: u.x, dep1: u.dep, x2: target.x, dep2: target.dep,
+        this.shots.push({ x1: u.x, dep1: this.depOf(u), x2: target.x, dep2: this.depOf(target),
                           side: u.side, crit, life: 0.13, max: 0.13 });
-        hits.push([target, raw * this.ampSlow(u, target), crit, u.x, u.ex]);
-        if (crit) this.events.push({ t: "crit", x: u.x, side: u.side, dep: u.dep, id: u.id });
+        hits.push([target, this.afterArmor(u, target, raw * this.ampSlow(u, target), { crit }), crit, u.x, u.ex]);
+        if (crit) this.events.push({ t: "crit", x: u.x, side: u.side, dep: this.depOf(u), id: u.id });
         if (u.sl) slows.push([target, u.sl / 100]);
         // 조기공개냥 — 확률로 상대 유닛을 그 자리에 묶는다
         if (u.stC && this.rng.next() < u.stC) stuns.push([target, u.stD]);
         if (u.sp) {
           // 방사 피해 — 승진냥의 샷건, 그리고 💥 침해 계열로 얻은 방사. 직격 주변까지 쓸어 버린다
-          this.shots.push({ ring: true, x1: target.x, dep1: target.dep, r: u.sp,
+          this.shots.push({ ring: true, x1: target.x, dep1: this.depOf(target), r: u.sp,
                             side: u.side, life: 0.2, max: 0.2 });
           for (const f of this.units) {
             if (f.dead || f === target || f.side === u.side) continue;
-            if (Math.abs(f.x - target.x) > u.sp) continue;
-            hits.push([f, raw * u.spf * this.ampSlow(u, f), false, target.x, u.ex]);
+            if (this.dist(target, f) > u.sp) continue;
+            hits.push([f, this.afterArmor(u, f, raw * u.spf * this.ampSlow(u, f), { splash: true }), false, target.x, u.ex]);
           }
         }
         // 인용문헌냥 연쇄 — 명중한 자리에서 가장 가까운 적으로 차례차례 튄다
@@ -2423,13 +2703,13 @@ class DuelSim {
             let next = null, best = u.ch.r;
             for (const f of this.units) {
               if (f.dead || f.side === u.side || hopped.includes(f)) continue;
-              const d2 = Math.abs(f.x - from.x);
+              const d2 = this.dist(from, f);
               if (d2 < best) { best = d2; next = f; }
             }
             if (!next) break;
-            this.shots.push({ x1: from.x, dep1: from.dep, x2: next.x, dep2: next.dep,
+            this.shots.push({ x1: from.x, dep1: this.depOf(from), x2: next.x, dep2: this.depOf(next),
                               side: u.side, crit: false, chain: true, life: 0.16, max: 0.16 });
-            hits.push([next, left * this.ampSlow(u, next), false, from.x, u.ex]);
+            hits.push([next, this.afterArmor(u, next, left * this.ampSlow(u, next)), false, from.x, u.ex]);
             hopped.push(next); from = next; left *= u.ch.f;
           }
         }
@@ -2439,16 +2719,24 @@ class DuelSim {
     }
 
     // ── 적용 ── 이 순간까지는 아무도 죽지 않았다. 같은 틱에 서로를 눕히는 것도 그래서 가능하다.
-    for (const [u, dx] of moves) {
-      u.x += dx;
-      // 상대 진영선을 지나쳐 화면 밖으로 걸어 나가지 않게 붙잡는다.
-      // (표적은 방향을 가리지 않고 가장 가까운 적이라, 적이 살아 있는 한 여기까지 올 일은
-      //  거의 없다 — 화면 밖으로 새는 것만 막는 안전장치다.)
-      const lim = campX(u.side === "a" ? "b" : "a");
-      u.x = u.dir > 0 ? Math.min(u.x, lim) : Math.max(u.x, lim);
+    for (const [u, dx, dz] of moves) {
+      u.x += dx; u.z += dz || 0;
+      if (this.topo === "brawl") {
+        // 난전 — 전장 네모 안에 붙잡는다
+        u.x = Math.min(W - DUEL.campX, Math.max(DUEL.campX, u.x));
+        u.z = Math.min(DUEL.depthPx + 60, Math.max(-60, u.z));
+      } else {
+        // 상대 진영선을 지나쳐 화면 밖으로 걸어 나가지 않게 붙잡는다.
+        const lim = campX(u.side === "a" ? "b" : "a");
+        u.x = u.dir > 0 ? Math.min(u.x, lim) : Math.max(u.x, lim);
+      }
     }
-    for (const [u, amt] of heals) { u.hp = Math.min(u.max, u.hp + amt);
-                                    this.events.push({ t: "heal", x: u.x, side: u.side, dep: u.dep, amt: Math.round(amt) }); }
+    for (const [u, amt, from] of heals) {
+      u.hp = Math.min(u.max, u.hp + amt);
+      this.events.push({ t: "heal", x: u.x, side: u.side, dep: this.depOf(u), amt: Math.round(amt) });
+      this.shots.push({ x1: from.x, dep1: this.depOf(from), x2: u.x, dep2: this.depOf(u),
+                        side: u.side, heal: true, life: 0.22, max: 0.22 });
+    }
     for (const [u, pct, dur] of slows) { u.slowT = dur || 1.6; u.slowPct = pct; }
     for (const [u, d] of stuns) u.freezeT = Math.max(u.freezeT, d);
     for (const [u, amt, crit, fx, ex] of hits) this.hurt(u, amt, crit, fx, ex);
@@ -2462,7 +2750,7 @@ class DuelSim {
   drainEvents() { const e = this.events; this.events = []; return e; }
 }
 
-return { DuelSim, campX, dirOf, makeRoster, mobRoster, deckGroups, deckPower };
+return { DuelSim, SIDES, campX, campOf, dirOf, makeRoster, makeMeta, mobRoster, deckGroups, deckPower };
 })();
 __mods["core/game.js"] = (function(){
 // @ts-check
@@ -3106,22 +3394,28 @@ class Game {
    * 이길 수 없는 판이어도 몇 명이라도 더 눕히면 손실이 줄어든다.
    * @param {"win"|"lose"|"draw"} outcome
    * @param {number} foeAlive 살아남은 상대 유닛 수
+   * @param {{place?:number, pts?:number, dmg?:number}} [extra] 대난투(4인)용 — 등수와 그에 따른
+   *   점수·내구 손실을 바깥에서 정해 넘긴다 (승/무/패 셋으로는 넷의 등수를 담을 수 없다)
    */
-  endDuel(outcome, foeAlive) {
+  endDuel(outcome, foeAlive, extra) {
     if (this.phase !== "duel") return false;
     /* 이긴 쪽에게 **특허료를 주지 않는다.** 주면 더 좋은 덱을 사서 다음 대전도 이기고,
      * 그 눈덩이가 세 번 굴러가면 첫 대전 한 판으로 판이 끝난다. 승패는 최종 랭킹 점수로만
      * 돌아온다 (rankScore 의 ⚔️ 항목). 진 쪽의 내구 손실은 그대로 둔다 —
      * 이쪽은 「졌으니 다음 라운드가 버겁다」는 압박이지 자원 격차가 아니다. */
+    const ex = extra || {};
     let dmg = 0;
     const prize = outcome === "lose" ? DUEL.prize : DUEL.drawPrize;   // 둘 다 0
-    if (outcome === "lose") { dmg = DUEL.leakBase + foeAlive * DUEL.leakPer; this.hp -= dmg; }
+    if (ex.dmg != null) dmg = ex.dmg;
+    else if (outcome === "lose") dmg = DUEL.leakBase + foeAlive * DUEL.leakPer;
+    if (dmg) this.hp -= dmg;
     if (prize) this.gold += prize;
+    const points = ex.pts != null ? ex.pts
+      : outcome === "win" ? RANK.duelWin : outcome === "draw" ? RANK.duelDraw : RANK.duelLose;
     this.duelRecord[outcome === "win" ? 0 : outcome === "draw" ? 1 : 2]++;
-    this.duelLog.push({ wave: this.wave, outcome });
-    this.events.push({ t: "duel_end", wave: this.wave, outcome, dmg, prize, foeAlive,
-                       points: outcome === "win" ? RANK.duelWin
-                             : outcome === "draw" ? RANK.duelDraw : RANK.duelLose });
+    this.duelLog.push({ wave: this.wave, outcome, pts: points, place: ex.place || 0 });
+    this.events.push({ t: "duel_end", wave: this.wave, outcome, dmg, prize, foeAlive, points,
+                       place: ex.place || 0 });
 
     if (this.hp <= 0) {
       this.phase = "lost"; this.shots = [];
@@ -3220,8 +3514,10 @@ class Game {
 
     // ⚔️ 대전 — 세 판의 승/무/패
     const duels = this.duelLog.map((d) => ({
-      wave: d.wave, outcome: d.outcome,
-      pts: d.outcome === "win" ? RANK.duelWin : d.outcome === "draw" ? RANK.duelDraw : RANK.duelLose,
+      wave: d.wave, outcome: d.outcome, place: d.place || 0,
+      // 대난투는 등수 점수를 endDuel 이 적어 두었다 — 없으면(1:1·2:2) 승/무/패 표를 본다
+      pts: d.pts != null ? d.pts
+         : d.outcome === "win" ? RANK.duelWin : d.outcome === "draw" ? RANK.duelDraw : RANK.duelLose,
     }));
     const duel = duels.reduce((a, d) => a + d.pts, 0);
 
@@ -3589,10 +3885,10 @@ return { SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS,
 __mods["web/main.js"] = (function(){
 // @ts-check
 const {Game, frameOf} = __req("core/game.js");
-const {CATS, CAT_SKILLS, ENEMIES, BAL, LINES, LINE_TIER_AT, PASSIVES, PASSIVE_BY_KEY,
+const {CATS, CAT_SKILLS, ENEMIES, BAL, LINES, LINE_TIER_AT, MODES, PASSIVES, PASSIVE_BY_KEY,
        RANK, SABOTAGE, AUGMENTS, AUGMENT_WAVES,
        DUEL, DUEL_WAVES, DRAW_KEYS, RECIPES, catDrawChance} = __req("core/data.js");
-const {DuelSim, campX, makeRoster, mobRoster, deckPower} = __req("core/duel.js");
+const {DuelSim, SIDES, campOf, makeRoster, makeMeta, mobRoster, deckPower} = __req("core/duel.js");
 const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {auraCells} = __req("core/stats.js");
@@ -3612,10 +3908,36 @@ const catCanvas = new Map();
 
 /* ═══════ 네트워킹 ═══════ */
 let ws = null, youAre = null;
-let oppSnapshot = null;   // 상대에게서 마지막으로 받은 보드 스냅샷
 let lastStateSentAt = 0;
-let matchSeed = 0;        // 서버가 정해 준 판 시드 — 양쪽이 같은 웨이브·같은 증강 후보를 받는다
+let matchSeed = 0;        // 서버가 정해 준 판 시드 — 모두가 같은 웨이브·같은 증강 후보를 받는다
 let soloMode = false;     // 솔로 플레이 — 상대도, 서버도 없다. 대기·준비·상대 화면이 전부 사라진다
+
+/* ── 모드 · 슬롯 ──
+ * 방 안의 자리(슬롯)는 0~3 이고 p1 = 슬롯 0 이다. 어느 슬롯이 어느 진영(팀)에 서는지는
+ * MODES[mode].teamOf 가 정한다 — 1:1 과 대난투는 슬롯이 곧 진영이고, 2:2 는 0·1 / 2·3 이 한 팀이다.
+ * players[slot] 은 다른 사람의 상태 — 마지막 스냅샷(snap)과 「나갔거나 판을 끝냈는가」(gone). */
+let mode = "solo";
+let mySlot = 0;
+let roomSize = 1;
+/** @type {{slot:number, snap:any, gone:boolean, name:string}[]} */
+let players = [];
+/** 로비에서 방을 만든 뒤 고른 모드 (방 코드와 함께 보여 준다) */
+let lobbyMode = "duel";
+
+const MODE = () => MODES[mode] || MODES.solo;
+const teamOf = (slot) => MODE().teamOf(slot);
+const slotName = (slot) => `P${slot + 1}`;
+/** 그 슬롯이 나와 한 팀인가 (2:2 에서만 참이 나올 수 있다) */
+const isAlly = (slot) => slot !== mySlot && teamOf(slot) === teamOf(mySlot);
+/** 나 말고 방에 있는(있었던) 슬롯 전부 */
+const otherSlots = () => players.filter((p) => p.slot !== mySlot).map((p) => p.slot);
+/** 아직 판에 붙어 있는 다른 사람 — 나갔거나 판을 끝낸 사람은 뺀다 */
+const activeSlots = () => players.filter((p) => p.slot !== mySlot && !p.gone).map((p) => p.slot);
+/** 방해 공작을 던질 수 있는 상대 — 아군은 뺀다 */
+const enemySlots = () => activeSlots().filter((s) => !isAlly(s));
+/** 판정을 내리는 슬롯 — 붙어 있는 사람 중 가장 앞 슬롯 (나 포함) */
+const authoritySlot = () => Math.min(mySlot, ...activeSlots());
+const playerOf = (slot) => players.find((p) => p.slot === slot);
 
 /* ── 웨이브 동시 개시 ──
  * 예전에는 「웨이브 개시」를 누르는 즉시 내 판에서만 웨이브가 굴러가서, 먼저 누르고 먼저 끝내는 쪽이
@@ -3623,8 +3945,9 @@ let soloMode = false;     // 솔로 플레이 — 상대도, 서버도 없다. �
  * 양쪽에게 동시에 알린다 — 둘 다 준비되면 바로, 아니면 준비시간 15초가 끝나는 순간에.
  */
 let iReady = false;        // 내가 준비를 눌렀는가
-let oppReady = false;      // 상대가 준비를 눌렀는가
-let oppInPrep = false;     // 상대도 준비 단계에 들어섰는가 (아직 웨이브를 돌고 있으면 false)
+let oppReady = false;      // 다른 사람 **모두**가 준비를 눌렀는가
+let oppInPrep = false;     // 다른 사람 모두가 준비 단계에 들어섰는가 (아직 웨이브를 돌고 있으면 false)
+let readyCount = 0;        // 준비를 누른 사람 수 (나 포함) — 넷이 붙는 판에서 「2/4」로 보여 준다
 let prepEndsAt = 0;        // 준비시간 마감 시각(performance.now 기준). 0이면 아직 카운트다운 전
 let prepSentWave = 0;      // "준비 단계에 들어섰다"를 서버에 알린 웨이브 번호 (중복 전송 방지)
 let oppAugs = [];          // 상대가 고른 증강 키 목록 (스냅샷에서 받아온다)
@@ -3644,8 +3967,15 @@ function sendWS(obj) { if (soloMode) return; if (ws && ws.readyState === 1) ws.s
 function onServerMessage(msg) {
   switch (msg.t) {
     case "created":
+      lobbyMode = msg.mode || lobbyMode;
       $("#codeDisplay").textContent = msg.code;
       $("#createdBox").classList.remove("hidden");
+      renderRoomState(msg.count || 1, msg.size || 2, msg.mode);
+      break;
+    case "roomState":        // 방에 몇 명이 모였는가 — 만든 사람과 들어온 사람 모두에게 온다
+      $("#codeDisplay").textContent = msg.code;
+      $("#createdBox").classList.remove("hidden");
+      renderRoomState(msg.count, msg.size, msg.mode);
       break;
     case "joinError":
       $("#joinError").textContent = msg.reason;
@@ -3653,56 +3983,91 @@ function onServerMessage(msg) {
       break;
     case "start":
       youAre = msg.youAre;
+      mySlot = msg.slot != null ? msg.slot : (youAre === "p2" ? 1 : 0);
+      mode = MODES[msg.mode] ? msg.mode : "duel";
+      roomSize = msg.size || MODE().size;
+      players = [];
+      for (let i = 0; i < roomSize; i++) players.push({ slot: i, snap: null, gone: false, name: slotName(i) });
       matchSeed = msg.seed || 0;
       beginBattle();
       break;
-    case "oppState":
-      oppSnapshot = msg.snap;
-      $("#oppHp").textContent = `${Math.max(0, Math.ceil(msg.snap.hp))}/${msg.snap.maxHp}`;
-      $("#oppWave").textContent = `${msg.snap.wave}/${BAL.waveCount}`;
-      syncOppAugs(msg.snap.augs || []);
-      break;
-
-    /* ── 동시 개시 ── */
-    case "prepState": {      // 서버가 보내 주는 양쪽의 준비 상황 (항상 전체 상태)
-      if (!game || msg.wave !== game.wave + 1) break;
-      const me = youAre === "p1" ? 0 : 1;
-      const was = oppReady;
-      iReady = !!msg.ready[me];
-      oppReady = !!msg.ready[1 - me];
-      oppInPrep = !!msg.prep[1 - me];
-      if (oppReady !== was) log(oppReady ? "상대가 <b>준비 완료</b>했습니다." : "상대가 준비를 취소했습니다.");
+    case "oppState": {
+      const p = playerOf(msg.from != null ? msg.from : (mySlot === 0 ? 1 : 0));
+      if (!p) break;
+      p.snap = msg.snap;
+      renderOppCard(p);
+      if (roomSize === 2) syncOppAugs(msg.snap.augs || []);
       break;
     }
-    case "prepSync":         // 양쪽 다 준비 단계 — 여기서부터 15초를 잰다
+
+    /* ── 동시 개시 ── */
+    case "prepState": {      // 서버가 보내 주는 모두의 준비 상황 (항상 전체 상태)
+      if (!game || msg.wave !== game.wave + 1) break;
+      const was = oppReady;
+      iReady = !!msg.ready[mySlot];
+      const others = otherSlots();
+      oppReady = others.every((s) => msg.ready[s]);
+      oppInPrep = others.every((s) => msg.prep[s]);
+      readyCount = msg.ready.filter(Boolean).length;
+      if (Array.isArray(msg.gone)) msg.gone.forEach((g, i) => { const p = playerOf(i); if (p && g) p.gone = true; });
+      if (oppReady !== was && roomSize === 2)
+        log(oppReady ? "상대가 <b>준비 완료</b>했습니다." : "상대가 준비를 취소했습니다.");
+      break;
+    }
+    case "prepSync":         // 모두 준비 단계 — 여기서부터 15초를 잰다
       oppInPrep = true;
       prepEndsAt = performance.now() + (msg.secs || BAL.prepSecs) * 1000;
       break;
-    case "waveGo":           // 서버의 개시 신호 — 양쪽이 같은 순간에 웨이브를 시작한다
+    case "waveGo":           // 서버의 개시 신호 — 모두가 같은 순간에 웨이브를 시작한다
       if (game && game.wave + 1 === msg.wave) doStartWave();
       break;
     // 스테이지 강화 효과는 넷 다 자기 냥타워를 키우는 것이라 상대에게 걸 것이 없다
     // (상대를 흔드는 일은 아래 방해 공작 뽑기가 맡는다). 중계할 게 없다는 뜻일 뿐,
-    // 공격력·공속·치명타는 1:1 대전장까지 그대로 따라간다.
+    // 공격력·공속·치명타는 대전장까지 그대로 따라간다.
     case "oppSabotage":
-      if (game) game.receiveSabotage(msg.key);
+      if (game && game.receiveSabotage(msg.key) && msg.from != null && roomSize > 2)
+        log(`<b class="warn">${slotName(msg.from)}</b>의 공작이었습니다.`);
       break;
-    case "oppDuel":      // 상대의 대전 명세 — 이게 도착해야 대전장을 굴릴 수 있다
-      receiveDuelRoster(msg.wave, msg.roster);
+    case "oppDuel":      // 다른 사람의 대전 명세 — 모두 도착해야 대전장을 굴릴 수 있다
+      receiveDuelRoster(msg.from != null ? msg.from : (mySlot === 0 ? 1 : 0), msg.wave, msg.roster, msg.meta);
       break;
-    case "oppDuelResult":   // p1 이 내린 판정 (p2 는 이것을 따른다)
-      receiveDuelResult(msg.wave, msg.outcome, msg.foeAlive, msg.reason);
+    case "oppDuelResult":   // 판정 슬롯이 내린 결과 (나머지는 이것을 따른다)
+      receiveDuelResult(msg.from, msg.wave, msg);
       break;
+    /* 다른 사람의 판이 끝났다(성적표를 냈다 / 무너졌다 / 나갔다).
+     * 1:1 에서는 그 순간 내 판도 끝이다 — 붙을 사람이 없다. 단, 내가 이미 끝났으면 성적표를
+     * 덮어쓰지 않는다 (마지막 라운드가 대전이라 둘이 거의 동시에 끝난다).
+     * 넷이 붙는 판에서는 그 자리만 비우고 계속 간다 — 그 사람 몫의 대전 상대는 쥐 침입단이 대신 선다. */
     case "oppWon":
-      if (game) endMatch(false, "상대가 먼저 특허 등록을 마쳤습니다.");
-      break;
     case "oppLost":
-      if (game) endMatch(true, "상대의 등록원부가 무너졌습니다.");
+    case "oppLeft": {
+      if (!game) break;
+      const from = msg.from != null ? msg.from : (mySlot === 0 ? 1 : 0);
+      const p = playerOf(from);
+      if (p) { p.gone = true; renderOppCard(p); }
+      const why = msg.t === "oppWon" ? "특허 등록을 마쳤습니다" : msg.t === "oppLost" ? "등록원부가 무너졌습니다" : "판을 떠났습니다";
+      if (game.phase === "won" || game.phase === "lost") break;
+      if (roomSize === 2) {
+        endMatch(msg.t !== "oppWon", msg.t === "oppWon" ? "상대가 먼저 특허 등록을 마쳤습니다."
+                                   : msg.t === "oppLost" ? "상대의 등록원부가 무너졌습니다." : "상대가 대전을 떠났습니다.");
+        break;
+      }
+      log(`<b class="warn">${slotName(from)}</b>이(가) ${why} — 그 자리는 쥐 침입단이 대신 섭니다.`);
+      if (!activeSlots().length) log("<b>남은 사람이 없습니다</b> — 이제부터는 혼자 진행합니다.");
       break;
-    case "oppLeft":
-      if (game && game.phase !== "won" && game.phase !== "lost") endMatch(true, "상대가 대전을 떠났습니다.");
+    }
+    case "serverDown":
+      log("<b class=\"warn\">서버가 내려갔습니다</b> — 혼자 진행합니다.");
       break;
   }
+}
+
+/** 로비의 방 대기 현황 — 「2v2 더블업 · 2/4 모였습니다」 */
+function renderRoomState(count, size, modeKey) {
+  const m = MODES[modeKey] || MODES[lobbyMode] || MODES.duel;
+  const el = $("#roomState");
+  if (!el) return;
+  el.textContent = `${m.name} · ${count}/${size} 모였습니다${count < size ? " — 이 코드를 함께할 사람에게 알려주세요" : ""}`;
 }
 
 /* ═══════ 렌더 ═══════ */
@@ -3959,10 +4324,11 @@ function renderReadyBar() {
   if (!bar) return;
 
   const duelNext = game.nextIsDuel;
+  const duelWord = duelLabel();
   // 솔로에는 맞출 상대가 없다 — 「개시」 버튼 하나로 끝난다
   const sync = !soloMode && needsSync(next);
   if (game.phase === "duel") {
-    b.disabled = true; b.textContent = "1:1 대전 중…";
+    b.disabled = true; b.textContent = `${duelWord} 중…`;
   } else if (game.phase === "wave") {
     b.disabled = true; b.textContent = "심사 중…";
   } else if (game.awaitingAugment) {
@@ -3974,7 +4340,7 @@ function renderReadyBar() {
     // 솔로에서는 "준비"가 아니라 곧바로 개시다 — 기다릴 상대가 없다.
     // 다음이 대전 라운드면 무엇이 시작되는지 버튼에 그대로 적는다.
     b.textContent = duelNext
-      ? (!sync ? `⚔ 라운드 ${next} 1:1 대전 개시` : iReady ? "준비 취소" : `⚔ 라운드 ${next} 1:1 대전 준비`)
+      ? (!sync ? `⚔ 라운드 ${next} ${duelWord} 개시` : iReady ? "준비 취소" : `⚔ 라운드 ${next} ${duelWord} 준비`)
       : (!sync ? `라운드 ${next} 개시` : iReady ? "준비 취소" : `라운드 ${next} 준비 완료`);
   } else {
     b.disabled = true;
@@ -4000,12 +4366,17 @@ function renderReadyBar() {
   $("#rdyMe").className = "rdy " + (iReady ? "on" : "off");
   $("#rdyMe").querySelector("b").textContent = iReady ? "준비 완료" : "준비 중";
   $("#rdyOpp").className = "rdy " + (oppReady ? "on" : oppInPrep ? "off" : "away");
-  $("#rdyOpp").querySelector("b").textContent =
-    oppReady ? "준비 완료" : oppInPrep ? "준비 중" : "라운드 진행 중";
+  // 넷이 붙는 판에서는 「누가」가 아니라 「몇 명이」다 — 나를 뺀 준비 인원을 적는다
+  const othersN = otherSlots().length;
+  $("#rdyOpp").querySelector("i").textContent = othersN > 1 ? "다른 사람" : "상대";
+  $("#rdyOpp").querySelector("b").textContent = othersN > 1
+    ? `준비 ${Math.max(0, readyCount - (iReady ? 1 : 0))}/${othersN}`
+    : oppReady ? "준비 완료" : oppInPrep ? "준비 중" : "라운드 진행 중";
 
   const t = $("#rdyTimer");
   if (!online()) t.textContent = "서버 연결 끊김 — 혼자 진행합니다";
-  else if (!prepEndsAt) t.textContent = "상대가 웨이브를 끝내면 준비시간이 시작됩니다";
+  else if (!prepEndsAt) t.textContent = othersN > 1 ? "모두 웨이브를 끝내면 준비시간이 시작됩니다"
+                                                    : "상대가 웨이브를 끝내면 준비시간이 시작됩니다";
   else t.textContent = `준비시간 ${left.toFixed(1)}초`;
   /** @type {HTMLElement} */ ($("#rdyFill")).style.width =
     prepEndsAt ? `${Math.min(100, (left / BAL.prepSecs) * 100)}%` : "0%";
@@ -5463,8 +5834,8 @@ function consumeEvents() {
       case "sabotage": {
         log(`<b style="color:#c3a8f5">방해 공작 뽑기</b> ${ev.icon} <b>${ev.name}</b> (${ev.tag}) — 상대 판에 던졌습니다 ` +
             `(−${ev.cost}${ev.gain ? ` · 강탈 <b style="color:#ffd782">+${ev.gain}</b>` : ""} · 남은 ${ev.left}회)`);
-        // 심사현황 로그가 화면에서 빠졌으므로, 나갔다는 사실은 상대 청사 위에 도장으로 남긴다
-        const opp = $("#oppCv");
+        // 심사현황 로그가 화면에서 빠졌으므로, 나갔다는 사실은 표적의 청사 위에 도장으로 남긴다
+        const opp = $(`#oppGrid canvas[data-slot="${lastSabTarget}"]`) || $("#oppGrid canvas");
         if (opp) {
           const ob = opp.getBoundingClientRect();
           stamp(ob.left + ob.width / 2, ob.top + ob.height / 2, "방 해", ev.name);
@@ -5505,73 +5876,132 @@ function consumeEvents() {
   }
 }
 
-/* ═══════ 1:1 대전 라운드 (오토배틀러) ═══════
+/* ═══════ 대전 라운드 (오토배틀러) ═══════
  * 라운드 4·7·10 은 침입자가 오지 않는다. 대신 청사 판을 접어 두고 별도의 대전장으로 옮겨,
- * 지금까지 만든 냥타워를 **통째로** 상대 덱과 맞붙인다.
+ * 지금까지 만든 냥타워를 **통째로** 다른 덱과 맞붙인다.
  *
  * 진행은 세 마디다.
- *   1) 명세 교환 — 내 냥타워의 완성된 스탯을 뽑아 서버로 보내고 상대 것을 기다린다 (최대 12초)
- *   2) 전투 — 양쪽 전군이 진형을 짜고 저절로 진군한다. **누를 것이 하나도 없다**
- *   3) 정산 — 진 쪽이 등록원부 내구를 잃고, 이긴 쪽은 특허료를 받는다. 그리고 준비 단계로.
- * 배속(×2·×3)은 여기서 잠긴다 — 양쪽이 같은 속도로 봐야 같은 판이 된다.
+ *   1) 명세 교환 — 내 냥타워의 완성된 스탯을 뽑아 서버로 보내고 **다른 사람 전부**의 것을 기다린다
+ *      (최대 12초). 오지 않는 자리는 쥐 침입단이 대신 선다
+ *   2) 전투 — 전군이 진형을 짜고 저절로 진군한다. **누를 것이 하나도 없다**
+ *   3) 정산 — 진 쪽이 등록원부 내구를 잃고 점수가 갈린다. 그리고 준비 단계로.
+ * 배속(×2·×3)은 여기서 잠긴다 — 모두가 같은 속도로 봐야 같은 판이 된다.
  *
- * ── 승패는 왜 p1 이 정하나 ──
- * 사람이 손댈 일이 없어 시뮬레이션은 완전히 결정적이다 — 같은 명세 · 같은 시드면 두 화면은
- * 원래 같은 결과에 닿는다. 그래도 **p1 쪽 계산을 정본으로 삼는다**: 브라우저마다 Math.pow
- * 같은 초월함수의 끝자리가 다를 수 있어, 만에 하나라도 「둘 다 이겼다」가 나오지 않게
- * 못 박아 두는 장치다. 솔로에서는 내 계산이 곧 정본이다.
+ * ── 모드마다 진영이 다르다 ──
+ *   솔로   나(a) 대 쥐 침입단(b)
+ *   1:1    p1(a) 대 p2(b)
+ *   2:2    p1+p2(a) 대 p3+p4(b) — 팀의 두 덱이 한 진영에 **합쳐져** 선다
+ *   대난투 p1(a) · p2(b) · p3(c) · p4(d) 가 네 귀퉁이에서 한가운데로 몰려든다. 등수로 점수를 받는다
+ *
+ * ── 승패는 왜 한 사람이 정하나 ──
+ * 사람이 손댈 일이 없어 시뮬레이션은 완전히 결정적이다 — 같은 명세 · 같은 시드면 화면들은
+ * 원래 같은 결과에 닿는다. 그래도 **가장 앞 슬롯(authoritySlot) 쪽 계산을 정본으로 삼는다**:
+ * 브라우저마다 Math.pow 같은 초월함수의 끝자리가 다를 수 있어, 만에 하나라도 「둘 다 이겼다」가
+ * 나오지 않게 못 박아 두는 장치다. 솔로에서는 내 계산이 곧 정본이다.
  */
-/** @type {{wave:number, sim:any, mine:any[], theirs:any[]|null, foeMob:boolean, phase:string,
- *          waitT:number, acc:number, endT:number, res:any, floats:any[],
+/** @type {{wave:number, sim:any, mine:any[], meta:any, rosters:Record<number,any[]>,
+ *          metas:Record<number,any>, mobs:Set<number|string>, phase:string,
+ *          waitT:number, acc:number, endT:number, res:any, floats:any[], skRings:any[],
  *          verdictT:number}|null} */
 let duel = null;
-/** 상대 명세가 내가 라운드에 들어서기 전에 먼저 도착하는 경우가 있어 따로 받아 둔다 */
-let pendingDuelRoster = { wave: 0, roster: null };
+/** 다른 사람의 명세가 내가 라운드에 들어서기 전에 먼저 도착하는 경우가 있어 슬롯별로 받아 둔다 */
+let pendingDuelRosters = { wave: 0, by: {} };
 
 const duelOn = () => !!game && game.phase === "duel";
-/** 내가 대전장의 어느 쪽인가. 서버가 정해 준 p1/p2 로 못 박는다 (화면에서는 늘 왼쪽에 보인다). */
-const mySide = () => (youAre === "p2" ? "b" : "a");
-/** 내가 승패를 정하는 쪽인가 (p1 또는 솔로) */
-const duelAuthority = () => soloMode || youAre !== "p2";
+/** 슬롯이 서는 진영 — 팀 번호가 곧 진영 글자다 */
+const sideOfSlot = (slot) => SIDES[teamOf(slot)] || "a";
+/** 내가 대전장의 어느 쪽인가 (화면에서는 늘 왼쪽에 보인다 — 그리기 단계에서 뒤집는다) */
+const mySide = () => (soloMode ? "a" : sideOfSlot(mySlot));
+/** 내가 승패를 정하는 쪽인가 (가장 앞 슬롯 또는 솔로) */
+const duelAuthority = () => soloMode || authoritySlot() === mySlot;
+/** 이 판의 대전을 무엇이라 부르는가 */
+const duelLabel = () => (mode === "team" ? "2:2 대전" : mode === "ffa" ? "대난투" : "1:1 대전");
+
+/**
+ * 진영 색 — [진한 색, 본색, 탄환색]. **내 진영은 늘 청사색(파랑)**이고 상대는 붉은색부터 간다.
+ * 내가 a 가 아닐 때(p2·p3·p4)는 a 진영이 내 원래 색을 받아 색이 겹치지 않게 한다.
+ */
+const SIDE_COL = {
+  a: ["#3c6a8a", "#5b8fb0", "#2f6f9a"],
+  b: ["#8a2a24", "#c4322a", "#c4322a"],
+  c: ["#2f5a22", "#4f8f38", "#3f7a2f"],
+  d: ["#4a2f7a", "#7a4fb0", "#6a3fa0"],
+};
+function sideCol(side) {
+  const me = mySide();
+  if (side === me) return SIDE_COL.a;
+  if (side === "a") return SIDE_COL[me] || SIDE_COL.b;
+  return SIDE_COL[side] || SIDE_COL.b;
+}
+/** 진영에 선 사람들 — 표시용 이름. 쥐 침입단이 대신 선 자리는 그렇게 적는다 */
+function sideLabel(side) {
+  if (!duel) return side;
+  if (soloMode) return side === "a" ? "내 병력" : "쥐 침입단";
+  const slots = [];
+  for (let s = 0; s < roomSize; s++) if (sideOfSlot(s) === side) slots.push(s);
+  const names = slots.map((s) => (s === mySlot ? "나" : duel.mobs.has(s) ? `쥐 침입단(${slotName(s)})` : slotName(s)));
+  if (side === mySide()) return slots.length > 1 ? `내 팀 (${names.join(" · ")})` : "내 병력";
+  return names.join(" · ");
+}
 
 /** 대전 라운드를 연다 (waveGo 신호가 대전 스테이지에 떨어졌을 때) */
 function startDuelRound() {
   if (!game.startDuel()) { log("대전 라운드를 열지 못했습니다."); return; }
   const mine = makeRoster(game);
+  const meta = makeMeta(game);
   /* 대전 중에는 청사 판이 접혀 있어 덱을 다시 잴 수 없다. 라운드에 들어서는 지금 재어 두지
    * 않으면 랭킹의 🏗️ 항목이 대전 내내 0으로 떨어져, 화면의 점수가 대전에 들어설 때마다
    * 뚝 내려갔다가 끝나면 도로 올라간다 — 보는 사람 입장에서는 그냥 버그다. */
   game.finalDeck = deckPower(mine);
-  duel = { wave: game.wave, sim: null, mine, theirs: null, foeMob: false, phase: "wait",
+  duel = { wave: game.wave, sim: null, mine, meta, rosters: {}, metas: {}, mobs: new Set(), phase: "wait",
            waitT: 0, acc: 0, endT: 0, res: null, floats: [], skRings: [], verdictT: 0 };
+  duel.rosters[mySlot] = mine;
+  duel.metas[mySlot] = meta;
   $("#duelStage").classList.remove("hidden");
   $("#duelResult").classList.add("hidden");
   document.body.classList.add("dueling");
+  $("#duelTitle").textContent = `⚔ ${duelLabel()}`;
   clearDuelDecks();
   render();
 
   if (soloMode) {
     // 솔로에는 붙을 사람이 없다 — 청사에 쳐들어오던 쥐들이 무작위로 편성돼 대전장에 선다
-    beginDuelSim(makeMobSquad(), true);
+    beginDuelSim();
     return;
   }
-  sendWS({ t: "duel", wave: game.wave, roster: mine });
-  // 내가 늦게 들어와서 상대 명세가 먼저 와 있었다면 그대로 쓴다
-  if (pendingDuelRoster.wave === game.wave && pendingDuelRoster.roster) {
-    beginDuelSim(pendingDuelRoster.roster);
-    pendingDuelRoster = { wave: 0, roster: null };
+  sendWS({ t: "duel", wave: game.wave, roster: mine, meta });
+  // 내가 늦게 들어와서 다른 사람 명세가 먼저 와 있었다면 그대로 쓴다
+  if (pendingDuelRosters.wave === game.wave) {
+    for (const s in pendingDuelRosters.by) {
+      duel.rosters[s] = pendingDuelRosters.by[s].roster;
+      duel.metas[s] = pendingDuelRosters.by[s].meta;
+    }
   }
+  pendingDuelRosters = { wave: 0, by: {} };
+  tryBeginDuel();
 }
 
-/** 서버가 중계해 준 상대 명세 */
-function receiveDuelRoster(wave, roster) {
+/** 붙어 있는 사람의 명세가 다 왔으면 시작한다 (나갔거나 끝낸 자리는 기다리지 않는다) */
+function tryBeginDuel() {
+  if (!duel || duel.sim || duel.phase !== "wait") return;
+  if (activeSlots().every((s) => duel.rosters[s])) beginDuelSim();
+}
+
+/** 서버가 중계해 준 다른 사람의 명세 */
+function receiveDuelRoster(slot, wave, roster, meta) {
   if (!Array.isArray(roster)) return;
-  if (duel && duel.wave === wave && duel.phase === "wait") { beginDuelSim(roster); return; }
-  pendingDuelRoster = { wave, roster };   // 아직 내가 라운드에 못 들어왔다 — 들어오면 꺼내 쓴다
+  if (duel && duel.wave === wave && duel.phase === "wait") {
+    duel.rosters[slot] = roster; duel.metas[slot] = meta || null;
+    tryBeginDuel();
+    return;
+  }
+  // 아직 내가 라운드에 못 들어왔다 — 들어오면 꺼내 쓴다
+  if (pendingDuelRosters.wave !== wave) pendingDuelRosters = { wave, by: {} };
+  pendingDuelRosters.by[slot] = { roster, meta: meta || null };
 }
 
 /**
- * 쥐 침입단을 편성한다 (솔로 · 상대 무응답용).
+ * 쥐 침입단을 편성한다 (솔로 · 응답 없는 자리용).
  * 시드에 실제 시각을 섞어, 같은 판을 다시 해도 매번 다른 조합이 나오게 한다 —
  * 「쥐들이 알아서 조합해서 나온다」가 이 라운드의 재미다.
  * 마지막 대전 스테이지에는 특허괴물을 반드시 한 마리 끼워 넣는다.
@@ -5582,39 +6012,56 @@ function makeMobSquad() {
 }
 
 /**
- * 양쪽 명세가 모였다. 시뮬레이션을 시작한다.
- * @param {any[]} theirs @param {boolean} [isMob] 상대가 사람이 아니라 쥐 침입단인가
+ * 명세가 모였다(또는 기다림이 끝났다). 시뮬레이션을 시작한다.
+ * 비어 있는 자리는 쥐 침입단으로 채운다 — 2:2 에서 팀원 자리가 비면 쥐가 내 편에 선다.
  */
-function beginDuelSim(theirs, isMob) {
+function beginDuelSim() {
   if (!duel || duel.sim) return;
-  duel.theirs = theirs;
-  duel.foeMob = !!isMob;
-  // 편을 p1 → p2 로 못 박는다. 화면에서 내가 왼쪽에 보이는 것은 그리기 단계의 일이다.
-  const me = mySide();
-  const [a, b] = me === "a" ? [duel.mine, theirs] : [theirs, duel.mine];
-  duel.sim = new DuelSim(a, b, ((matchSeed || game.seed) ^ (duel.wave * 0x9e3779b1)) >>> 0);
+  /** @type {Record<string, any[]>} */
+  const sides = {};
+  const tag = (roster, own) => roster.map((u) => Object.assign({}, u, { own }));
+  if (soloMode) {
+    sides.a = tag(duel.mine, mySlot);
+    sides.b = tag(makeMobSquad(), -1);
+    duel.mobs.add("b");
+  } else {
+    for (let s = 0; s < roomSize; s++) {
+      let r = duel.rosters[s];
+      if (!r) { r = makeMobSquad(); duel.rosters[s] = r; duel.mobs.add(s); }
+      const side = sideOfSlot(s);
+      sides[side] = (sides[side] || []).concat(tag(r, s));
+    }
+  }
+  duel.sim = new DuelSim(sides, ((matchSeed || game.seed) ^ (duel.wave * 0x9e3779b1)) >>> 0, MODE().topo);
   duel.phase = "fight";
   duel.acc = 0;
-  $("#duelFoeLabel").textContent = isMob ? "쥐 침입단" : "상대 병력";
+  renderDuelHead();
   renderDuelDecks();
-  if (isMob) {
+
+  const me = mySide();
+  const mineN = duel.sim.startN[me];
+  const foes = duel.sim.sides.filter((s) => s !== me);
+  if (soloMode || duel.mobs.size) {
     // 어떤 조합이 나왔는지 로그에 남긴다 — 조합이 매번 다른 것이 이 라운드의 재미다
-    const tally = {};
-    for (const u of theirs) tally[u.k] = (tally[u.k] || 0) + 1;
-    const list = Object.keys(tally).map((k) => `${ENEMIES[k].icon} ${ENEMIES[k].nm} ${tally[k]}`).join(" · ");
-    log(`<b style="color:#cda43a">1:1 대전 개시</b> — 내 냥타워 ${duel.mine.length}명 대 쥐 침입단 ${theirs.length}마리`);
-    log(`<b class="warn">침입단 편성</b> ${list}`);
-  } else {
-    log(`<b style="color:#cda43a">1:1 대전 개시</b> — 내 냥타워 ${duel.mine.length}명 대 상대 ${theirs.length}명`);
+    for (const side of foes) {
+      const tally = {};
+      for (const u of duel.sim.units) if (u.side === side && u.mob) tally[u.k] = (tally[u.k] || 0) + 1;
+      const list = Object.keys(tally).map((k) => `${ENEMIES[k].icon} ${ENEMIES[k].nm} ${tally[k]}`).join(" · ");
+      if (list) log(`<b class="warn">침입단 편성</b> (${sideLabel(side)}) ${list}`);
+    }
   }
-  // 붙기 전에 두 덱의 지수를 나란히 적어 준다 — 이 라운드가 재는 것이 그것이기 때문이다
-  const mp = deckPower(duel.mine), tp = deckPower(theirs);
+  log(`<b style="color:#cda43a">${duelLabel()} 개시</b> — ${sideLabel(me)} ${mineN}명 대 ` +
+      foes.map((s) => `${sideLabel(s)} ${duel.sim.startN[s]}명`).join(" · "));
+  // 붙기 전에 덱 지수를 나란히 적어 준다 — 이 라운드가 재는 것이 그것이기 때문이다
+  const mp = duel.sim.power[me];
+  const best = Math.max(...foes.map((s) => duel.sim.power[s]));
   log(`<b>덱 지수</b> 내 <b style="color:var(--blue)">${mp}</b> 대 ` +
-      `${isMob ? "침입단" : "상대"} <b style="color:var(--seal-soft)">${tp}</b> — ` +
-      (mp > tp ? "내 덱이 우세합니다." : mp < tp ? "내 덱이 열세입니다." : "팽팽합니다.") +
+      foes.map((s) => `${sideLabel(s)} <b style="color:var(--seal-soft)">${duel.sim.power[s]}</b>`).join(" · ") + " — " +
+      (mp > best ? "내 덱이 우세합니다." : mp < best ? "내 덱이 열세입니다." : "팽팽합니다.") +
       ` <i style="font-style:normal;color:var(--muted)">체력과 화력을 함께 잰 값입니다.</i>`);
   log(`전군이 저절로 진군합니다 — <b>누를 것은 없습니다.</b> ` +
-      `<b>상대 냥타워를 먼저 전멸시키는 쪽이 이깁니다.</b>`);
+      (mode === "ffa" ? `<b>마지막까지 남는 진영이 1등</b>이고 전멸한 순서가 등수입니다.`
+                      : `<b>상대 냥타워를 먼저 전멸시키는 쪽이 이깁니다.</b>`));
 }
 
 /** 매 프레임. 대전장을 진행하고 그린다. */
@@ -5623,10 +6070,11 @@ function stepDuel(dt) {
 
   if (duel.phase === "wait") {
     duel.waitT += dt;
-    // 상대가 끝내 응답하지 않는다 (연결이 끊겼거나 창을 닫았다). 쥐 침입단을 세워 라운드를 넘긴다.
+    // 누군가 끝내 응답하지 않는다 (연결이 끊겼거나 창을 닫았다). 그 자리에 쥐 침입단을 세워 라운드를 넘긴다.
     if (duel.waitT >= DUEL.waitSecs) {
-      log(`<b class="warn">상대 명세가 오지 않았습니다</b> — 쥐 침입단으로 대신 진행합니다.`);
-      beginDuelSim(makeMobSquad(), true);
+      const late = activeSlots().filter((s) => !duel.rosters[s]);
+      log(`<b class="warn">${late.map(slotName).join(" · ")}의 명세가 오지 않았습니다</b> — 그 자리는 쥐 침입단으로 대신 진행합니다.`);
+      beginDuelSim();
     }
     return;
   }
@@ -5644,12 +6092,13 @@ function stepDuel(dt) {
     if (duel.sim.over) finishDuelRound();
   }
 
-  // 내 계산은 끝났는데 아직 p1 의 판정이 안 왔다 — 조금 기다렸다가 안 오면 내 결과로 간다
+  // 내 계산은 끝났는데 아직 판정이 안 왔다 — 조금 기다렸다가 안 오면 내 결과로 간다
   if (duel.phase === "verdict") {
     duel.verdictT -= dt;
     if (duel.verdictT <= 0) {
-      log(`<b class="warn">상대의 판정이 오지 않았습니다</b> — 내 화면의 결과로 마칩니다.`);
-      applyDuelOutcome(localDuelOutcome());
+      log(`<b class="warn">판정이 오지 않았습니다</b> — 내 화면의 결과로 마칩니다.`);
+      const all = outcomesFromResult(duel.sim.result());
+      applyDuelOutcome(all.bySlot[mySlot], all.reason);
     }
   }
 
@@ -5676,13 +6125,21 @@ function consumeDuelEvent(ev) {
   else if (ev.t === "exec") duelFloat(ev.x, y, "무효!", "#e0574d", true);
   // 내 냥이 쓰러지면 화면이 살짝 흔들린다 — 전멸이 곧 패배라 한 명 한 명이 무겁다
   else if (ev.t === "die" && ev.side === mySide()) addShake(3, .12);
+  else if (ev.t === "elim") {
+    // 한 진영이 통째로 무너졌다 — 넷이 붙는 판에서는 이게 등수를 정하는 사건이다
+    if (duel.sim.sides.length > 2) {
+      duelFloat(DUEL.w / 2, DUEL.h / 2 - 40, `${sideLabel(ev.side)} 전멸`, "#ffd782", true);
+      log(`<b class="warn">${sideLabel(ev.side)} 전멸</b> — 남은 진영 ${duel.sim.sides.length - duel.sim.elim.length}`);
+      addShake(ev.side === mySide() ? 8 : 4, .25);
+    }
+  }
   else if (ev.t === "skill") {
     const sk = CAT_SKILLS[ev.key];
     if (!sk) return;
     duel.skRings.push({ x: ev.x, dep: ev.dep, r: ev.r, col: sk.col, life: .55, max: .55 });
     duelFloat(ev.x, y - 14, sk.name, sk.col, true);
-    // 컷인은 **내 냥이 터뜨렸을 때만** 띄운다 — 양쪽 것을 다 띄우면 화면 아래가 쉴 새 없이 번쩍인다
-    if (ev.side === mySide()) cutIn(ev.key, ev.lv, ev.n);
+    // 컷인은 **내 냥이 터뜨렸을 때만** 띄운다 — 모두의 것을 다 띄우면 화면 아래가 쉴 새 없이 번쩍인다
+    if (ev.own === mySlot) cutIn(ev.key, ev.lv, ev.n);
     addShake(ev.side === mySide() ? 4 : 2, .16);
   }
 }
@@ -5691,57 +6148,75 @@ function duelFloat(x, y, txt, col, big) {
   duel.floats.push({ x, y, txt, col, big, life: big ? 0.9 : 0.7, max: big ? 0.9 : 0.7 });
 }
 
-/** 내 화면의 계산으로 본 결과 */
-function localDuelOutcome() {
-  const r = duel.sim.result();
-  const me = mySide();
-  return {
-    outcome: r.winner === null ? "draw" : r.winner === me ? "win" : "lose",
-    foeAlive: me === "a" ? r.aliveB : r.aliveA,
-    reason: r.reason,
-  };
+/**
+ * 시뮬레이션 결과 → **슬롯마다** 승/무/패 · 등수 · 점수 · 내구 손실.
+ * 1:1·2:2 는 진영의 승패가 곧 그 진영 사람들의 승패다. 대난투는 등수(standings)가 전부라
+ * 1등이 승, 2등이 무, 3·4등이 패로 적히고 점수·내구는 RANK.ffaPts/ffaDmg 를 그대로 따른다.
+ * 판정 슬롯이 이걸 계산해 모두에게 보내고, 받는 쪽은 자기 슬롯 칸만 꺼내 쓴다.
+ */
+function outcomesFromResult(r) {
+  const placeOf = {};
+  for (const s of r.standings) placeOf[s.side] = s.place;
+  const bySlot = {};
+  const slots = soloMode ? [mySlot] : Array.from({ length: roomSize }, (_, i) => i);
+  for (const s of slots) {
+    const side = sideOfSlot(s);
+    const place = placeOf[side] || 0;
+    let foeAlive = 0;
+    for (const k in r.alive) if (k !== side) foeAlive += r.alive[k];
+    if (mode === "ffa") {
+      const i = Math.max(0, Math.min(RANK.ffaPts.length - 1, place - 1));
+      bySlot[s] = { outcome: place === 1 ? "win" : place === 2 ? "draw" : "lose",
+                    place, pts: RANK.ffaPts[i], dmg: RANK.ffaDmg[i], foeAlive };
+    } else {
+      bySlot[s] = { outcome: r.winner === null ? "draw" : r.winner === side ? "win" : "lose",
+                    place, foeAlive };
+    }
+  }
+  return { bySlot, reason: r.reason };
 }
 
 /**
  * 싸움이 끝났다.
- * 내가 판정하는 쪽(p1 또는 솔로)이면 그대로 정산하고 상대에게 결과를 알린다.
- * 아니면 p1 의 판정이 올 때까지 잠깐 기다린다 — 두 화면이 어긋났을 때
- * 「둘 다 이겼다」가 나오지 않게 하는 장치다.
+ * 내가 판정하는 쪽(가장 앞 슬롯 또는 솔로)이면 그대로 정산하고 모두에게 결과를 알린다.
+ * 아니면 판정이 올 때까지 잠깐 기다린다 — 화면들이 어긋났을 때 「둘 다 이겼다」가 나오지 않게 하는 장치다.
  */
 function finishDuelRound() {
   if (!duel || duel.phase === "done" || duel.phase === "verdict") return;
   if (duelAuthority()) {
-    const res = localDuelOutcome();
-    // 내 결과를 상대 입장으로 뒤집어 보낸다
-    sendWS({ t: "duelResult", wave: duel.wave,
-             outcome: res.outcome === "win" ? "lose" : res.outcome === "lose" ? "win" : "draw",
-             foeAlive: duel.sim.alive(mySide()).filter((u) => !u.dead).length,
-             reason: res.reason });
-    applyDuelOutcome(res);
+    const all = outcomesFromResult(duel.sim.result());
+    sendWS({ t: "duelResult", wave: duel.wave, bySlot: all.bySlot, reason: all.reason });
+    applyDuelOutcome(all.bySlot[mySlot], all.reason);
   } else {
     duel.phase = "verdict";
     duel.verdictT = 5;
   }
 }
 
-/** 상대(p1)가 보내 준 판정 */
-function receiveDuelResult(wave, outcome, foeAlive, reason) {
+/** 판정 슬롯이 보내 준 결과 */
+function receiveDuelResult(from, wave, msg) {
   if (!duel || duel.wave !== wave) return;
   if (duel.phase === "done") return;
-  applyDuelOutcome({ outcome, foeAlive: foeAlive || 0, reason: reason || "" });
+  // 옛 형식(outcome 하나)도 받아 준다 — 판이 바뀌는 중에 섞여 들어올 수 있다
+  const mine = msg.bySlot ? msg.bySlot[mySlot] : { outcome: msg.outcome, foeAlive: msg.foeAlive || 0 };
+  if (!mine) return;
+  applyDuelOutcome(mine, msg.reason || "");
+  void from;
 }
 
 /** 결과를 판에 반영하고 잠깐 결과 화면을 보여 준다 */
-function applyDuelOutcome(res) {
-  if (!duel || duel.phase === "done") return;
-  duel.res = { ...res };
+function applyDuelOutcome(o, reason) {
+  if (!duel || duel.phase === "done" || !o) return;
+  duel.res = Object.assign({}, o, { reason: reason || "" });
   duel.phase = "done";
   duel.endT = 3.4;                                  // 결과를 읽을 틈
   /* 랭킹의 🏗️ 덱 파워 항목은 **마지막 라운드(10)가 끝난 시점**의 덱 지수를 쓴다.
    * core 는 대전 명세를 만들 줄 모르므로(그 일은 duel.js 가 한다) 여기서 넣어 준다.
    * 대전 중에는 판이 달라지지 않으니 라운드 개시 때 만든 명세가 곧 종료 시점의 덱이다. */
   game.finalDeck = deckPower(duel.mine);
-  game.endDuel(res.outcome, res.foeAlive);          // 내구 정산·전적 기록은 코어가 한다
+  // 내구 정산·전적 기록은 코어가 한다. 대난투는 등수에 따른 점수·내구를 그대로 넘긴다
+  game.endDuel(o.outcome, o.foeAlive || 0,
+               mode === "ffa" ? { place: o.place, pts: o.pts, dmg: o.dmg } : { place: o.place });
   renderDuelResult();
 }
 
@@ -5757,7 +6232,7 @@ function lineSummaryHtml() {
   return `<span>빌드 계열</span><b>${txt}</b>`;
 }
 
-/** 판이 끝났다 — 상대에게 알리고 성적표를 띄운다 */
+/** 판이 끝났다 — 모두에게 알리고 성적표를 띄운다 */
 function finishOver(ev) {
   pendingOver = null;
   sendWS({ t: ev.win ? "won" : "lost" });
@@ -5769,7 +6244,7 @@ function finishOver(ev) {
 /** 대전장을 접고 청사 판으로 돌아온다 */
 function closeDuelRound() {
   duel = null;
-  pendingDuelRoster = { wave: 0, roster: null };
+  pendingDuelRosters = { wave: 0, by: {} };
   $("#duelStage").classList.add("hidden");
   document.body.classList.remove("dueling");
   $("#duelResult").classList.add("hidden");
@@ -5791,21 +6266,24 @@ function closeDuelRound() {
  *   ① **비스듬한 지면** — 지평선을 긋고 먼 산을 세운 뒤, 지면 띠를 왼쪽이 낮고 오른쪽이 높게
  *      기울여(DUEL.tilt) 깐다. 평평한 가로줄이 아니라 「땅」으로 보인다.
  *   ② **깊이** — 유닛마다 dep(0~1)이 있어 뒤에 선 놈일수록 위에 작게 그려진다. 같은 인원도
- *      진형이 깊어 보이고, 앞줄이 뒷줄을 가리지 않는다.
+ *      진형이 깊어 보이고, 앞줄이 뒷줄을 가리지 않는다. 대난투에서는 이 깊이가 실제 거리 축이다.
  *   ③ **영역 2분할** — 양 진영 최전선의 한가운데에 **전선**이 그어지고 그 좌우 바닥이 진영색으로
  *      옅게 물든다. 밀고 밀리는 것이 색으로 그대로 보인다 — 숫자를 안 봐도 된다.
+ *      (대난투에는 전선이 없다 — 네 방향에서 몰려드는 판에 선 하나를 그을 수 없다)
  *
- * 내가 늘 왼쪽에 보이도록 좌표만 뒤집는다(계산은 p1/p2 순서 그대로). 그래서 「내 진영은 늘 왼쪽,
- * 내 냥은 오른쪽으로 걸어간다」가 판마다 변하지 않는다. */
-const duelX = (x) => (mySide() === "a" ? x : DUEL.w - x);
+ * 내가 늘 왼쪽에 보이도록 좌표만 뒤집는다(계산은 진영 순서 그대로). 그래서 「내 진영은 늘 왼쪽,
+ * 내 냥은 오른쪽으로 걸어간다」가 판마다 변하지 않는다. 대난투에서 뒤(c)·앞(d) 진영은 뒤집을 것이 없다. */
+const duelX = (x) => (mySide() === "b" ? DUEL.w - x : x);
 /** 그 화면 좌표에서의 지면 높이 — 왼쪽이 낮고 오른쪽이 높은 비스듬한 땅 */
 const duelGroundY = (sx) => DUEL.ground + DUEL.tilt * (0.5 - sx / DUEL.w);
 /** 유닛이 서는 높이 — 지면에서 깊이(dep)만큼 뒤로 물러난다 */
 const duelYAt = (sx, dep) => duelGroundY(sx) - (dep || 0) * DUEL.depthRise;
 /** 뒤로 물러난 만큼 작게 — 원근의 나머지 절반 */
-const duelScale = (dep) => 1 - (dep || 0) * DUEL.depthScale;
+const duelScale = (dep) => 1 - Math.min(1, Math.max(0, dep || 0)) * DUEL.depthScale;
 /** 이벤트·탄환이 쓰는 편의 함수 (전장 좌표를 화면 좌표로 뒤집어 받는다) */
 const duelY = (x, dep) => duelYAt(duelX(x), dep);
+/** 이 판이 네 귀퉁이 난전인가 */
+const duelBrawl = () => !!duel && !!duel.sim && duel.sim.topo === "brawl";
 
 /**
  * 지금 **전선**이 어디인가 — 양 진영 최전선 유닛의 중간 지점(화면 좌표).
@@ -5886,6 +6364,20 @@ function drawDuelField(g) {
     g.fill();
   }
 
+  if (duelBrawl()) {
+    // 난전 — 전선 대신 한가운데에 옅은 원. 네 진영이 여기로 몰려든다는 표시다
+    const cx = DUEL.w / 2, cy = duelYAt(cx, 0.5);
+    g.save();
+    g.strokeStyle = "rgba(43,36,24,.28)"; g.lineWidth = 2; g.setLineDash([8, 7]);
+    g.beginPath(); g.ellipse(cx, cy, 150, 46, 0, 0, 7); g.stroke();
+    g.restore();
+    g.textAlign = "center"; g.textBaseline = "alphabetic";
+    g.font = "bold 11px 'Jua','Gowun Dodum',sans-serif";
+    g.fillStyle = "rgba(43,36,24,.45)";
+    g.fillText("난전", cx, cy - 52);
+    return;
+  }
+
   /* ── 영역 2분할 ── 전선 좌우로 바닥을 진영색으로 옅게 물들인다. */
   const fx = duelFrontLine();
   const zone = (x0, x1, col) => {
@@ -5916,24 +6408,26 @@ function drawDuelField(g) {
 }
 
 /**
- * 진영 깃발 하나 — 양끝에 꽂힌 표식이다.
+ * 진영 깃발 하나 — 진영마다 하나씩 꽂힌 표식이다.
  *
  * **두들길 수 있는 물건이 아니다.** 성채가 있던 자리지만, 지킬 건물이 있으면 승부가
  * 「누가 먼저 벽을 뚫었는가」로 새기 때문에 전부 걷어냈다. 남은 것은 여기가 누구 진영인지
- * 알려 주는 깃대 하나뿐이다 — 내 쪽은 청사 톤(푸른 기), 상대 쪽은 붉은 기.
+ * 알려 주는 깃대 하나뿐이다 — 내 쪽은 청사 톤(푸른 기), 상대 쪽은 진영색 기.
  */
 function drawDuelCamp(g, side) {
-  const mine = side === mySide();
-  const x = duelX(campX(side));
-  const GY = duelGroundY(x);      // 기운 지면 위에 꽂힌다 — 공중에 떠 있으면 바로 눈에 띈다
-  const main = mine ? "#5b8fb0" : "#c4322a";
-  const dark = mine ? "#3c6a8a" : "#8a2a24";
-  // 깃발이 안쪽(전장 쪽)을 향해 날리도록 — 화면에서 내 진영은 늘 왼쪽이다
-  const face = mine ? 1 : -1;
+  const camp = campOf(side, duel && duel.sim ? duel.sim.topo : "line");
+  const x = duelX(camp.cx);
+  const dep = Math.min(1.1, Math.max(-0.1, camp.cz / DUEL.depthPx));
+  const GY = duelYAt(x, dep);      // 기운 지면 위에 꽂힌다 — 공중에 떠 있으면 바로 눈에 띈다
+  const [dark, main] = sideCol(side);
+  // 깃발이 안쪽(전장 쪽)을 향해 날리도록
+  const face = x < DUEL.w / 2 ? 1 : x > DUEL.w / 2 ? -1 : (side === "c" ? -1 : 1);
   const t = duel && duel.sim ? duel.sim.t : 0;
+  const sc = duelScale(dep);
 
   g.save();
   g.translate(x, GY);
+  g.scale(sc, sc);
   // 깃대 밑동 — 흙무더기
   g.fillStyle = "rgba(43,36,24,.22)";
   g.beginPath(); g.ellipse(0, 1, 22, 6, 0, 0, 7); g.fill();
@@ -5951,22 +6445,33 @@ function drawDuelCamp(g, side) {
   g.closePath();
   g.fillStyle = main; g.fill();
   g.strokeStyle = "#2b2418"; g.lineWidth = 2; g.stroke();
-  // 인장 — 깃면 가운데의 붉은/푸른 점
+  // 인장 — 깃면 가운데의 진영색 점
   g.fillStyle = dark;
   g.beginPath(); g.arc(face * 30, -91 + wave * .6, 9, 0, 7); g.fill();
+  // 이름표 — 넷이 붙는 판에서는 어느 깃발이 누구 것인지 적어 준다
+  if (duel && duel.sim && duel.sim.sides.length > 2) {
+    g.font = "bold 11px 'Jua','Gowun Dodum',sans-serif";
+    g.textAlign = "center"; g.textBaseline = "alphabetic";
+    g.lineWidth = 3; g.strokeStyle = "rgba(24,16,10,.7)"; g.fillStyle = "#fff";
+    const nm = side === mySide() ? "나" : sideLabel(side);
+    g.strokeText(nm, 0, -124); g.fillText(nm, 0, -124);
+  }
   g.restore();
 }
 
-/** 유닛 하나 — 내 냥은 스프라이트, 쥐 침입단은 청사에서 보던 그 원화 그대로 */
+/** 유닛 하나 — 냥타워는 스프라이트, 쥐 침입단은 청사에서 보던 그 원화 그대로 */
 function drawDuelUnit(g, u, ms) {
   const mine = u.side === mySide();
-  const x = duelX(u.x), y = duelYAt(x, u.dep);
+  const ally = mine && !soloMode && u.own !== mySlot;     // 2:2 팀원의 냥
+  const dep = u.z / DUEL.depthPx;
+  const x = duelX(u.x), y = duelYAt(x, dep);
   const hit = u.hitT > 0;
-  // 화면에서 내 편은 늘 오른쪽을 보고, 상대는 왼쪽을 본다
-  const facing = mine ? 1 : -1;
+  // 화면에서 내 편은 늘 오른쪽을 보고, 상대는 왼쪽을 본다. 난전에서는 한가운데를 본다
+  const facing = duelBrawl() ? (x <= DUEL.w / 2 ? 1 : -1) : mine ? 1 : -1;
   const fade = u.dead ? Math.max(0, 1 - (u.deadT || 0) / 0.5) : 1;
   // 원근 — 뒤에 선 유닛일수록 작다. 그림자·체력줄까지 같은 배율을 타야 따로 놀지 않는다
-  const sc = duelScale(u.dep);
+  const sc = duelScale(dep);
+  const [dark, main] = sideCol(u.side);
 
   g.save();
   g.globalAlpha = fade;
@@ -5997,7 +6502,7 @@ function drawDuelUnit(g, u, ms) {
 
   if (u.mob) {
     const d = ENEMIES[u.k];
-    // 걸음걸이는 시뮬레이션 시각에서 뽑는다 — 프레임 시간과 무관해야 양쪽이 같이 움직인다
+    // 걸음걸이는 시뮬레이션 시각에서 뽑는다 — 프레임 시간과 무관해야 모두 같이 움직인다
     const art = mobFrame(u.k, "run", u.walking ? Math.floor(duel.sim.t * 7 + u.id) : 0);
     const r = (d ? d.r : 18) * 1.05;
     g.save();
@@ -6008,17 +6513,22 @@ function drawDuelUnit(g, u, ms) {
     g.restore();
     if (hit) { g.globalAlpha = fade * .45; g.fillStyle = "#fff";
                g.beginPath(); g.arc(0, -r, r, 0, 7); g.fill(); g.globalAlpha = fade; }
+    // 진영 표식 — 쥐가 누구 편에 섰는지 (2:2 에서 쥐가 내 편에 설 수도 있다)
+    g.fillStyle = main;
+    g.beginPath(); g.arc(-r * 0.9, -r * 2 - 4, 4, 0, 7); g.fill();
   } else {
     const S = 52;
     // 걸을 때는 살짝 위아래로 튄다 — 멈춰 서서 쏠 때는 가만히 있는다
     const bob = u.walking ? Math.abs(Math.sin(duel.sim.t * 7 + u.id)) * 3 : 0;
     g.translate(0, -bob);
-    // 종이 타일 — 내 편은 푸른 테두리, 상대는 붉은 테두리
+    // 종이 타일 — 진영색 테두리. 팀원의 냥은 점선으로 갈린다
     g.fillStyle = "#f2ecdb";
     g.fillRect(-S / 2, -S, S, S);
     g.lineWidth = u.pr ? 3 : 2;
-    g.strokeStyle = u.pr ? "#cda43a" : mine ? "#3c6a8a" : "#c4322a";
+    g.strokeStyle = u.pr ? "#cda43a" : dark;
+    if (ally) g.setLineDash([5, 3]);
     g.strokeRect(-S / 2, -S, S, S);
+    g.setLineDash([]);
 
     const fake = { key: u.k, uid: u.id * 97, atkEnd: u.atkT > 0 ? ms + u.atkT * 1000 : 0 };
     const [row, fr] = frameOf(fake, ms);
@@ -6026,11 +6536,18 @@ function drawDuelUnit(g, u, ms) {
     g.save();
     g.scale(facing, 1);
     if (art) g.drawImage(art, -25, -50, 50, 50);
-    else { g.fillStyle = mine ? "#5bc8e8" : "#e0574d"; g.beginPath(); g.arc(0, -25, 16, 0, 7); g.fill(); }
+    else { g.fillStyle = mine ? "#5bc8e8" : main; g.beginPath(); g.arc(0, -25, 16, 0, 7); g.fill(); }
     g.restore();
     if (hit) { g.fillStyle = "rgba(255,255,255,.5)"; g.fillRect(-S / 2, -S, S, S); }
     if (u.slowT > 0) { g.fillStyle = "rgba(121,183,216,.34)"; g.fillRect(-S / 2, -S, S, S); }
     if (u.freezeT > 0) { g.fillStyle = "rgba(160,120,255,.34)"; g.fillRect(-S / 2, -S, S, S); }
+    // 탱커(방어)는 타일 아래에 방패 띠 — 「이 냥은 맞아 주는 냥」이 보여야 진형이 읽힌다
+    if (u.ar > 0) {
+      g.fillStyle = dark; g.fillRect(-S / 2, -6, S, 6);
+      g.fillStyle = "#f2ecdb"; g.font = "bold 8px ui-monospace,monospace";
+      g.textAlign = "center"; g.textBaseline = "alphabetic";
+      g.fillText(`🛡 ${Math.round(u.ar * 100)}%`, 0, -0.5);
+    }
     if (u.lv > 1) {
       g.fillStyle = "#2b2418"; g.fillRect(-S / 2, -S - 12, 26, 12);
       g.fillStyle = "#ffd782"; g.font = "bold 9px ui-monospace,monospace";
@@ -6065,15 +6582,16 @@ function drawDuel(now) {
     g.fillStyle = "rgba(24,16,10,.6)";
     g.font = "16px 'Jua','Gowun Dodum',sans-serif";
     const left = Math.max(0, DUEL.waitSecs - duel.waitT);
-    g.fillText(`상대의 냥타워가 도착하기를 기다리는 중… ${left.toFixed(1)}초`, DUEL.w / 2, DUEL.h / 2);
+    const late = activeSlots().filter((s) => !duel.rosters[s]).map(slotName).join(" · ");
+    g.fillText(`${late || "상대"}의 냥타워가 도착하기를 기다리는 중… ${left.toFixed(1)}초`, DUEL.w / 2, DUEL.h / 2);
     return;
   }
 
-  drawDuelCamp(g, "a"); drawDuelCamp(g, "b");
+  for (const s of duel.sim.sides) drawDuelCamp(g, s);
 
   // 유닛 — 깊은 쪽(뒤)부터 그려 앞에 선 놈이 위에 오게 한다
   const ms = duel.sim.t * 1000;
-  const order = duel.sim.units.slice().sort((p, q) => (q.dep || 0) - (p.dep || 0));
+  const order = duel.sim.units.slice().sort((p, q) => q.z - p.z);
   for (const u of order) drawDuelUnit(g, u, ms);
 
   // 스킬 고리 — 합성 냥타워가 터뜨린 범위가 바닥에 타원으로 번진다
@@ -6089,7 +6607,7 @@ function drawDuel(now) {
   }
   g.globalAlpha = 1;
 
-  // 탄환
+  // 탄환 (그리고 회복 줄기)
   for (const s of duel.sim.shots) {
     const a = Math.max(0, s.life / s.max);
     const x1 = duelX(s.x1), y1 = duelYAt(x1, s.dep1) - 26 * duelScale(s.dep1);
@@ -6101,11 +6619,13 @@ function drawDuel(now) {
     }
     const x2 = duelX(s.x2), y2 = duelYAt(x2, s.dep2) - 26 * duelScale(s.dep2);
     g.globalAlpha = a;
-    g.strokeStyle = s.chain ? "#6fe0d0" : s.crit ? "#cda43a" : s.side === mySide() ? "#2f6f9a" : "#c4322a";
-    g.lineWidth = s.crit ? 3 : 1.8;
+    g.strokeStyle = s.heal ? "#7fbf6a" : s.chain ? "#6fe0d0" : s.crit ? "#cda43a" : sideCol(s.side)[2];
+    g.lineWidth = s.crit ? 3 : s.heal ? 2.4 : 1.8;
+    if (s.heal) g.setLineDash([4, 4]);
     g.beginPath();
     g.moveTo(x1, y1); g.lineTo(x2, y2);
     g.stroke();
+    g.setLineDash([]);
   }
   g.globalAlpha = 1;
 
@@ -6127,18 +6647,22 @@ function drawDuel(now) {
 }
 
 /* ── 덱 표시줄 (화면 아래) ──
- * 누를 것이 없는 라운드다. 그래서 이 자리에는 조작 대신 **양쪽이 무엇을 데려왔는지**를
- * 나란히 놓는다 — 종류·레벨별로 한 칸씩, 몇 명인지와 함께. 위에는 덱 지수를 적어
- * 지금 붙고 있는 두 덱의 우열이 한눈에 보이게 한다.
+ * 누를 것이 없는 라운드다. 그래서 이 자리에는 조작 대신 **모두가 무엇을 데려왔는지**를
+ * 진영별로 늘어놓는다 — 종류·레벨별로 한 칸씩, 몇 명인지와 함께. 위에는 덱 지수를 적어
+ * 지금 붙고 있는 덱들의 우열이 한눈에 보이게 한다. 그 아래에는 **덱의 이력**(어느 계열을
+ * 몇 단계까지 열었는가 · 무슨 강화를 골랐는가)을 사람마다 적는다 — 고른 강화가 대전에 실려
+ * 있다는 것이 여기서 눈에 보인다.
  * 싸움이 시작될 때 한 번만 그린다 (구성이 도중에 바뀌지 않는다).
  */
 function clearDuelDecks() {
-  for (const id of ["#duelDeckMine", "#duelDeckFoe"]) {
+  for (const id of ["#duelDecks", "#duelLines", "#duelFoes"]) {
     const el = $(id);
     if (el) el.innerHTML = "";
   }
   const pw = $("#duelPower");
-  if (pw) pw.textContent = "—";
+  if (pw) { pw.textContent = "—"; pw.className = "even"; }
+  $("#duelMine").textContent = "-";
+  /** @type {HTMLElement} */ ($("#duelMineFill")).style.width = "100%";
 }
 
 /** 한 편의 덱을 칸으로 늘어놓는다 */
@@ -6153,21 +6677,71 @@ function deckChips(groups) {
   }).join("");
 }
 
+/**
+ * 한 사람의 **덱 이력** 칸 — 열린 계열 단계와 고른 강화 아이콘.
+ * 명세에 딸려 온 meta(makeMeta)를 그대로 읽는다. 쥐 침입단 자리는 「없음」이다.
+ */
+function metaChips(slot) {
+  const m = duel.metas[slot];
+  if (!m) return `<span class="dempty">강화 없음</span>`;
+  const lines = Object.keys(LINES).filter((k) => (m.score && m.score[k]) > 0)
+    .sort((a, b) => m.score[b] - m.score[a])
+    .map((k) => {
+      const L = LINES[k], t = (m.lines && m.lines[k]) || 0;
+      return `<span class="lchip${t ? " lit" : ""}" style="--lc:${L.col}">${L.icon} ${L.name} ${m.score[k]}${t ? ` · ${t}단계` : ""}</span>`;
+    }).join("");
+  const tally = {};
+  for (const k of m.passives || []) tally[k] = (tally[k] || 0) + 1;
+  const picks = Object.keys(tally).map((k) => {
+    const p = PASSIVE_BY_KEY[k]; if (!p) return "";
+    return `<span class="pchip" title="${p.name} — ${p.desc}">${p.icon}${tally[k] > 1 ? `<em>×${tally[k]}</em>` : ""}</span>`;
+  }).join("");
+  if (!lines && !picks) return `<span class="dempty">강화 없음</span>`;
+  return lines + picks;
+}
+
 function renderDuelDecks() {
   if (!duel || !duel.sim) return;
-  const me = mySide(), foe = me === "a" ? "b" : "a";
+  const me = mySide();
   const sim = duel.sim;
-  $("#duelDeckMine").innerHTML = deckChips(sim.deck[me]);
-  $("#duelDeckFoe").innerHTML = deckChips(sim.deck[foe]);
-  $("#duelDeckFoeLbl").textContent = duel.foeMob ? "쥐 침입단" : "상대 덱";
-  const mp = sim.power[me], fp = sim.power[foe];
+  const order = [me].concat(sim.sides.filter((s) => s !== me));
+  const colOf = (s) => (s === me ? "var(--blue)" : sideCol(s)[1]);
+  $("#duelDecks").innerHTML = order.map((s) => `
+    <div class="ddeck">
+      <span class="dlbl" style="color:${colOf(s)}">${s === me ? "내 덱" : sideLabel(s)}</span>
+      <div class="dchips">${deckChips(sim.deck[s])}</div>
+    </div>`).join("");
+
+  // 덱 이력 — 사람마다 한 줄. 솔로에서는 내 것만
+  const slots = soloMode ? [mySlot] : Array.from({ length: roomSize }, (_, i) => i)
+    .sort((p, q) => (p === mySlot ? -1 : q === mySlot ? 1 : sideOfSlot(p) === me ? -1 : sideOfSlot(q) === me ? 1 : p - q));
+  $("#duelLines").innerHTML = `<i>덱 이력 — 고른 강화가 그대로 실려 있습니다</i>` + slots.map((s) => `
+    <div class="dline">
+      <span class="dlbl" style="color:${colOf(sideOfSlot(s))}">${s === mySlot ? "나" : duel.mobs.has(s) ? "쥐 침입단" : slotName(s)}</span>
+      <div class="dchips">${duel.mobs.has(s) ? `<span class="dempty">강화 없음</span>` : metaChips(s)}</div>
+    </div>`).join("");
+
+  // 덱 지수 — 내 것과 남의 것. 내가 가장 높으면 금빛, 아니면 붉은빛으로 기운다
+  const mp = sim.power[me];
+  const best = Math.max(...sim.sides.filter((s) => s !== me).map((s) => sim.power[s]));
   const pw = $("#duelPower");
-  pw.innerHTML = `<b class="me">${mp}</b><span>덱 지수</span><b class="foe">${fp}</b>`;
-  pw.className = mp > fp ? "up" : mp < fp ? "down" : "even";
+  pw.innerHTML = order.map((s, i) => `${i ? `<span>${i === 1 ? "덱 지수" : "·"}</span>` : ""}<b style="color:${colOf(s)}">${sim.power[s]}</b>`).join("");
+  pw.className = mp > best ? "up" : mp < best ? "down" : "even";
+}
+
+/** 위쪽 표시줄의 상대 칸을 진영 수만큼 만든다 (한 번) */
+function renderDuelHead() {
+  if (!duel || !duel.sim) return;
+  const me = mySide();
+  const foes = duel.sim.sides.filter((s) => s !== me);
+  $("#duelFoes").innerHTML = foes.map((s) => `
+    <span class="dside foe" data-side="${s}" style="--sc:${sideCol(s)[1]}">
+      <i>${sideLabel(s)}</i><b>-</b><span class="dhp"><i></i></span></span>`).join("");
+  $("#duelFoes").classList.toggle("many", foes.length > 1);
 }
 
 /**
- * 대전장 위쪽 표시줄 — 남은 시간 · 양쪽 병력.
+ * 대전장 위쪽 표시줄 — 남은 시간 · 진영별 병력.
  *
  * 성채가 없으니 지켜볼 숫자는 **남은 병력** 하나다. 머릿수와 함께 체력 막대를 얹는데,
  * 막대는 자기 시작 병력 대비 비율이다 — 시간이 다 됐을 때 승패를 가르는 잣대가 그것이라
@@ -6175,13 +6749,18 @@ function renderDuelDecks() {
  */
 function renderDuelBar() {
   if (!duel) return;
-  const me = mySide(), foe = me === "a" ? "b" : "a";
+  const me = mySide();
   const sim = duel.sim;
   const show = (side) => sim ? `${sim.alive(side).length}/${sim.startN[side]}` : "-";
   $("#duelMine").textContent = show(me);
-  $("#duelTheirs").textContent = sim ? show(foe) : "대기";
-  for (const [id, side] of [["#duelMineFill", me], ["#duelTheirsFill", foe]]) {
-    /** @type {HTMLElement} */ ($(id)).style.width = sim ? `${sim.ratio(side) * 100}%` : "100%";
+  /** @type {HTMLElement} */ ($("#duelMineFill")).style.width = sim ? `${sim.ratio(me) * 100}%` : "100%";
+  if (sim) {
+    document.querySelectorAll("#duelFoes .dside").forEach((el) => {
+      const s = /** @type {HTMLElement} */ (el).dataset.side;
+      el.querySelector("b").textContent = show(s);
+      /** @type {HTMLElement} */ (el.querySelector(".dhp i")).style.width = `${sim.ratio(s) * 100}%`;
+      el.classList.toggle("out", !sim.alive(s).length);
+    });
   }
   const left = sim ? Math.max(0, DUEL.timeLimit - sim.t) : DUEL.timeLimit;
   $("#duelTimer").textContent = `${left.toFixed(1)}초`;
@@ -6195,11 +6774,14 @@ function renderDuelResult() {
   box.className = won ? "win" : drew ? "draw" : "lose";
   /* 보상은 **특허료가 아니라 점수**다 — 이긴 쪽이 자원까지 가져가면 눈덩이가 굴러
    * 첫 대전 한 판으로 판이 끝난다. 진 쪽의 내구 손실만 판 안에 남는다. */
-  const pts = won ? RANK.duelWin : drew ? RANK.duelDraw : RANK.duelLose;
-  box.innerHTML = `<b>${won ? "대전 승리" : drew ? "무승부" : "대전 패배"}</b>
+  const ffa = mode === "ffa";
+  const pts = r.pts != null ? r.pts : won ? RANK.duelWin : drew ? RANK.duelDraw : RANK.duelLose;
+  const dmg = r.dmg != null ? r.dmg : (won || drew ? 0 : DUEL.leakBase + (r.foeAlive || 0) * DUEL.leakPer);
+  const title = ffa ? `${r.place}등${r.place === 1 ? " — 대난투 승리" : ""}`
+                    : won ? `${duelLabel()} 승리` : drew ? "무승부" : `${duelLabel()} 패배`;
+  box.innerHTML = `<b>${title}</b>
     <i>${r.reason}</i>
-    <span>랭킹 점수 <b>+${pts.toLocaleString()}</b>${
-      won || drew ? "" : ` · 등록원부 내구 −${DUEL.leakBase + r.foeAlive * DUEL.leakPer}`}</span>`;
+    <span>랭킹 점수 <b>+${pts.toLocaleString()}</b>${dmg ? ` · 등록원부 내구 −${dmg}` : ""}</span>`;
   box.classList.remove("hidden");
 }
 
@@ -6428,6 +7010,10 @@ function endMatch(iWon, reasonText) {
     </div>`;
   const maxSpeed = Math.max(1, rank.waves.length * RANK.speedPerWave);
   const maxDuel = Math.max(1, DUEL_WAVES.length * RANK.duelWin);
+  // 대난투는 승/무/패가 아니라 등수다 — 세 판의 등수를 그대로 적는다
+  const duelRec = mode === "ffa"
+    ? (rank.duels.length ? rank.duels.map((d) => `${d.place || "-"}등`).join(" · ") : "—")
+    : `${s.duelRecord[0]}승 ${s.duelRecord[1]}무 ${s.duelRecord[2]}패`;
 
   $("#sheet").innerHTML = `<div class="end">
     <h3 style="color:${iWon ? "#cda43a" : "#e0574d"}">${iWon ? "심사 종료 — 성적표" : "거절결정 — 판 중단"}</h3>
@@ -6439,7 +7025,7 @@ function endMatch(iWon, reasonText) {
       <div class="rksay">${rank.say}</div>
     </div>
     <div class="rankbars">
-      ${bar(`⚔️ 1:1 대전 <em>${s.duelRecord[0]}승 ${s.duelRecord[1]}무 ${s.duelRecord[2]}패</em>`, rank.duel, maxDuel, "#e0574d")}
+      ${bar(`⚔️ ${duelLabel()} <em>${duelRec}</em>`, rank.duel, maxDuel, "#e0574d")}
       ${bar(`🏗️ 덱 파워 <em>지수 ${Math.round(game.finalDeck || 0).toLocaleString()}</em>`, rank.deck, 4000, "#6fe0d0")}
       ${bar(`⏱️ 클리어 속도 <em>${rank.waves.length}개 라운드</em>`, rank.speed, maxSpeed, "#cda43a")}
       ${bar(`🏛️ 등록원부 <em>${Math.max(0, Math.round(game.hp))}/${game.maxHp}</em>`, rank.hp, Math.max(1, game.maxHp * RANK.hpMul), "#7fbf6a")}
@@ -6500,6 +7086,8 @@ function boardPoint(e) {
 }
 
 /* ═══════ 방해 공작 (상대 판에 거는 훼방) ═══════ */
+/** 마지막 공작이 날아간 슬롯 — 도장을 그 사람의 청사 위에 찍는 데 쓴다 */
+let lastSabTarget = 0;
 /**
  * 공작 버튼도 스킬처럼 판이 시작될 때 한 번만 만든다.
  * 솔로에는 훼방을 놓을 상대가 없으므로 패널 자체를 감춘다.
@@ -6546,10 +7134,10 @@ function updateSabotageBar() {
   const b = /** @type {HTMLButtonElement} */ ($("#btnSab"));
   if (!b) return;
   const blocked = game.sabotageBlocked();
-  const why = blocked || (online() ? null : "서버 연결 끊김");
+  const why = blocked || (online() ? null : "서버 연결 끊김") || (enemySlots().length ? null : "남은 상대 없음");
   b.disabled = !!why;
   const state = b.querySelector(".state");
-  if (state) state.textContent = why || "무작위 1개 · 상대 판에 즉시";
+  if (state) state.textContent = why || (roomSize > 2 ? "무작위 1개 · 무작위 상대 판에 즉시" : "무작위 1개 · 상대 판에 즉시");
   const left = $("#sabLeft");
   if (left) left.textContent = String(game.sabotageLeft);
 }
@@ -6572,20 +7160,27 @@ function onSabotageDraw() {
   const blocked = game.sabotageBlocked();
   if (blocked) { log(`<b>방해 공작 뽑기</b> 불가 — ${blocked}`); return; }
   if (!online()) { log(`<b>방해 공작 뽑기</b> 불가 — 서버 연결이 끊겨 상대에게 닿지 않습니다`); return; }
+  /* 표적 — 1:1 에서는 상대 하나뿐이다. 넷이 붙는 판에서는 **아직 붙어 있는 적 가운데 무작위로**
+   * 하나를 고른다 (2:2 는 팀원을 뺀다). 누구에게 갔는지는 뽑기 칸과 상대 청사 도장에 적힌다. */
+  const foes = enemySlots();
+  if (!foes.length) { log(`<b>방해 공작 뽑기</b> 불가 — 던질 상대가 남지 않았습니다`); return; }
+  const to = foes[Math.floor(Math.random() * foes.length)];
   const key = game.drawSabotage();
   if (!key) return;
-  sendWS({ t: "sabotage", key });
-  flashSabotage(key);
+  lastSabTarget = to;
+  sendWS({ t: "sabotage", key, to });
+  flashSabotage(key, to);
   renderHud();
 }
 
 /** 뽑힌 공작을 패널 안에 큼직하게 남긴다 */
-function flashSabotage(key) {
+function flashSabotage(key, to) {
   const d = SABOTAGE[key];
   const box = $("#sabFlash");
   if (!box) return;
+  const who = roomSize > 2 ? ` → <b>${slotName(to)}</b>` : "";
   box.innerHTML = `<span class="ic">${d.icon}</span>
-    <span class="meta"><b>${d.short} — ${d.name}</b><i>${d.tag}</i><em>${d.desc}</em></span>`;
+    <span class="meta"><b>${d.short} — ${d.name}</b><i>${d.tag}${who}</i><em>${d.desc}</em></span>`;
   box.classList.remove("hidden");
   // 같은 것이 연달아 나와도 새로 뽑았다는 게 보이도록 등장 애니메이션을 다시 태운다
   box.classList.remove("pop");
@@ -7135,18 +7730,60 @@ function catFrameCanvas(key, row, frame) {
   return cv;
 }
 
-/** 상대 보드 미니맵 — 상대에게서 받은 스냅샷을 그린다 (상대 클라이언트가 계산한 결과를 그대로 그림) */
+/**
+ * 「상대 청사」 패널 — 방의 다른 사람마다 카드 하나(내구·라운드·미니맵).
+ * 1:1 이면 큰 카드 하나, 넷이 붙는 판이면 작은 카드 셋이 두 줄로 선다. 2:2 의 팀원 카드는
+ * 푸른 테두리로 갈리고 「아군」 딱지가 붙는다 — 공작을 던질 상대와 아닌 사람이 한눈에 갈려야 한다.
+ * 판이 시작될 때 한 번 만들고, 스냅샷이 올 때마다 숫자만 갱신한다 (renderOppCard).
+ */
+function buildOppPanel() {
+  const grid = $("#oppGrid");
+  if (!grid) return;
+  const others = otherSlots();
+  grid.className = "oppgrid" + (others.length > 1 ? " many" : "");
+  grid.innerHTML = others.map((s) => `
+    <div class="oppcard${isAlly(s) ? " ally" : ""}" data-slot="${s}">
+      <div class="opphead"><b>${slotName(s)}</b><i>${isAlly(s) ? "아군" : mode === "ffa" || mode === "team" ? "상대" : ""}</i>
+        <span class="opphp">-</span><span class="oppwave">0/${BAL.waveCount}</span></div>
+      <canvas data-slot="${s}" width="${others.length > 1 ? 136 : 280}" height="${others.length > 1 ? 136 : 280}"></canvas>
+    </div>`).join("");
+  $("#oppLabel").textContent = mode === "team" ? "TEAMMATE & RIVALS" : others.length > 1 ? "RIVALS" : "OPPONENT";
+  const h2 = $("#oppPanel h2");
+  if (h2) h2.firstChild.textContent = others.length > 1 ? "다른 청사 " : "상대 청사 ";
+}
+
+/** 카드의 숫자(내구·라운드·상태)만 갱신한다 — 스냅샷이 올 때와 상태가 바뀔 때 */
+function renderOppCard(p) {
+  const card = $(`#oppGrid .oppcard[data-slot="${p.slot}"]`);
+  if (!card) return;
+  card.classList.toggle("gone", !!p.gone);
+  if (p.snap) {
+    card.querySelector(".opphp").textContent = `${Math.max(0, Math.ceil(p.snap.hp))}/${p.snap.maxHp}`;
+    card.querySelector(".oppwave").textContent = `${p.snap.wave}/${BAL.waveCount}`;
+  }
+  if (p.gone) card.querySelector(".opphp").textContent = "탈락";
+}
+
+/** 다른 사람들의 보드 미니맵 — 받은 스냅샷을 그린다 (그쪽 클라이언트가 계산한 결과를 그대로 그림) */
 function drawOpponent(now) {
   if (soloMode) return;   // 상대 청사 패널 자체가 없다
-  const cv = /** @type {HTMLCanvasElement} */ ($("#oppCv"));
+  for (const p of players) {
+    if (p.slot === mySlot) continue;
+    const cv = /** @type {HTMLCanvasElement} */ ($(`#oppGrid canvas[data-slot="${p.slot}"]`));
+    if (cv) drawOppBoard(cv, p.snap, now);
+  }
+}
+
+/** 미니맵 한 장 */
+function drawOppBoard(cv, snap, now) {
   const g = cv.getContext("2d");
   g.clearRect(0, 0, cv.width, cv.height);
-  if (!oppSnapshot) {
+  if (!snap) {
     g.fillStyle = "rgba(90,80,60,.5)"; g.font = "12px sans-serif"; g.textAlign = "center";
-    g.fillText("상대 정보를 기다리는 중…", cv.width / 2, cv.height / 2);
+    g.fillText("정보를 기다리는 중…", cv.width / 2, cv.height / 2);
     return;
   }
-  const s = oppSnapshot;
+  const s = snap;
   const cell = Math.min(cv.width / s.cols, cv.height / s.rows);
   const ox = (cv.width - cell * s.cols) / 2, oy = (cv.height - cell * s.rows) / 2;
   g.save(); g.translate(ox, oy);
@@ -7308,19 +7945,21 @@ function beginBattle() {
   corpses = []; crumbs = [];
   ghostCats = []; ghostClaws = [];   // 지난 판에서 휘젓던 유령냥이 새 판에 남아 있으면 안 된다
   shakeT = 0; shakeMag = 0;
-  iReady = false; oppReady = false; oppInPrep = false;
+  iReady = false; oppReady = false; oppInPrep = false; readyCount = 0;
   prepEndsAt = 0; prepSentWave = 0; oppAugs = [];
-  duel = null; pendingDuelRoster = { wave: 0, roster: null }; mergeDockSig = "";
+  duel = null; pendingDuelRosters = { wave: 0, by: {} }; mergeDockSig = "";
   $("#duelStage").classList.add("hidden");
   $("#duelResult").classList.add("hidden");
   document.body.classList.remove("dueling");
   stageTheme = null;        // 새 판이면 전장 원화도 1스테이지 것부터 다시 깐다
   applyStageTheme();
   preloadStageArt();
-  $("#oppLabel").textContent = youAre === "p1" ? "OPPONENT (후)" : "OPPONENT (선)";
+  buildOppPanel();
+  document.body.dataset.mode = mode;
+  const M = MODE();
   log(soloMode
     ? `<b>솔로 플레이</b> — 상대 없이 ${BAL.waveCount}라운드를 치르고 랭킹 점수를 받습니다.`
-    : `<b>1v1 대전</b> — 상대와 같은 판·같은 웨이브를 동시에 치릅니다.`);
+    : `<b>${M.name}</b> — ${M.desc} 당신은 <b>${slotName(mySlot)}</b>${mode === "team" ? ` (팀원 ${otherSlots().filter(isAlly).map(slotName).join(", ")})` : ""}입니다.`);
   log(`<b>${game.map.name}</b> 방위 개시 · ${game.map.desc}`);
   if (!soloMode) log(`<b>방해 공작</b>은 종류를 고르지 않습니다 — 특허료를 내고 <b>무작위로 하나를 뽑아</b> ` +
     `상대 판에 던집니다 (웨이브 주기마다 ${BAL.sabotageDraws}회).`);
@@ -7329,9 +7968,10 @@ function beginBattle() {
   // 이종 합성(다른 종류끼리의 처방)은 잠가 두었다 — RECIPES 를 되살리면 이 안내도 함께 되돌린다
   // log(`<b style="color:#6fe0d0">다른 종류끼리도 합성</b>됩니다 — 처방 ${RECIPES.length}가지로 ` +
   //     `연쇄·정지·즉사·징수 같은 <b>특수 냥타워</b>를 만들 수 있습니다 (뽑기로는 나오지 않습니다).`);
-  log(`스테이지 <b>${DUEL_WAVES.join(" · ")}</b>는 침입자 대신 <b>1:1 대전</b>입니다 — ` +
-      `별도의 대전장에서 <b>내 냥타워 전부</b>가 상대 덱과 저절로 붙습니다 (누를 것 없음). ` +
-      `지는 쪽은 등록원부 내구 <b>${DUEL.leakBase}</b>을 잃습니다.`);
+  log(`스테이지 <b>${DUEL_WAVES.join(" · ")}</b>는 침입자 대신 <b>${duelLabel()}</b>입니다 — ` +
+      `별도의 대전장에서 <b>내 냥타워 전부</b>가 다른 덱과 저절로 붙습니다 (누를 것 없음). ` +
+      (mode === "ffa" ? `등수대로 점수를 받고, 1등이 아니면 등록원부 내구를 잃습니다 (2등 −${RANK.ffaDmg[1]} · 3등 −${RANK.ffaDmg[2]} · 4등 −${RANK.ffaDmg[3]}).`
+                      : `지는 쪽은 등록원부 내구 <b>${DUEL.leakBase}</b>을 잃습니다.`));
   if (!soloMode) log(`<b>방해 공작</b> 셋 — 💸 <b>돈뺏기</b>(특허료 ${SABOTAGE.steal.amount} 강탈) · ` +
     `📨 <b>몹보내기</b>(침입자 ${SABOTAGE.swarm.amount}마리) · ⛔ <b>타워정지</b>(${SABOTAGE.freeze.dur}초). ` +
     `맞으면 판 위에 <b>흐릿한 고양이</b>가 나타나 휘젓습니다 — 무엇에 당했는지가 그걸로 보입니다.`);
@@ -7481,9 +8121,21 @@ connectWS();
 $("#btnSolo").addEventListener("click", () => {
   if (game) return;
   soloMode = true;
-  youAre = null; matchSeed = 0; oppSnapshot = null;
+  mode = "solo"; mySlot = 0; roomSize = 1; players = [{ slot: 0, snap: null, gone: false, name: "나" }];
+  youAre = null; matchSeed = 0;
   if (ws) { try { ws.close(); } catch (_) {} ws = null; }
   beginBattle();
+});
+/* ── 모드 고르기 ── 1v1 · 2v2 더블업 · 대난투. 고른 것이 「방 만들기」에 실린다.
+ * 들어가는 쪽은 고를 것이 없다 — 방이 어떤 모드인지는 코드가 알고 있다. */
+document.querySelectorAll("#modePick button").forEach((b) => {
+  b.addEventListener("click", () => {
+    lobbyMode = /** @type {HTMLElement} */ (b).dataset.mode || "duel";
+    document.querySelectorAll("#modePick button").forEach((x) => x.classList.toggle("on", x === b));
+    const m = MODES[lobbyMode];
+    $("#modeDesc").textContent = m ? m.desc : "";
+    $("#btnCreate").textContent = m ? `${m.name} 방 만들기` : "방 만들기";
+  });
 });
 /**
  * 나가기 — 판을 접고 첫 화면으로 돌아간다.
@@ -7498,7 +8150,9 @@ $("#btnExit").addEventListener("click", () => {
   if (!confirm(exitMsg())) return;
   location.reload();
 });
-const exitMsg = () => soloMode ? "솔로 플레이를 종료합니다." : "대전을 중단하고 나갑니다.";
+const exitMsg = () => soloMode ? "솔로 플레이를 종료합니다."
+  : roomSize > 2 ? "판을 떠납니다. 남은 사람들은 계속 진행하고, 내 자리는 쥐 침입단이 대신 섭니다."
+  : "대전을 중단하고 나갑니다.";
 
 /* ── 뒤로가기로 판이 날아가는 것 막기 ──
  * 이 페이지는 히스토리의 첫 기록이라, 판 안에서 뒤로가기를 누르면 돌아갈 곳이 없어
@@ -7510,7 +8164,7 @@ addEventListener("popstate", () => {
   history.pushState({ ingame: true }, "");  // 먹힌 기록을 도로 채운다 (안 채우면 다음 뒤로가기에 떠난다)
   if (confirm(exitMsg())) location.reload();
 });
-$("#btnCreate").addEventListener("click", () => sendWS({ t: "create" }));
+$("#btnCreate").addEventListener("click", () => sendWS({ t: "create", mode: lobbyMode }));
 $("#btnJoin").addEventListener("click", () => {
   const code = /** @type {HTMLInputElement} */ ($("#joinCode")).value.trim();
   if (code.length !== 4) {
