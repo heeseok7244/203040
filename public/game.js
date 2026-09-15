@@ -2453,6 +2453,7 @@ class DuelSim {
         id: this._id++, side, own: u.own == null ? -1 : u.own,
         k: u.k, lv: u.lv || 1, pr: !!u.pr, mob: !!u.mob,
         x, z, dir: camp.fx || (camp.fz > 0 ? 1 : -1),
+        lookX: camp.fx, lookZ: camp.fz, // 표시 방향만 기록하며 전투 판정에는 사용하지 않는다
         hp: u.hp, max: u.hp,
         dmg: u.dmg, rate: u.rate, range: u.range, tg: u.tg || 1,
         cc: u.cc || 0, cm: u.cm || 1, sl: u.sl || 0,
@@ -2726,7 +2727,10 @@ class DuelSim {
           if (mate) { if (md > 40) moves.push([u, ...this.stepToward(u, mate, spd)]); }
           else if (foe) moves.push([u, ...this.stepToward(u, foe, spd)]);
           u.walking = !!(mate ? md > 40 : foe);
-        } else u.walking = false;
+        } else {
+          u.walking = false;
+          u.lookX = worst.x - u.x; u.lookZ = worst.z - u.z;
+        }
         continue;
       }
 
@@ -2749,6 +2753,9 @@ class DuelSim {
         continue;
       }
       u.walking = false;   // 멈춰 서서 쏜다
+      if (foes.length) {
+        u.lookX = foes[0][1].x - u.x; u.lookZ = foes[0][1].z - u.z;
+      }
 
       u.cd -= DT * slow;      // 둔화는 이동뿐 아니라 공속도 늦춘다
       if (u.cd > 0) continue;
@@ -2805,6 +2812,7 @@ class DuelSim {
 
     // ── 적용 ── 이 순간까지는 아무도 죽지 않았다. 같은 틱에 서로를 눕히는 것도 그래서 가능하다.
     for (const [u, dx, dz] of moves) {
+      if (Math.abs(dx) + Math.abs(dz || 0) > 1e-6) { u.lookX = dx; u.lookZ = dz || 0; }
       u.x += dx; u.z += dz || 0;
       if (this.topo === "brawl") {
         // 난전 — 전장 네모 안에 붙잡는다
@@ -6697,7 +6705,11 @@ function drawDuelCamp(g, side) {
   g.restore();
 }
 
-/** 유닛 하나 — 냥타워는 스프라이트, 쥐 침입단은 청사에서 보던 그 원화 그대로 */
+const duelCatFrame = DuelCatArt.create(Object.fromEntries(
+  Object.entries(CAT_SHEET_SRC).map(([key, src]) => [key, src.replace("cat_attack", "cat_duel")])
+));
+
+/** 유닛 하나 — 냥타워는 대전 전용 4방향 시트를 사용한다. */
 function drawDuelUnit(g, u, ms) {
   const mine = u.side === mySide();
   const ally = mine && !soloMode && u.own !== mySlot;     // 2:2 팀원의 냥
@@ -6707,8 +6719,8 @@ function drawDuelUnit(g, u, ms) {
   // 화면에서 내 편은 늘 오른쪽을 보고, 상대는 왼쪽을 본다. 난전에서는 한가운데를 본다
   const facing = duelBrawl() ? (x <= DUEL.w / 2 ? 1 : -1) : mine ? 1 : -1;
   const fade = u.dead ? Math.max(0, 1 - (u.deadT || 0) / 0.5) : 1;
-  // 원근 — 뒤에 선 유닛일수록 작다. 그림자·체력줄까지 같은 배율을 타야 따로 놀지 않는다
-  const sc = duelScale(dep);
+  // 대전 유닛은 발밑을 기준으로 2배 확대한다. 그림자·레벨·체력줄도 원근에 맞춘다.
+  const sc = duelScale(dep) * 2;
   const [dark, main] = sideCol(u.side);
 
   g.save();
@@ -6756,30 +6768,41 @@ function drawDuelUnit(g, u, ms) {
     g.beginPath(); g.arc(-r * 0.9, -r * 2 - 4, 4, 0, 7); g.fill();
   } else {
     const S = 52;
+    const dir = DuelCatArt.direction(u.lookX || 0, duelBrawl() ? u.lookZ || 0 : 0,
+      mySide() === "b", facing > 0 ? DIR.right : DIR.left);
+    const walking = u.walking && !u.dead && !(u.freezeT > 0);
+    const movingArt = duelCatFrame(u.k, dir, walking ? Math.floor(duel.sim.t * 7 + u.id) : 0);
     // 걸을 때는 살짝 위아래로 튄다 — 멈춰 서서 쏠 때는 가만히 있는다
-    const bob = u.walking ? Math.abs(Math.sin(duel.sim.t * 7 + u.id)) * 3 : 0;
+    const bob = !movingArt && walking ? Math.abs(Math.sin(duel.sim.t * 7 + u.id)) * 3 : 0;
     g.translate(0, -bob);
-    // 종이 타일 — 진영색 테두리. 팀원의 냥은 점선으로 갈린다
-    g.fillStyle = "#f2ecdb";
-    g.fillRect(-S / 2, -S, S, S);
+    // 투명한 캐릭터 뒤에는 바닥만 보인다. 진영·승진 표시는 발밑 고리로 남긴다.
     g.lineWidth = u.pr ? 3 : 2;
     g.strokeStyle = u.pr ? "#cda43a" : dark;
     if (ally) g.setLineDash([5, 3]);
-    g.strokeRect(-S / 2, -S, S, S);
+    g.beginPath(); g.ellipse(0, 2, S / 2, 7, 0, 0, Math.PI * 2); g.stroke();
     g.setLineDash([]);
 
     const fake = { key: u.k, uid: u.id * 97, atkEnd: u.atkT > 0 ? ms + u.atkT * 1000 : 0 };
     const [row, fr] = frameOf(fake, ms);
-    const art = catFrameCanvas(u.k, row, fr);
+    const art = movingArt || catFrameCanvas(u.k, row, fr);
     g.save();
-    g.scale(facing, 1);
+    // 피격·상태 효과도 그림의 투명 영역을 유지한다.
+    if (hit) g.filter = "brightness(1.7)";
+    if (u.slowT > 0 || u.freezeT > 0) {
+      g.shadowColor = u.freezeT > 0 ? "#a078ff" : "#79b7d8";
+      g.shadowBlur = 6;
+    }
+    if (!movingArt) g.scale(facing, 1);
+    // 이동 시트는 정지 중 0번 컷을 유지하고 공격할 때만 표적 쪽으로 짧게 내민다.
+    if (movingArt && u.atkT > 0 && !u.dead && !(u.freezeT > 0)) {
+      const lean = Math.sin(Math.min(1, u.atkT / .42) * Math.PI) * 2;
+      g.translate(dir === DIR.right ? lean : dir === DIR.left ? -lean : 0,
+        dir === DIR.down ? lean : dir === DIR.up ? -lean : 0);
+    }
     if (art) g.drawImage(art, -25, -50, 50, 50);
     else { g.fillStyle = mine ? "#5bc8e8" : main; g.beginPath(); g.arc(0, -25, 16, 0, 7); g.fill(); }
     g.restore();
-    if (hit) { g.fillStyle = "rgba(255,255,255,.5)"; g.fillRect(-S / 2, -S, S, S); }
-    if (u.slowT > 0) { g.fillStyle = "rgba(121,183,216,.34)"; g.fillRect(-S / 2, -S, S, S); }
-    if (u.freezeT > 0) { g.fillStyle = "rgba(160,120,255,.34)"; g.fillRect(-S / 2, -S, S, S); }
-    // 탱커(방어)는 타일 아래에 방패 띠 — 「이 냥은 맞아 주는 냥」이 보여야 진형이 읽힌다
+    // 탱커(방어)는 발밑에 방패 띠로 표시한다.
     if (u.ar > 0) {
       g.fillStyle = dark; g.fillRect(-S / 2, -6, S, 6);
       g.fillStyle = "#f2ecdb"; g.font = "bold 8px ui-monospace,monospace";
@@ -6796,7 +6819,7 @@ function drawDuelUnit(g, u, ms) {
   g.restore();
 
   if (u.dead) return;
-  // 체력줄 — 머리 위. 몸이 작아진 만큼 같이 작아진다
+  // 체력줄 — 확대된 캐릭터의 머리 위에 표시한다.
   const top = y - (u.mob ? (ENEMIES[u.k] ? ENEMIES[u.k].r : 18) * 2.2 : 66) * sc;
   const hp = Math.max(0, u.hp / u.max), bw = 40 * sc;
   g.globalAlpha = 1;
@@ -6848,14 +6871,14 @@ function drawDuel(now) {
   // 탄환 (그리고 회복 줄기)
   for (const s of duel.sim.shots) {
     const a = Math.max(0, s.life / s.max);
-    const x1 = duelX(s.x1), y1 = duelYAt(x1, s.dep1) - 26 * duelScale(s.dep1);
+    const x1 = duelX(s.x1), y1 = duelYAt(x1, s.dep1) - 52 * duelScale(s.dep1);
     if (s.ring) {
       g.globalAlpha = a * 0.7; g.strokeStyle = "#ff9a5c"; g.lineWidth = 2;
       g.beginPath(); g.ellipse(x1, y1, s.r * (1.15 - a * 0.15), s.r * (1.15 - a * 0.15) * 0.45, 0, 0, 7);
       g.stroke();
       g.globalAlpha = 1; continue;
     }
-    const x2 = duelX(s.x2), y2 = duelYAt(x2, s.dep2) - 26 * duelScale(s.dep2);
+    const x2 = duelX(s.x2), y2 = duelYAt(x2, s.dep2) - 52 * duelScale(s.dep2);
     g.globalAlpha = a;
     g.strokeStyle = s.heal ? "#7fbf6a" : s.chain ? "#6fe0d0" : s.crit ? "#cda43a" : sideCol(s.side)[2];
     g.lineWidth = s.crit ? 3 : s.heal ? 2.4 : 1.8;
