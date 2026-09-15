@@ -682,8 +682,9 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   background-repeat:no-repeat;background-size:400% 100%;background-position:0 0;
   background-color:rgba(183,208,175,.35);border:1px solid rgba(43,36,24,.18);
   image-rendering:auto}
-/* 정면 초상화(cat_info{n}.png) — 정사각형 한 장이라 칸에 그대로 담고, 테두리에 살짝 여백을 둔다 */
-.catpick .spr.port{background-size:88% 88%;background-position:center}
+/* 정면 초상화(cat_advance{n}.png) — 정사각형 한 장이라 칸에 그대로 담는다. 소품까지 담은 넓은 창이라
+   그림 자체에 여백이 있으므로 거의 꽉 채운다 */
+.catpick .spr.port{background-size:96% 96%;background-position:center}
 .catpick .spr:hover{background-color:rgba(183,208,175,.7);border-color:#3f5a2f}
 .catpick .who{min-width:0}
 .catpick .nm{display:block}
@@ -713,6 +714,11 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   background:rgba(105,182,214,.05);overflow:hidden}
 .lvtile .spr{position:absolute;inset:0;background-repeat:no-repeat;
   background-size:400% 100%;background-position:0 0}
+/* 정면 초상화(cat_main{n}.png) — 임용 카드와 같은 정사각형 한 장, 딱지가 겹치지 않게 조금 작게 담는다 */
+.lvtile .spr.port{background-size:84% 84%;background-position:center}
+/* 승진냥 타일은 소품 달린 초상화(cat_advance{n}.png) — 소품까지 담은 넓은 창이라 몸통이 작게 들어
+   있으므로 꽉 채워야 아래 줄의 맨 냥과 몸통 크기가 비슷해진다 */
+.lvtile.top .spr.port{background-size:100% 100%}
 .lvtile .ic{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-size:24px;line-height:1}
 .lvtile em,.lvtile b{position:absolute;font-style:normal;font-family:var(--mono);font-size:8.5px;

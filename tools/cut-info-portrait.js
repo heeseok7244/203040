@@ -2,20 +2,24 @@
 /**
  * 초상화 원화 → 게임용 투명 초상화.
  *
- *   침입자  mob{n}_info.png → mob-{종류}-info.png   (도감)
- *   냥타워  cat{n}_info.png → cat_info{n}.png        (좌측 임용 카드의 프로필)
+ *   침입자  mob{n}_info.png    → mob-{종류}-info.png   (도감)
+ *   냥타워  cat{n}_advance.png → cat_advance{n}.png    (좌측 임용 카드의 프로필 · 승진냥(Lv3) — 소품 달린 냥)
+ *   냥타워  cat{n}_main.png    → cat_main{n}.png       (보유 현황 타일 — 소품 없는 맨 냥)
  *
  *   node tools/cut-info-portrait.js [원화폴더] [출력폴더]
  *   (기본값: public/img/src → public/img/game)
  *
- * 원화는 흰 배경에 정면 캐릭터 하나가 그려진 정사각형(쥐 1254×1254, 냥 1024×1024)이다. 여기서
+ * (예전 프로필 cat{n}_info.png → cat_info{n}.png 는 더 굽지 않는다 — 카드가 advance 로 옮겨 갔고,
+ *  모션 시트에 소품을 입히던 용도도 없앴다. 지금 시트는 맨 냥 그대로다.)
+ *
+ * 원화는 흰 배경에 정면 캐릭터 하나가 그려진 정사각형(1254×1254)이다. 여기서
  *   1. 배경을 지워 투명하게 만들고 (sprite.js cutout — 테두리에서 번져 들어가며 지운다),
  *   2. 캐릭터가 남은 영역만 여백을 조금 둔 정사각형으로 오려낸 뒤,
  *   3. 칸(72px / 48px)의 고해상도 화면 몫까지 감안한 SIZE 로 줄인다.
  *
- * 침입자 도감(game.js renderBestiary / paintBeast)과 냥타워 카드(renderCatRoster, CAT_INFO_SRC)가
- * 이 그림을 그대로 칸에 맞춰 그린다 — 달리기·공격 시트와는 무관하다.
- * 냥의 번호는 공격 시트와 같다 (cat1_info = cat_1 = 출원냥).
+ * 침입자 도감(game.js renderBestiary / paintBeast)과 냥타워 카드(renderCatRoster, CAT_INFO_SRC)·
+ * 보유 현황(renderPromoteList, CAT_TILE_SRC)이 이 그림을 그대로 칸에 맞춰 그린다 — 달리기·공격 시트와는
+ * 무관하다. 냥의 번호는 공격 시트와 같다 (cat1_advance = cat1_main = cat_1 = 출원냥).
  */
 const fs = require("fs");
 const path = require("path");
@@ -67,14 +71,23 @@ function cropSquare(img, x0, y0, side) {
 
 /**
  * 냥 초상화는 **여섯 장을 같은 창으로** 오린다.
- * 쥐처럼 그림의 경계 상자에 맞춰 오리면 소총·수리검·폭탄 같은 소품이 붙은 냥은 그만큼 작아져
- * 카드마다 냥 크기가 들쭉날쭉해진다. 원화 여섯 장은 몸통이 같은 자리·같은 크기(y 320~860)로
- * 그려져 있으므로, 창 하나를 고정해 두면 몸통 크기가 저절로 같아진다.
- * 창은 출원냥(cat1 — 머리 위 서류 아이콘까지 232~860)이 딱 들어가는 704px 이다. 이보다 넓게
- * 뻗은 소품(소총 총열·바깥쪽 수리검)은 창 밖으로 잘린다 — 소품을 다 담는 것보다 냥이 같은
- * 크기로 보이는 쪽을 택했다.
+ * 쥐처럼 그림의 경계 상자에 맞춰 오리면 소품이 붙은 냥은 그만큼 작아져 카드마다 냥 크기가
+ * 들쭉날쭉해진다. 원화 여섯 장은 몸통이 같은 자리·같은 크기로 그려져 있으므로, 창 하나를
+ * 고정해 두면 몸통 크기가 저절로 같아진다.
+ *
+ * main 원화(1254×1254)는 소품 없는 맨 냥이라 경계 상자가 여섯 장 모두 거의 같지만
+ * (288~1018 × 273~996), 나중에 소품이 붙은 장이 들어와도 크기가 흔들리지 않도록 창을 고정해 둔다.
+ * 경계 상자(약 733px)에 여백을 조금 더한 820px.
  */
-const CAT_WIN = { cx: 520, cy: 560, side: 704 };
+const CAT_MAIN_WIN = { cx: 653, cy: 634, side: 820 };
+
+/**
+ * advance 원화는 main 과 같은 자리의 냥에 소품이 붙은 그림이다 — 서류는 머리 위(y 161)로, 폭죽은
+ * 양옆(x 109~1153)으로 뻗는다. 여섯 장의 소품이 전부 들어가는 가장 작은 정사각형 창(1080px)을
+ * 고정해 두어, 소품을 자르지 않으면서도 냥 몸통은 여섯 장이 같은 크기로 보이게 한다.
+ * 대신 몸통은 main(820px 창)보다 작게 담기므로 카드의 .port 는 조금 크게(96%) 채운다.
+ */
+const CAT_ADV_WIN = { cx: 631, cy: 578, side: 1080 };
 
 /**
  * 원화 한 장 → 투명 정사각형 초상화 한 장. 원화가 없으면 건너뛴다 (파일을 하나씩 넣는 중에도 돌아가도록).
@@ -104,4 +117,5 @@ function bake(srcName, outName, label, win) {
 }
 
 TYPES.forEach((t, i) => bake(`mob${i + 1}_info.png`, `mob-${t}-info.png`, `${i + 1}단계`));
-for (let n = 1; n <= 6; n++) bake(`cat${n}_info.png`, `cat_info${n}.png`, `냥 ${n}`, CAT_WIN);
+for (let n = 1; n <= 6; n++) bake(`cat${n}_main.png`, `cat_main${n}.png`, `냥 ${n} (main)`, CAT_MAIN_WIN);
+for (let n = 1; n <= 6; n++) bake(`cat${n}_advance.png`, `cat_advance${n}.png`, `냥 ${n} (advance)`, CAT_ADV_WIN);

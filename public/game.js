@@ -3820,8 +3820,9 @@ sprite.src = INLINE.startsWith("__") ? "./sprite.png" : "data:image/png;base64,"
 /* 예전에는 여기에 「승진냥 전용 스프라이트」(선글라스 낀 흰 냥, img/cat-promoted.png)가 있었다.
  * 최고 레벨에 닿으면 원화가 통째로 그 그림으로 갈아 끼워졌는데, **내가 키운 그 냥이 아니게**
  * 보이는 것이 문제였다 — 여섯 종을 애써 갈라 놓고 마지막에 전부 같은 흰 냥으로 수렴했다.
- * 지금은 레벨이 올라도 **기본 1단계 원화를 그대로** 쓰고, 금빛 테두리와 Lv 딱지로만 갈린다.
- * (파일도 지웠다 — 되살리려면 git 이력에서 꺼내 이 자리에 다시 넣으면 된다.) */
+ * 지금은 Lv1·2 는 기본 원화(시트)를 쓰고, 승진냥(Lv3)만 **같은 냥의 소품 달린 정면 초상화**
+ * (CAT_INFO_SRC, 임용 카드와 같은 그림)로 갈아탄다 — 얼굴은 그대로이고 소품만 갖춰진다.
+ * (옛 파일은 지웠다 — 되살리려면 git 이력에서 꺼내면 된다.) */
 
 /**
  * 냥 종류별 전용 스프라이트 — 각각 4프레임 한 줄 (tools/cut-cat-sheet.js 가 원화에서 뽑는다).
@@ -3865,19 +3866,53 @@ for (const key of Object.keys(CAT_SHEET_SRC)) {
   catSheets[key] = im;
 }
 /**
- * 프로필 초상화 — 좌측 임용 카드(renderCatRoster)에 얹는 정면 일러스트.
- * tools/cut-info-portrait.js 가 원화(img/src/cat{n}_info.png)의 흰 배경을 지우고 정사각형(192px)으로
- * 오려 둔 것이라 칸에 contain 으로 그대로 담으면 된다. 번호는 공격 시트와 같다 (cat_info1 = 출원냥).
+ * 프로필 초상화 — 좌측 임용 카드(renderCatRoster)에 얹는 정면 일러스트. 서류·폭죽 같은 **소품이 붙은**
+ * 냥(img/src/cat{n}_advance.png)이라 카드에서 어느 냥인지 한눈에 갈린다.
+ * tools/cut-info-portrait.js 가 원화의 흰 배경을 지우고 정사각형(192px)으로 오려 둔 것이라 칸에
+ * contain 으로 그대로 담으면 된다. 번호는 공격 시트와 같다 (cat_advance1 = 출원냥).
  * 판 위에 서는 모습(CAT_SHEET_SRC 0번 칸)과 다른 그림이지만, 카드는 「누구를 살지」 고르는 자리라
  * 정면 얼굴이 더 알아보기 쉽다. 없는 종류는 예전처럼 시트 0번 칸으로 되돌아간다.
+ * (예전 프로필 cat_info{n}.png 는 지웠다 — 더 굽지도, 쓰지도 않는다.)
  */
 const CAT_INFO_SRC = {
-  spec:  "img/game/cat_info1.png",   // 출원냥
-  claim: "img/game/cat_info2.png",   // 특허범위냥
-  agent: "img/game/cat_info3.png",   // 변리사냥
-  pct:   "img/game/cat_info4.png",   // 국제출원냥
-  fast:  "img/game/cat_info5.png",   // 우선심사냥
-  delay: "img/game/cat_info6.png",   // 보정명령냥
+  spec:  "img/game/cat_advance1.png",   // 출원냥
+  claim: "img/game/cat_advance2.png",   // 특허범위냥
+  agent: "img/game/cat_advance3.png",   // 변리사냥
+  pct:   "img/game/cat_advance4.png",   // 국제출원냥
+  fast:  "img/game/cat_advance5.png",   // 우선심사냥
+  delay: "img/game/cat_advance6.png",   // 보정명령냥
+};
+/**
+ * 보유 현황 타일(renderPromoteList)용 정면 일러스트 — 같은 도구로 구운 **소품 없는 맨 냥**
+ * (img/src/cat{n}_main.png). 타일은 작고 Lv·수 딱지가 귀퉁이에 얹히므로 소품까지 담으면 냥이
+ * 너무 작아진다. 없는 종류는 시트 0번 칸으로 되돌아간다.
+ */
+const CAT_TILE_SRC = {
+  spec:  "img/game/cat_main1.png",   // 출원냥
+  claim: "img/game/cat_main2.png",   // 특허범위냥
+  agent: "img/game/cat_main3.png",   // 변리사냥
+  pct:   "img/game/cat_main4.png",   // 국제출원냥
+  fast:  "img/game/cat_main5.png",   // 우선심사냥
+  delay: "img/game/cat_main6.png",   // 보정명령냥
+};
+/**
+ * 승진냥(Lv3) 은 판 위·보유 현황에서도 **소품 달린 정면 초상화(CAT_INFO_SRC)** 로 갈아탄다 —
+ * 같은 냥이 소품을 갖춘 모습이라 「내가 키운 그 냥」인 채로 승진이 눈에 보인다.
+ * 정지 그림 한 장이므로 승진냥은 공격 모션·점프를 돌리지 않는다 (시트를 쓰는 Lv1·2 만 움직인다).
+ * 판 위 캔버스에 그리려면 Image 가 필요해 여기서 미리 읽어 둔다. 로드 실패는 삼킨다 —
+ * 그 냥은 승진해도 시트 0번 칸을 그대로 쓴다.
+ */
+const catPortraits = {};
+for (const key of Object.keys(CAT_INFO_SRC)) {
+  const im = new Image();
+  im.addEventListener("error", () => { catPortraits[key] = null; }, { once: true });
+  im.src = CAT_INFO_SRC[key];
+  catPortraits[key] = im;
+}
+const portraitOf = (key) => catPortraits[key] || null;
+const portraitReady = (key) => {
+  const im = portraitOf(key);
+  return !!im && im.complete && im.naturalWidth > 0;
 };
 /**
  * 점프 모션 시트 — 웨이브가 도는 동안 제자리에서 뛰는 냥만 여기에 적는다.
@@ -3987,9 +4022,9 @@ function onSpriteReady(fn) {
   }
 }
 
-return { SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS, CAT_SHEET_SRC, CAT_INFO_SRC,
+return { SPEC_CELL, SPEC_FRAMES, SPEC_FRAME_MS, CAT_SHEET_SRC, CAT_INFO_SRC, CAT_TILE_SRC,
          sheetOf, sheetReady, sheetCellW, sheetCellH, cellW, cellH,
-         jumpOf, jumpReady, motionFrame,
+         jumpOf, jumpReady, motionFrame, portraitOf, portraitReady,
          onSpriteReady, sprite };
 })();
 __mods["web/main.js"] = (function(){
@@ -4003,9 +4038,9 @@ const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {auraCells} = __req("core/stats.js");
 const {sprite, onSpriteReady,
-       SPEC_FRAMES, SPEC_FRAME_MS, CAT_SHEET_SRC, CAT_INFO_SRC,
+       SPEC_FRAMES, SPEC_FRAME_MS, CAT_SHEET_SRC, CAT_INFO_SRC, CAT_TILE_SRC,
        sheetOf, sheetReady, sheetCellW, sheetCellH, cellW, cellH,
-       motionFrame} = __req("web/sprite.js");
+       motionFrame, portraitOf, portraitReady} = __req("web/sprite.js");
 const $ = (s) => /** @type {HTMLElement} */ (document.querySelector(s));
 const CS = BAL.cellSize, GAP = BAL.cellGap;
 
@@ -4295,8 +4330,12 @@ function pieceEl(p, onBoard) {
    */
   const smooth = useSpecSheet(p.key);
   const hi = smooth ? Math.min(3, Math.max(1, Math.ceil(window.devicePixelRatio || 1))) : 1;
-  cv.width = 64 * hi; cv.height = 64 * hi;
-  cv.style.width = "64px"; cv.style.height = "64px";
+  /* 승진냥은 소품 달린 정면 초상화(drawCats 참고)로 그리는데, 초상화는 소품까지 담느라 냥 몸통이
+   * 그림의 2/3 밖에 안 된다. 64px 에 그대로 담으면 Lv1·2 보다 작아 보이므로 캔버스를 터 크기
+   * (PORTRAIT_PX)로 키운다 — 그러면 몸통은 시트의 냥과 같은 크기가 되고 소품이 터 가장자리까지 찬다. */
+  const px = usePortrait(p.key, lv) ? PORTRAIT_PX : 64;
+  cv.width = px * hi; cv.height = px * hi;
+  cv.style.width = px + "px"; cv.style.height = px + "px";
   if (smooth) cv.classList.add("smooth");   // 픽셀아트가 아니므로 pixelated 를 걷어 낸다
   catCanvas.set(p.uid, cv);        // 코어 객체를 오염시키지 않는다
   el.appendChild(cv);
@@ -4309,9 +4348,9 @@ function pieceEl(p, onBoard) {
   badge.style.cssText = BADGE("right");
 
   /* 합성 레벨 — 왼쪽 위. 무엇이 몇 레벨인지 판을 훑기만 해도 보여야 합성 계획이 선다.
-   * 예전에는 최고 레벨에만 따로 「승」 계급장을 달았는데, 원화까지 갈아타던 시절의 잔재다.
-   * 지금은 원화가 그대로이므로 **표시도 Lv 딱지 하나로 통일**한다 — 같은 것을 두 가지 방식으로
-   * 말하면 어느 쪽이 진짜인지 판에서 되묻게 된다. 최고 레벨은 금빛 테두리로 갈린다. */
+   * 예전에는 최고 레벨에만 따로 「승」 계급장을 달았는데, 지금은 **표시를 Lv 딱지 하나로 통일**
+   * 한다 — 같은 것을 두 가지 방식으로 말하면 어느 쪽이 진짜인지 판에서 되묻게 된다.
+   * 최고 레벨은 금빛 테두리와 승진 원화(usePortrait)로 갈린다. */
   if (lv > 1) {
     const tag = document.createElement("span");
     tag.className = "lvtag";
@@ -4585,12 +4624,20 @@ function draw(now) {
  * 전용 시트가 없는 종류(특수 냥타워 등)는 예전 공용 스프라이트로 되돌아간다.
  * @param {string} key @param {boolean} promoted
  */
-/* 전용 원화를 쓰는가. **합성·승진 여부를 보지 않는다** —
- * 레벨이 오르거나 이종 합성으로 나온 냥도 **기본 1단계 냥의 원화를 그대로** 쓰고,
- * 합성했다는 표시는 테두리(아우라)와 Lv 딱지로만 한다. 예전에는 승진냥만 전용 원화
- * (선글라스 낀 흰 냥)로 갈아탔는데, 원래 쓰던 냥과 얼굴이 통째로 달라져 「내가 키운 그 냥」이
- * 아니게 보였다. */
+/* 전용 시트를 쓰는가. **합성 여부를 보지 않는다** — 이종 합성으로 나온 냥도 재료 냥의 시트를
+ * 그대로 쓰고, 합성했다는 표시는 테두리(아우라)와 Lv 딱지로만 한다. 승진(Lv3)만 아래 usePortrait
+ * 로 따로 가른다. */
 const useSpecSheet = (key) => sheetReady(key);
+/**
+ * 승진냥(Lv3)만 **같은 냥의 소품 달린 정면 초상화**(cat_advance{n}, CAT_INFO_SRC)로 갈아탄다.
+ * 임용 카드에서 본 그 그림이라 승진이 눈에 보이면서도 얼굴은 그대로다. 정지 그림 한 장이라
+ * 승진냥은 공격 모션·점프를 돌리지 않는다. 초상화가 없는 종류(특수 냥타워)는 시트 그대로다.
+ * 캔버스 크기는 pieceEl 이 만들 때 정하므로 로드 여부가 아니라 **파일이 있는지**로 가른다 —
+ * 아직 안 읽혔으면 drawCats 가 그 자리에 시트 0번 칸을 같은 크기로 그려 넘긴다.
+ */
+const usePortrait = (key, lv) => lv >= BAL.promoteLv && !!CAT_INFO_SRC[key];
+/** 승진냥 캔버스의 표시 크기(px) — 터 한 칸(cellSize)에 꽉 차게 */
+const PORTRAIT_PX = CS;
 
 /**
  * 그 냥의 현재 공격 프레임. 공격 중이 아니면 0(평상시 자세)이다.
@@ -4649,12 +4696,20 @@ function drawCats(g, now) {
     const [row, fr] = frameOf(c, now);
     // 캔버스를 화면 픽셀 밀도만큼 크게 잡은 조각(전용 시트를 쓰는 냥)은 그 배율만큼 확대해 그린다.
     // 아래 그리는 코드는 예전처럼 64×64 좌표계 그대로 두면 된다.
-    const k = cc.width / 64;
+    // 승진냥 캔버스(PORTRAIT_PX)는 그 좌표계를 터 크기로 넓혀 쓴다 — 초상화는 꽉 채워 그리고,
+    // 시트로 되돌아갈 때는 가운데 64×64 에 그려 다른 냥과 같은 크기를 지킨다.
+    const big = usePortrait(c.key, Math.max(1, c.lv || 1));
+    const box = big ? PORTRAIT_PX : 64, off = (box - 64) / 2;
+    const k = cc.width / box;
     cg.setTransform(k, 0, 0, k, 0, 0);
     cg.imageSmoothingEnabled = true;          // 부드러운 일러스트라 NEAREST 로 늘리면 외곽선이 깨진다
     cg.imageSmoothingQuality = "high";
-    cg.clearRect(0, 0, 64, 64);
-    if (useSpecSheet(c.key)) {
+    cg.clearRect(0, 0, box, box);
+    if (big && portraitReady(c.key)) {
+      // 승진냥 — 소품 달린 정면 초상화 한 장. 움직이지 않는다 (usePortrait 주석 참고).
+      const im = portraitOf(c.key);
+      cg.drawImage(im, 0, 0, im.naturalWidth, im.naturalHeight, 0, 0, box, box);
+    } else if (useSpecSheet(c.key)) {
       // 전용 시트를 가진 냥 — 평상시 0번 칸, 공격하는 동안만 0→1→2→3 (색보정 없이 원화 그대로).
       // 네 칸이 같은 배율·같은 바닥선으로 구워져 있어 칸이 넘어가도 중심과 발끝이 그대로다.
       //
@@ -4667,10 +4722,10 @@ function drawCats(g, now) {
       const canJump = game.phase === "wave" && !(c.atkEnd && now < c.atkEnd);
       const [im, fi] = motionFrame(c.key, c.uid, specFrame(c, now), canJump, now);
       const cw = cellW(im), ch = cellH(im);
-      cg.drawImage(im, fi * cw, 0, cw, ch, 0, 0, 64, 64);
+      cg.drawImage(im, fi * cw, 0, cw, ch, off, off, 64, 64);
     } else if (sprite.complete) {
       cg.filter = CATS[c.key].filter || "none";
-      cg.drawImage(sprite, fr * 64, row * 64, 64, 64, 0, 0, 64, 64);
+      cg.drawImage(sprite, fr * 64, row * 64, 64, 64, off, off, 64, 64);
       cg.filter = "none";
     }
   }
@@ -7514,17 +7569,20 @@ function renderPromoteList() {
     const key = id.slice(0, id.lastIndexOf(":")), lv = +id.slice(id.lastIndexOf(":") + 1);
     const d = CATS[key];
     const top = lv >= BAL.promoteLv;
-    /* 글자 없이 판 위와 같은 원화(시트 0번 칸)만 타일로 늘어놓는다.
-     * 레벨·수는 타일 귀퉁이 딱지로만 남긴다 — 시트가 없는 종류는 아이콘으로 대신한다. */
-    const src = CAT_SHEET_SRC[key];
+    /* 글자 없이 그림만 타일로 늘어놓는다 — 정면 초상화를 먼저 쓰되 판 위와 같은 규칙으로 가른다:
+     * 승진냥(Lv3)은 소품 달린 초상화(CAT_INFO_SRC), 그 아래는 맨 냥(CAT_TILE_SRC).
+     * 초상화가 없는 종류는 판 위와 같은 원화(시트 0번 칸)로, 그것도 없으면 아이콘으로 대신한다.
+     * 레벨·수는 타일 귀퉁이 딱지로만 남긴다. */
+    const port = (top && CAT_INFO_SRC[key]) || CAT_TILE_SRC[key], src = CAT_SHEET_SRC[key];
     /* 수는 「합성까지 몇 명」으로 읽히게 n/3 로 적는다 — 합성 단추는 재료가 다 찼을 때만 판 위에
      * 뜨므로, 그 전에는 여기가 「하나 더 사면 레벨이 오른다」를 알려 주는 유일한 자리다.
      * 다 찼으면 초록으로 갈려 단추가 떠 있음을 알린다. 최고 레벨은 더 안 모이니 ×n 그대로. */
     const need = BAL.mergeNeed, canUp = lv < BAL.maxLv, ready = canUp && count[id] >= need;
     const hint = canUp ? ` — ${need}명 모으면 Lv${lv + 1} (판 우측 상단 합성 단추)` : " — 최고 레벨";
     return `<div class="lvtile${top ? " top" : ""}${d.special ? " spec" : ""}${ready ? " ready" : ""}" data-k="${key}" title="${d.name} Lv${lv} ×${count[id]}${hint}">
-      ${src ? `<span class="spr" style="background-image:url('${src}')"></span>`
-            : `<span class="ic">${d.icon}</span>`}
+      ${port ? `<span class="spr port" style="background-image:url('${port}')"></span>`
+            : src ? `<span class="spr" style="background-image:url('${src}')"></span>`
+                  : `<span class="ic">${d.icon}</span>`}
       <em>Lv${lv}</em><b>${canUp ? `${count[id]}/${need}` : `×${count[id]}`}</b>
     </div>`;
   }).join("");
