@@ -576,7 +576,7 @@ const WAVES = [
 const SABOTAGE = {
   steal: {
     key: "steal", name: "특허료 가압류", short: "돈뺏기", icon: "💸", cost: 110, weight: 36,
-    when: "live", kind: "steal", amount: 140, tag: "즉시 · 특허료 강탈",
+    when: "live", kind: "steal", amount: 140, tag: "즉시 · 특허료 140 강탈",
     desc: "상대 계좌에 가압류를 걸어 특허료 140을 그대로 빼앗는다 — 빼앗은 돈은 내 잔고로 들어온다. " +
       "뽑기 값(정액)보다 많이 들어오므로, 이게 나오면 돈을 벌면서 상대의 다음 임용을 늦춘다. " +
       "상대 잔고가 모자라면 빚으로 남는다.",
@@ -3684,7 +3684,9 @@ class Game {
    */
   passiveOffers() {
     if (this.passiveOffer) return this.passiveOffer;
-    const pool = PASSIVES.slice();
+    // 사거리를 올리는 카드(📏 명세서 보정)는 후보에서 뺀다 — 정의는 남겨 두어
+    // 이미 고른 판의 표시·계산은 그대로 돈다.
+    const pool = PASSIVES.filter((p) => p.stat !== "range");
     const out = [];
     const n = Math.min(BAL.passiveOffer, pool.length);
     for (let i = 0; i < n; i++) {
@@ -5998,6 +6000,8 @@ function consumeEvents() {
         log(ev.duel
           ? `라운드 ${ev.wave} 대전 종료 · 수입 <b>+${ev.income}</b>`
           : `라운드 ${ev.wave} 방어 완료 · 수입 <b>+${ev.income}</b>`);
+        // 이번 라운드에 던진 공작 표시는 라운드와 함께 걷는다
+        clearSabotageFlash();
         // 대전 라운드라면 결과 화면을 읽는 동안은 모달을 띄우지 않는다 —
         // 대전장을 접을 때(closeDuelRound) 이어서 연다.
         if (duel) break;
@@ -7373,6 +7377,15 @@ function buildSabotageBar() {
   updateSabotageBar();
 }
 
+function showSabotageTip(e, d) {
+  if (dragging) return;
+  const t = $("#tip");
+  t.innerHTML = `<b>${d.short}</b> (${d.name}) — ${d.tag}<i>${d.desc}</i>`;
+  t.style.display = "block";
+  t.style.left = Math.min(e.clientX + 14, innerWidth - 264) + "px";
+  t.style.top = Math.min(e.clientY + 14, innerHeight - 150) + "px";
+}
+
 /** 뽑기 단추의 상태만 손본다 (매 프레임 불린다 — innerHTML 을 다시 쓰지 않는다) */
 function updateSabotageBar() {
   if (!game || soloMode) return;
@@ -7385,15 +7398,6 @@ function updateSabotageBar() {
   if (state) state.textContent = why || (roomSize > 2 ? "무작위 1개 · 무작위 상대 판에 즉시" : "무작위 1개 · 상대 판에 즉시");
   const left = $("#sabLeft");
   if (left) left.textContent = String(game.sabotageLeft);
-}
-
-function showSabotageTip(e, d) {
-  if (dragging) return;
-  const t = $("#tip");
-  t.innerHTML = `<b>${d.short}</b> (${d.name}) — ${d.tag}<i>${d.desc}</i>`;
-  t.style.display = "block";
-  t.style.left = Math.min(e.clientX + 14, innerWidth - 264) + "px";
-  t.style.top = Math.min(e.clientY + 14, innerHeight - 150) + "px";
 }
 
 /**
@@ -7431,6 +7435,15 @@ function flashSabotage(key, to) {
   box.classList.remove("pop");
   void box.offsetWidth;
   box.classList.add("pop");
+}
+
+/** 라운드가 끝나면 방금 던진 공작 칸을 비운다 — 그 라운드 안에서만 보인다 */
+function clearSabotageFlash() {
+  const box = $("#sabFlash");
+  if (!box) return;
+  box.classList.add("hidden");
+  box.classList.remove("pop");
+  box.innerHTML = "";
 }
 
 /** 상대가 나에게 걸어 둔 공작을 판 아래에 표시한다. 매 프레임 불린다. */
