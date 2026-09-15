@@ -15,6 +15,11 @@ RUN npm install --omit=dev && npm cache clean --force
 
 COPY . .
 
+# 랭킹(data/rankings.json)은 서버가 실행 중에 쓴다. /app 은 root 소유라 비루트로 낮추기 전에
+# 이 칸만 넘겨 둔다. (Render 무료 플랜은 디스크가 배포마다 초기화된다 — 영구 디스크를 붙이면
+# 그 마운트 경로를 RANK_FILE 로 넘긴다.)
+RUN mkdir -p /app/data && chown node:node /app/data
+
 # node 이미지에 이미 있는 비루트 계정으로 낮춰서 돌린다
 USER node
 

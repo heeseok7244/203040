@@ -4,3 +4,5 @@ npm-debug.log*
 .env
 *.zip
 .claude/
+# 랭킹 저장 파일 — 서버가 실행 중에 만든다
+data/

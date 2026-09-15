@@ -229,6 +229,8 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   padding:6px 9px;font-size:11px;max-width:230px;display:none;box-shadow:0 3px 10px rgba(0,0,0,.5)}
 #tip b{color:var(--blue)} #tip i{color:var(--muted);font-style:normal;display:block;margin-top:3px}
 .end{text-align:center;padding:26px 18px}
+/* 성적표는 랭킹 표까지 붙어 길다 — 화면보다 커지면 잘리지 않고 안에서 스크롤한다 */
+.sheet:has(> .end){max-height:calc(100vh - 36px);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
 .end h3{border:0;font-size:26px;letter-spacing:.2em;padding:0 0 8px}
 .hintbar{font-size:10.5px;color:#6b5e42;text-align:center;margin:9px 0 7px;line-height:1.5}
 .boardinfo{margin-top:10px}
@@ -1251,3 +1253,35 @@ body.dueling #tip{display:none!important}
 .rkwaves span u{text-decoration:none;font-family:var(--mono);color:var(--gold)}
 .rkwaves span.par{border-color:rgba(127,191,106,.55);background:rgba(127,191,106,.1)}
 .rkwaves span.par u{color:var(--ok)}
+
+/* ── 랭킹 보드 — 성적표 아래. 이름을 적어 올리고 상위 20위를 본다 (game.js mountLeaderboard) ── */
+.lb{max-width:400px;margin:0 auto 16px;text-align:left;border-top:1px solid var(--line);padding-top:12px}
+.lbhead{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.lbhead b{font-family:var(--disp);font-size:14px;letter-spacing:.12em;color:#f4e2b0}
+.lbhead i{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em}
+.lbform{display:flex;gap:6px;margin-bottom:6px}
+.lbform input{flex:1;min-width:0;background:var(--ink);border:1px solid var(--line);color:var(--txt);
+  padding:6px 10px;font-family:var(--body);font-size:13px}
+.lbform input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 2px rgba(205,164,58,.25)}
+.lbform button{flex:none;padding:6px 14px;white-space:nowrap}
+.lbmsg{font-size:11.5px;color:var(--muted);min-height:1.4em;margin-bottom:6px}
+.lbmsg b{color:var(--gold);font-family:var(--disp);font-size:14px}
+.lbnote{display:block;font-style:normal;font-size:11px;color:var(--muted);padding:8px 0;text-align:center}
+.lbtable{max-height:260px;overflow-y:auto;border:1px solid var(--line);background:rgba(12,21,36,.6);
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.lbtable table{width:100%;border-collapse:collapse;font-size:11.5px}
+.lbtable th{position:sticky;top:0;background:var(--ink2);font-family:var(--mono);font-weight:400;font-size:9.5px;
+  color:var(--muted);letter-spacing:.08em;padding:5px 7px;text-align:center;border-bottom:1px solid var(--line)}
+.lbtable td{padding:4px 7px;text-align:center;font-family:var(--mono);border-bottom:1px solid rgba(60,106,138,.3);
+  color:var(--txt);white-space:nowrap}
+.lbtable td.l,.lbtable th.l{text-align:left;font-family:var(--body)}
+.lbtable td.l{max-width:130px;overflow:hidden;text-overflow:ellipsis}
+.lbtable td.r,.lbtable th.r{text-align:right}
+.lbtable tr:last-child td{border-bottom:0}
+/* 1·2·3위는 금·은·동 — 순위 숫자만 물들인다 */
+.lbtable tr.top1 td:first-child{color:#ffd782;font-weight:700}
+.lbtable tr.top2 td:first-child{color:#d9dde3;font-weight:700}
+.lbtable tr.top3 td:first-child{color:#d19a66;font-weight:700}
+/* 방금 올린 내 줄 */
+.lbtable tr.me td{background:rgba(205,164,58,.16);color:#ffd782}
+.lbtable tr.me td.l{font-weight:700}

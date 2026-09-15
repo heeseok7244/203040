@@ -442,7 +442,7 @@ const PASSIVES = [
     detail: "배상액은 한 건의 무게로 정해진다. <b>기본 공속이 초당 1.35회 이하</b>인 냥타워(📄 출원냥 · 📐 특허범위냥 · 🔗 인용문헌냥 · ⚖️ 심판합의체냥)의 공격력이 40% 오른다. 고를 때마다 누적된다." },
   { key: "destroy", name: "폐기명령", icon: "🧨", line: "splash", stat: "splashUp", amount: 0.35,
     desc: "방사 반경 +35% · 방사 피해 비율 +8%p",
-    detail: "침해품을 그 자리에서 폐기한다. <b>이미 방사 피해를 가진 냥타워</b>만 커진다 — 「균등침해」나 승진(Lv3)으로 방사를 먼저 얻어 두어야 값을 한다." },
+    detail: "침해품을 그 자리에서 폐기한다. <b>이미 방사 피해를 가진 냥타워</b>만 커진다 — 「균등침해」로 방사를 먼저 얻어 두어야 값을 한다." },
 
   /* ── 🎯 입증 계열 — 급소를 짚는다. 주사위를 자주 굴리는 냥일수록 웃는다 ── */
   { key: "keyclaim", name: "핵심청구항 지정", icon: "🎯", line: "crit", stat: "critC", amount: 0.08,
@@ -731,6 +731,9 @@ const DUEL_WAVES = [4, 7, 10];
  *            × 종류별 배율(CATS[k].duel.hp). **예전(60 + 임용가 × 1.1)의 두 배 남짓**이다 —
  *            여덟 명씩 붙어도 5~8초에 끝나 「무엇이 통했는지」를 볼 틈이 없었다
  * dmgMul     대전장에서 공격력에 곱하는 배율. 체력을 키운 것과 함께 싸움을 **네댓 배 길게** 늘인다
+ * dmgPromo   승진냥(Lv3)이 대전장에서 받는 공격력 배율. 승진의 방사 피해를 걷어낸 대신
+ *            「대전장에서 세다」를 여기(hpPromo 와 함께)에 실었다 — 웨이브를 쓸어 담는 대신
+ *            덱 맞대기에서 값을 하도록
  * pierceDmg  방어무시 100%p 당 공격력 보너스. 방어무시는 이제 실제로 방어(armor)를 뚫지만,
  *            방어가 없는 유닛을 상대할 때도 완전히 헛되지는 않도록 조금 남겨 둔다
  * heal       비전투 변리사냥이 대전장에서 맡는 역할 — 가장 다친 아군을 회복시킨다.
@@ -764,7 +767,7 @@ const DUEL = {
   waitSecs: 12,           // 상대 명세를 기다리는 최대 시간. 넘기면 쥐 침입단으로 대신한다
   dt: 1 / 60,             // 고정 시간간격 — 프레임이 흔들려도 싸움의 속도는 같다
   hpBase: 130, hpPerCost: 2.2, hpLv: 1.9, hpPromo: 1.3,
-  dmgMul: 0.62,
+  dmgMul: 0.62, dmgPromo: 1.3,
   pierceDmg: 0.2,
   heal: { every: 0.5, flat: 3, pct: 0.006, range: 170, lv: 1.3, auraUp: 0.25, tierMul: 1.4 },
   /* ── 대난투(4인) 전용 지형 ──
@@ -886,7 +889,7 @@ const BAL = {
   startGold: 130, startHp: 80,         // 난이도 상향 — 시작 자금·체력을 줄여 초반부터 신중하게
   /* ── 라운드별 침입자 체력 배율 (index 0 = 라운드 1) ──
    * 예전에는 직선(1 + 0.30 × (라운드−1), 라운드 9 에서 3.4배)이었다. 그러면 초반은 빡빡한데
-   * 후반이 싱거웠다 — 냥타워 수 · 합성 레벨(Lv3 = 공격력 3.4배 + 승진 보정 + 방사) · 강화 ·
+   * 후반이 싱거웠다 — 냥타워 수 · 합성 레벨(Lv3 = 공격력 3.4배 + 승진 보정) · 강화 ·
    * 증강이 전부 **곱으로** 쌓여 화력은 뒤로 갈수록 가속하는데 적 체력은 직선으로만 늘어,
    * 라운드 8~9 에서는 쥐가 문에서 나오는 족족 그 자리에서 죽고 웨이브 길이가 소환 간격뿐이었다.
    * (출원냥 Lv3 넷이면 초당 2000 안팎을 낸다 — 도용업자 42 × 3.4 = 143 은 한 방이다.)
@@ -912,13 +915,14 @@ const BAL = {
    * 「특허료를 들여 한 명을 키운다」는 자리가 합성과 그대로 겹쳐 버려서, 승진을 따로
    * 사는 것이 아니라 **합성의 마지막 단계**로 옮겼다.
    * 최고 레벨(promoteLv)에 닿은 냥타워는 저절로 승진냥이 된다 —
-   * 선글라스 원화 · 샷건 · 방사 피해 · 치명타 보정이 레벨 보정 위에 얹힌다. */
+   * 선글라스 원화 · 공격력 · 치명타 보정이 레벨 보정 위에 얹히고, 대전장에서는 체력·공격력이
+   * 한 번 더 붙는다(DUEL.hpPromo · dmgPromo).
+   * 예전에는 여기에 **방사 피해(반경 1.4칸 · 직격의 70%)** 도 딸려 왔는데, Lv3 하나가 웨이브를
+   * 통째로 쓸어 담아 다른 빌드가 설 자리가 없었다. 방사는 이제 💥 침해 계열(균등침해)로만 얻는다. */
   promoteLv: 3,              // 이 레벨에 닿으면 승진냥이 된다 (maxLv 와 같게 두는 것이 기본)
   promoteDmg: 1.25,          // 승진 시 공격력 배율
   promoteCritC: 0.12,        // 승진 시 치명타 확률 +12%p
   promoteCritM: 0.5,         // 승진 시 치명타 배율 +0.5
-  promoteSplashR: 118,       // 승진냥 방사 피해 반경(px, 1칸 = 84px → 약 1.4칸)
-  promoteSplash: 0.7,        // 방사 피해 비율 (직격 피해의 70%)
 
   /* ── 방해 공작 뽑기 ──
    * 무엇이 나갈지 고르지 않는다. 정액을 내고 **셋 중 하나**를 무작위로 뽑아 상대 판에 던진다.
@@ -1668,11 +1672,10 @@ function computeStats(b) {
       if (auraRate) auraRate = 1 + (auraRate - 1) * BAL.tierAuraMul;
     }
 
-    /* 방사 피해 — 예전에는 **승진냥 전용**이라 「방사 빌드」라는 것이 아예 없었다.
-     * 지금은 💥 균등침해로 누구나 얻을 수 있고, 승진은 그 위에 더 얹히는 식이다.
-     * 🧨 폐기명령은 **이미 가진 것을 키우기만** 한다 — 먼저 방사를 얻어 두어야 값을 한다. */
+    /* 방사 피해 — 💥 균등침해로만 얻는다. 승진(Lv3)에는 더 이상 방사가 딸려 오지 않는다 —
+     * BAL 의 승진 주석 참고. 🧨 폐기명령은 **이미 가진 것을 키우기만** 한다 —
+     * 먼저 방사를 얻어 두어야 값을 한다. */
     let splashR = B("splashR"), splashF = B("splashF");
-    if (promoted) { splashR += BAL.promoteSplashR; splashF += BAL.promoteSplash; }
     if (splashR > 0) {
       if (B("splashUpR")) { splashR *= 1 + B("splashUpR"); splashF += B("splashUpF"); }
       if (tier("splash") >= 2) { splashR *= 1 + BAL.tierSplashR; splashF += BAL.tierSplashF; }   // 💥 5단계
@@ -1948,7 +1951,7 @@ function step(g, dt, now) {
       const amount = c.st.dmg * (crit ? c.st.critM : 1);
 
       if (c.st.splash) {
-        // 승진냥 — 샷건. 탄이 퍼지는 궤적을 몇 가닥 더 그리고, 명중 지점 둘레에 방사 피해를 준다.
+        // 방사 냥(💥 균등침해) — 샷건. 탄이 퍼지는 궤적을 몇 가닥 더 그리고, 명중 지점 둘레에 방사 피해를 준다.
         const ang = Math.atan2(target.y - cy, target.x - cx);
         for (let k = -1; k <= 1; k++) {
           if (!k) continue;
@@ -2173,7 +2176,9 @@ function makeRoster(game) {
       // 값어치 — 청사에서의 임용가에 합성 레벨을 얹은 값. 싸움에는 쓰이지 않고,
       // 「내 덱이 얼마짜리인가」를 덱 표시줄에 적는 데만 쓴다.
       cost: Math.round(d.cost * Math.pow(BAL.mergeNeed, lv - 1)),
-      dmg: r3(s.dmg * DUEL.dmgMul * (prof.dmg || 1) * (1 + (s.pierce || 0) / 100 * DUEL.pierceDmg)),
+      // 승진냥은 체력(hpPromo)에 더해 공격력도 한 번 더 붙는다 — 대전장이 승진의 값을 하는 자리다
+      dmg: r3(s.dmg * DUEL.dmgMul * (prof.dmg || 1) * (s.promoted ? DUEL.dmgPromo : 1)
+              * (1 + (s.pierce || 0) / 100 * DUEL.pierceDmg)),
       rate: r3(s.rate),
       // 대전 성격에 사거리가 적혀 있으면(근접 탱커) 그것을 쓴다 — 판의 사거리 강화도 여기서는 안 실린다
       range: prof.range != null ? prof.range : Math.round(s.range * DUEL.rangeMul),
@@ -2778,7 +2783,7 @@ class DuelSim {
         // 조기공개냥 — 확률로 상대 유닛을 그 자리에 묶는다
         if (u.stC && this.rng.next() < u.stC) stuns.push([target, u.stD]);
         if (u.sp) {
-          // 방사 피해 — 승진냥의 샷건, 그리고 💥 침해 계열로 얻은 방사. 직격 주변까지 쓸어 버린다
+          // 방사 피해 — 💥 침해 계열로 얻은 방사(샷건). 직격 주변까지 쓸어 버린다
           this.shots.push({ ring: true, x1: target.x, dep1: this.depOf(target), r: u.sp,
                             side: u.side, life: 0.2, max: 0.2 });
           for (const f of this.units) {
@@ -6073,7 +6078,7 @@ function consumeEvents() {
         break;
       case "merge": {
         log(ev.promoted
-          ? `<b style="color:#cda43a">합성 · 승진</b> ${ev.icon} ${ev.name} <b>Lv${ev.lv}</b> — 선글라스·샷건, 방사 피해가 붙습니다`
+          ? `<b style="color:#cda43a">합성 · 승진</b> ${ev.icon} ${ev.name} <b>Lv${ev.lv}</b> — 선글라스, 공격력·치명타가 오르고 대전장에서 더 셉니다`
           : `<b style="color:#cda43a">합성</b> ${ev.icon} ${ev.name} ${ev.used}명 → <b>Lv${ev.lv}</b>`);
         if (ev.placed) {
           const [mx, my] = B.cellCenter(ev.x, ev.y);
@@ -7277,7 +7282,6 @@ function showTip(e, p) {
     ${specialTipHtml(p.key, s)}
     ${d.special ? `<i style="color:#6fe0d0">이종 합성 전용 — ${(RECIPES.find((r) => r.key === p.key) || { need: [] }).need.map((k) => CATS[k].name).join(" + ") || "지금은 잠겨 있습니다"}</i>` : ""}
     ${lv < BAL.maxLv ? `<i style="color:#8a7c5e">같은 종류 Lv${lv} ${BAL.mergeNeed}명을 모으면 Lv${lv + 1}로 합성됩니다${lv + 1 >= BAL.promoteLv ? " (승진냥)" : ""}</i>` : ""}
-    ${s && s.splash ? `<i style="color:#ff9a5c">승진냥 — 샷건 방사 피해 ${Math.round(s.splash.f * 100)}% (반경 ${(s.splash.r/(CS+GAP)).toFixed(1)}칸)</i>` : ""}
     ${s && s.golden ? `<i style="color:#cda43a">직권보정 — 이번 웨이브 공격력 3배</i>` : ""}`;
   t.style.display = "block";
   t.style.left = Math.min(e.clientX + 14, innerWidth - 244) + "px";
@@ -7371,9 +7375,109 @@ function endMatch(iWon, reasonText) {
       ${lineSummaryHtml()}
       <span>방해 공작</span><b>${s.sabotage.length ? s.sabotage.map((k) => `${SABOTAGE[k].icon} ${SABOTAGE[k].short}`).join(" · ") : "없음"}</b>
       </div>
+    <div class="lb" id="lb"></div>
     <button class="go" id="again" style="padding:10px 26px">로비로</button></div>`;
   $("#modal").classList.add("on");
   $("#again").addEventListener("click", () => location.reload());
+  mountLeaderboard(rank, iWon);
+}
+
+/* ═══════ 랭킹 보드 ═══════
+ * 성적표 아래에 붙는 칸 하나 — 이름을 적어 이 판의 총점을 올리고, 상위 20위를 본다.
+ * 서버(server/index.js 의 /api/rankings)가 표를 쥐고 있다. 이름은 다음 판에도 쓰라고
+ * 이 브라우저에 기억해 둔다. 한 판에 한 번만 올릴 수 있다 — 올리고 나면 입력 칸이 사라진다. */
+const LB_NAME_KEY = "patent-siege.rankName";
+const LB_NAME_MAX = 12;
+
+function savedRankName() { try { return localStorage.getItem(LB_NAME_KEY) || ""; } catch (_) { return ""; } }
+function rememberRankName(n) { try { localStorage.setItem(LB_NAME_KEY, n); } catch (_) {} }
+
+/**
+ * @param {{total:number, grade:string}} rank 이 판의 성적 (rankScore 의 결과)
+ * @param {boolean} cleared 10라운드를 다 마쳤는가
+ */
+function mountLeaderboard(rank, cleared) {
+  const box = $("#lb");
+  if (!box) return;
+  box.innerHTML = `
+    <div class="lbhead"><b>🏆 랭킹</b><i>TOP 20</i></div>
+    <form class="lbform" id="lbForm" autocomplete="off">
+      <input id="lbName" maxlength="${LB_NAME_MAX}" placeholder="이름 (${LB_NAME_MAX}자까지)" value="${escapeHtml(savedRankName())}">
+      <button type="submit" class="go">${rank.total.toLocaleString()}점 올리기</button>
+    </form>
+    <div class="lbmsg" id="lbMsg"></div>
+    <div class="lbtable" id="lbTable"><i class="lbnote">랭킹을 불러오는 중…</i></div>`;
+
+  const form = /** @type {HTMLFormElement} */ ($("#lbForm"));
+  const input = /** @type {HTMLInputElement} */ ($("#lbName"));
+  const msg = $("#lbMsg");
+
+  // 등록 전에도 표는 보여 준다 — 내 점수가 어디쯤인지 가늠할 수 있게
+  fetchJson("/api/rankings").then((r) => renderLeaderboard(r.list, null, r.top))
+    .catch(() => renderLeaderboard(null, null));
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = input.value.replace(/\s+/g, " ").trim().slice(0, LB_NAME_MAX);
+    if (!name) { input.focus(); msg.textContent = "이름을 적어 주세요."; return; }
+    rememberRankName(name);
+    form.querySelector("button").disabled = true;
+    msg.textContent = "올리는 중…";
+    try {
+      const r = await fetchJson("/api/rankings", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, score: rank.total, grade: rank.grade, mode, wave: game ? game.wave : 0, cleared }),
+      });
+      form.remove();
+      msg.innerHTML = r.rank && r.rank <= r.top
+        ? `<b>${r.rank}위</b>에 올랐습니다!`
+        : r.rank ? `${r.rank}위 — 상위 ${r.top}위 안에는 들지 못했습니다.`
+                 : `${r.top}위 안에 들지 못했습니다.`;
+      renderLeaderboard(r.list, r.rank && r.rank <= r.top ? { rank: r.rank, name, score: rank.total } : null, r.top);
+    } catch (err) {
+      form.querySelector("button").disabled = false;
+      msg.textContent = `올리지 못했습니다 — ${err.message}`;
+    }
+  });
+}
+
+/**
+ * 상위 표를 그린다.
+ * @param {any[]|null} list 서버가 준 목록 (null 이면 불러오기 실패)
+ * @param {{rank:number,name:string,score:number}|null} mine 방금 올린 내 줄 — 강조한다
+ * @param {number} [top]
+ */
+function renderLeaderboard(list, mine, top = 20) {
+  const el = $("#lbTable");
+  if (!el) return;
+  if (!list) { el.innerHTML = `<i class="lbnote">랭킹을 불러오지 못했습니다 — 서버가 없거나 연결이 끊겼습니다.</i>`; return; }
+  if (!list.length) { el.innerHTML = `<i class="lbnote">아직 아무도 없습니다 — 첫 자리는 비어 있습니다.</i>`; return; }
+  const modeShort = (k) => (MODES[k] ? MODES[k].short : k);
+  const gradeCol = (g) => (RANK.grades.find((x) => x.g === g) || RANK.grades[RANK.grades.length - 1]).col;
+  el.innerHTML = `<table>
+    <thead><tr><th>#</th><th class="l">이름</th><th>등급</th><th>모드</th><th>라운드</th><th class="r">점수</th></tr></thead>
+    <tbody>${list.slice(0, top).map((r) => {
+      const isMe = mine && r.rank === mine.rank && r.name === mine.name && r.score === mine.score;
+      return `<tr class="${isMe ? "me" : ""}${r.rank <= 3 ? ` top${r.rank}` : ""}">
+        <td>${r.rank}</td><td class="l">${escapeHtml(r.name)}</td>
+        <td><b style="color:${gradeCol(r.grade)}">${r.grade}</b></td>
+        <td>${modeShort(r.mode)}</td><td>${r.wave}/${BAL.waveCount}${r.cleared ? "" : " ✕"}</td>
+        <td class="r">${Number(r.score).toLocaleString()}</td></tr>`;
+    }).join("")}</tbody></table>`;
+  const me = el.querySelector("tr.me");
+  if (me) me.scrollIntoView({ block: "nearest" });
+}
+
+async function fetchJson(url, init) {
+  const res = await fetch(url, init);
+  let data = null;
+  try { data = await res.json(); } catch (_) {}
+  if (!res.ok) throw new Error((data && data.error) || `HTTP ${res.status}`);
+  return data;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
 /* ═══════ 판을 화면 높이에 맞추기 ═══════ */
@@ -8318,7 +8422,7 @@ function beginBattle() {
   if (!soloMode) log(`<b>방해 공작</b>은 종류를 고르지 않습니다 — 특허료를 내고 <b>무작위로 하나를 뽑아</b> ` +
     `상대 판에 던집니다 (웨이브 주기마다 ${BAL.sabotageDraws}회).`);
   log(`<b>강화는 같은 타워를 모으는 것 하나</b>입니다 — 같은 종류·같은 레벨 <b>${BAL.mergeNeed}명</b>이 모이면 ` +
-      `판 우측 상단에 <b>합성</b> 단추가 뜹니다. Lv${BAL.promoteLv}이 되면 <b>승진냥</b>(샷건·방사 피해)이 됩니다.`);
+      `판 우측 상단에 <b>합성</b> 단추가 뜹니다. Lv${BAL.promoteLv}이 되면 <b>승진냥</b>(공격력·치명타 보정, 대전장에서 체력·공격력 추가)이 됩니다.`);
   // 이종 합성(다른 종류끼리의 처방)은 잠가 두었다 — RECIPES 를 되살리면 이 안내도 함께 되돌린다
   // log(`<b style="color:#6fe0d0">다른 종류끼리도 합성</b>됩니다 — 처방 ${RECIPES.length}가지로 ` +
   //     `연쇄·정지·즉사·징수 같은 <b>특수 냥타워</b>를 만들 수 있습니다 (뽑기로는 나오지 않습니다).`);

@@ -21,6 +21,88 @@ const MIME = {
   '.woff2': 'font/woff2',
 };
 
+/* ═══════ 랭킹 ═══════
+ * 판이 끝나면 클라이언트가 성적표의 총점을 이름과 함께 올리고, 상위 20위를 받아 간다.
+ * DB 없이 JSON 파일 하나(data/rankings.json)에 쌓는다 — 이 서버는 외부 의존성이 하나도 없고,
+ * 랭킹 하나 때문에 그 원칙을 깰 만큼 데이터가 크지 않다. 파일에는 넉넉히 100건까지만 남기고
+ * 내려 줄 때 20위까지 자른다. 점수는 클라이언트가 계산해 보내므로 조작이 가능하다는 점은
+ * 감수한다 — 서버가 판을 굴리지 않는 구조라 검증할 원장이 없다.
+ * 파일 경로는 RANK_FILE 로 바꿀 수 있다 (영구 디스크를 붙일 때). */
+const RANK_FILE = process.env.RANK_FILE || path.join(__dirname, '..', 'data', 'rankings.json');
+const RANK_TOP = 20;          // 내려 주는 순위
+const RANK_KEEP = 100;        // 파일에 남기는 순위
+const RANK_NAME_MAX = 12;
+const RANK_MODES = new Set(['solo', 'duel', 'team', 'ffa']);
+const RANK_GRADES = new Set(['S', 'A', 'B', 'C', 'D']);
+
+/** @type {{name:string,score:number,grade:string,mode:string,wave:number,cleared:boolean,at:string}[]} */
+let rankings = [];
+try {
+  const raw = JSON.parse(fs.readFileSync(RANK_FILE, 'utf8'));
+  if (Array.isArray(raw)) rankings = raw.filter((r) => r && typeof r.score === 'number');
+} catch (_) { /* 처음이거나 파일이 깨졌다 — 빈 표에서 시작한다 */ }
+sortRankings();
+
+/** 점수 높은 순, 같으면 먼저 올린 순 */
+function sortRankings() {
+  rankings.sort((a, b) => b.score - a.score || String(a.at).localeCompare(String(b.at)));
+  if (rankings.length > RANK_KEEP) rankings.length = RANK_KEEP;
+}
+
+/* 저장은 파일 통째로 다시 쓴다. 두 판이 동시에 끝나도 쓰기가 겹치지 않도록 한 줄로 세운다.
+ * 임시 파일에 쓰고 이름을 바꾸므로 쓰다 죽어도 반쪽짜리 파일은 남지 않는다. */
+let rankSaving = Promise.resolve();
+function saveRankings() {
+  const body = JSON.stringify(rankings, null, 1);
+  rankSaving = rankSaving.then(async () => {
+    await fs.promises.mkdir(path.dirname(RANK_FILE), { recursive: true });
+    await fs.promises.writeFile(RANK_FILE + '.tmp', body);
+    await fs.promises.rename(RANK_FILE + '.tmp', RANK_FILE);
+  }).catch((e) => console.error('[patent-siege] 랭킹 저장 실패:', e.message));
+  return rankSaving;
+}
+
+const topRankings = () => rankings.slice(0, RANK_TOP).map((r, i) => Object.assign({ rank: i + 1 }, r));
+
+/** 요청 본문(JSON)을 읽는다. 랭킹 한 건은 몇백 바이트라 그 이상은 받지 않는다 */
+function readJson(req, limit = 4096) {
+  return new Promise((resolve, reject) => {
+    const chunks = []; let size = 0;
+    // 한글 한 글자가 청크 경계에 걸릴 수 있어 문자열로 이어 붙이지 않고 다 받은 뒤 한 번에 푼다
+    req.on('data', (c) => { chunks.push(c); size += c.length; if (size > limit) { reject(new Error('too large')); req.destroy(); } });
+    req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch (_) { reject(new Error('bad json')); } });
+    req.on('error', reject);
+  });
+}
+
+function sendJson(res, status, obj) {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(JSON.stringify(obj));
+}
+
+/** 클라이언트가 보낸 한 건을 검사해 표에 넣는다. 잘못된 것은 이유를 돌려준다 */
+async function handleRankPost(req, res) {
+  let body;
+  try { body = await readJson(req); } catch (e) { sendJson(res, 400, { error: e.message }); return; }
+  const name = String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, RANK_NAME_MAX);
+  const score = Math.round(Number(body.score));
+  if (!name) { sendJson(res, 400, { error: '이름이 비어 있습니다' }); return; }
+  if (!Number.isFinite(score) || score < 0 || score > 1e6) { sendJson(res, 400, { error: '점수가 이상합니다' }); return; }
+  const entry = {
+    name, score,
+    grade: RANK_GRADES.has(body.grade) ? body.grade : 'D',
+    mode: RANK_MODES.has(body.mode) ? body.mode : 'solo',
+    wave: Math.max(0, Math.min(10, Math.round(Number(body.wave)) || 0)),
+    cleared: !!body.cleared,
+    at: new Date().toISOString(),
+  };
+  rankings.push(entry);
+  sortRankings();
+  const rank = rankings.indexOf(entry) + 1;      // 0 이면 100위 밖으로 밀려나 남지 않았다
+  await saveRankings();
+  sendJson(res, 200, { rank, top: RANK_TOP, list: topRankings() });
+}
+
 const httpServer = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
 
@@ -29,6 +111,12 @@ const httpServer = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ ok: true, rooms: rooms.size, uptime: Math.round(process.uptime()) }));
     return;
+  }
+
+  if (p === '/api/rankings') {
+    if (req.method === 'GET') { sendJson(res, 200, { top: RANK_TOP, list: topRankings() }); return; }
+    if (req.method === 'POST') { handleRankPost(req, res); return; }
+    res.writeHead(405); res.end('method not allowed'); return;
   }
 
   if (p === '/') p = '/index.html';
