@@ -32,7 +32,7 @@ const RANK_FILE = process.env.RANK_FILE || path.join(__dirname, '..', 'data', 'r
 const RANK_TOP = 20;          // 내려 주는 순위
 const RANK_KEEP = 100;        // 파일에 남기는 순위
 const RANK_NAME_MAX = 12;
-const RANK_MODES = new Set(['solo', 'duel', 'team', 'ffa']);
+const RANK_MODES = new Set(['solo', 'duel']);
 const RANK_GRADES = new Set(['S', 'A', 'B', 'C', 'D']);
 
 /** @type {{name:string,score:number,grade:string,mode:string,wave:number,cleared:boolean,at:string}[]} */
@@ -149,9 +149,9 @@ const httpServer = http.createServer((req, res) => {
 
 /**
  * roomCode -> {
- *   mode,                       // 'duel' 1:1 · 'team' 2:2 더블업 · 'ffa' 1:1:1:1 대난투
+ *   mode,                       // 'duel' 1:1 (지금은 이것 하나다)
  *   size,                       // 방 인원 (MODE_SIZE)
- *   conns: [conn|null × size],  // 슬롯 순서 = p1..p4. 팀 모드는 슬롯 0·1 이 한 팀, 2·3 이 한 팀
+ *   conns: [conn|null × size],  // 슬롯 순서 = p1, p2
  *   started,                    // 다 모여 판이 열렸는가 (그 뒤로 나간 자리는 비워 두고 채우지 않는다)
  *   gone:  [bool × size],       // 판이 열린 뒤 나간 슬롯 — 준비 판정에서 늘 「준비됨」으로 친다
  *   seed,                       // 모든 클라이언트가 공유하는 판 시드 (웨이브 구성이 같아진다)
@@ -163,8 +163,9 @@ const httpServer = http.createServer((req, res) => {
  */
 const rooms = new Map();
 
-/** 모드별 인원. 클라이언트(core/data.js 의 MODES)와 같은 표다. */
-const MODE_SIZE = { duel: 2, team: 4, ffa: 4 };
+/** 모드별 인원. 클라이언트(game.js 의 MODES)와 같은 표다.
+ *  2:2 더블업(team)·4인 대난투(ffa)는 트래픽을 감당할 수 없어 걷어냈다 — 방은 1:1 뿐이다. */
+const MODE_SIZE = { duel: 2 };
 
 /** 모두 준비 단계에 들어선 뒤 주어지는 최대 준비시간(초). 클라이언트의 BAL.prepSecs 와 맞춘다. */
 const PREP_SECS = 15;
@@ -248,21 +249,10 @@ function leaveRoom(conn) {
     pushRoomState(room, code);
     return;
   }
-  /* 판이 열린 뒤 나갔다. 1:1 이면 남은 쪽의 판은 상대 없이 이어질 수 없으니 그대로 끝낸다(oppLeft).
-   * 넷이 붙는 판에서는 나간 자리만 비우고 계속 간다 — 그 사람 몫의 대전 명세는 클라이언트가
-   * 쥐 침입단으로 대신 세운다. 준비 판정에서는 늘 준비된 것으로 친다. */
+  /* 판이 열린 뒤 나갔다. 남은 쪽의 판은 상대 없이 이어질 수 없으니 그대로 끝낸다(oppLeft). */
   room.gone[me] = true;
   broadcast(room, { t: 'oppLeft', from: me });
-  if (room.size === 2) { clearPrepTimer(room); rooms.delete(code); for (const c of room.conns) if (c) c._room = null; return; }
-  // 남은 사람들이 나간 사람을 기다리고 있었을 수 있다 — 준비 판정을 다시 본다
-  if (room.prepWave) {
-    pushPrepState(room);
-    if (allPrep(room) && !room.prepTimer) {
-      room.prepTimer = setTimeout(() => goWave(room), PREP_SECS * 1000);
-      broadcast(room, { t: 'prepSync', wave: room.prepWave, secs: PREP_SECS });
-    }
-    maybeGo(room);
-  }
+  clearPrepTimer(room); rooms.delete(code); for (const c of room.conns) if (c) c._room = null;
 }
 
 // 방(room) 안에서 다른 사람에게 그대로 중계하는 메시지 타입 → 받을 때의 타입.
@@ -332,11 +322,10 @@ attachWebSocketServer(httpServer, (conn) => {
     const me = room.conns.indexOf(conn);
     if (me < 0) return;
 
-    // 판을 끝낸 사람은 더 기다릴 것이 없다 — 준비 판정에서 빼고, 1:1 이면 타이머도 정리한다
+    // 판을 끝낸 사람은 더 기다릴 것이 없다 — 준비 판정에서 빼고 타이머도 정리한다
     if (msg.t === 'won' || msg.t === 'lost') {
       room.gone[me] = true;
-      if (room.size === 2) { clearPrepTimer(room); room.prepWave = 0; }
-      else if (room.prepWave) { pushPrepState(room); maybeGo(room); }
+      clearPrepTimer(room); room.prepWave = 0;
     }
 
     /* ── 웨이브 동시 개시 ──

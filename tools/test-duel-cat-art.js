@@ -34,11 +34,11 @@ const source = fs.readFileSync(path.join(root, "public/game.js"), "utf8");
 const start = source.indexOf("function drawDuelUnit(");
 const end = source.indexOf("function drawDuel(now)", start);
 const chosen = [], scales = [], images = [], labels = [];
-let side = "a", available = true, brawl = false;
+let side = "a", available = true;
 const context = {
   DuelCatArt: { direction }, DIR: { right: 0, down: 1, left: 2, up: 3 },
   mySide: () => side, soloMode: true, mySlot: 0, DUEL: { depthPx: 300, w: 1000 },
-  duelX: x => x, duelYAt: () => 200, duelScale: () => 1, duelBrawl: () => brawl,
+  duelX: x => x, duelYAt: () => 200, duelScale: () => 1,
   sideCol: () => ["black", "blue"], duel: { sim: { t: 1 } },
   duelCatFrame: (key, dir, frame) => { chosen.push({ key, dir, frame }); return available ? {} : null; },
   frameOf: () => [0, 0], catFrameCanvas: () => ({}), CAT_SKILLS: {},
@@ -71,11 +71,10 @@ context.drawDuelUnit(g, { ...u, freezeT: 1 }, 1000);
 assert.equal(chosen.at(-1).frame, 0);
 context.drawDuelUnit(g, { ...u, dead: true, deadT: .1 }, 1000);
 assert.equal(chosen.at(-1).frame, 0);
-brawl = true;
+// 한 줄 전장뿐이라 깊이(lookZ)는 방향에 실리지 않는다 — 옆을 본다
 context.drawDuelUnit(g, { ...u, lookX: 0, lookZ: 1 }, 1000);
-assert.equal(chosen.at(-1).dir, 3);
+assert.notEqual(chosen.at(-1).dir, 3);
 available = false;
-brawl = false;
 context.drawDuelUnit(g, u, 1000); // 로드 실패 시 기존 그림으로 표시
 assert.ok(scales.some(([x]) => x < 0));
-console.log("PASS: 96 sprite bounds, 4 directions, mirrored viewpoint, movement/attack/freeze/death, fallback");
+console.log("PASS: 96 sprite bounds, side view only, mirrored viewpoint, movement/attack/freeze/death, fallback");

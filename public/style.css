@@ -296,16 +296,13 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 .meStats .stat span{font-size:9.5px;letter-spacing:.06em}
 /* 개시·배속은 판 아래가 아니라 오른쪽 칸 맨 위다 — 칸 안쪽 여백이 이미 있어 위 여백은 뺀다 */
 #ctlPanel .boardctl{margin-top:0}
-/* ── 다른 청사 카드 ── 사람마다 하나. 1v1 은 한 장, 넷이 붙는 판은 작은 카드 셋이 두 줄로 */
+/* ── 상대 청사 카드 ── 1v1 이라 한 장이다 */
 .oppgrid{display:grid;grid-template-columns:1fr;gap:8px}
-.oppgrid.many{grid-template-columns:repeat(2,1fr)}
 .oppcard{border:1px solid var(--line);background:rgba(0,0,0,.14);padding:5px}
-.oppcard.ally{border-color:#4a88b2;background:rgba(74,136,178,.12)}
 .oppcard.gone{opacity:.45}
 .oppcard .opphead{display:flex;align-items:baseline;gap:6px;margin-bottom:5px;font-family:var(--mono);font-size:10px}
 .oppcard .opphead b{font-size:12px;color:#e8eef4}
 .oppcard .opphead i{font-style:normal;font-size:9px;letter-spacing:.1em;color:var(--muted)}
-.oppcard.ally .opphead i{color:#8fc4e8}
 .oppcard .opphp{margin-left:auto;color:var(--seal-soft)}
 .oppcard .opphp::before{content:"내구 ";color:var(--muted)}
 .oppcard .oppwave::before{content:"R ";color:var(--muted)}
@@ -572,18 +569,7 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 #lobby .entry .go.alt:hover:not(:disabled){
   background:rgba(255,255,255,.16);transform:translateY(-1px);box-shadow:none}
 #lobby .entry .go.alt:active{transform:translateY(2px);box-shadow:none}
-/* ── 모드 고르기 ── 1v1 · 2v2 더블업 · 4인 대난투. 셋이 한 줄에 서고 고른 것만 밝다.
-   방을 만드는 사람만 고른다 — 들어가는 사람은 코드만 넣으면 방이 정한 모드를 따른다. */
-#lobby #modePick{display:flex;gap:calc(var(--ui) * .42);margin-bottom:calc(var(--ui) * .42)}
-#lobby #modePick button{
-  flex:1;padding:calc(var(--ui) * .55) 0;color:#bda9d8;
-  background:rgba(255,255,255,.05);border:1px solid var(--violet-line);line-height:1.15}
-#lobby #modePick button b{display:block;font-size:calc(var(--ui) * 1.15);color:var(--cream)}
-#lobby #modePick button i{display:block;font-style:normal;font-family:var(--mono);
-  font-size:max(9px,calc(var(--ui) * .66));letter-spacing:.08em;margin-top:2px}
-#lobby #modePick button:hover{background:rgba(255,255,255,.12);transform:translateY(-1px)}
-#lobby #modePick button.on{background:rgba(255,154,92,.18);border-color:#ffb27a;color:#ffd9a8}
-#lobby #modePick button.on b{color:#ffd9a8}
+/* 1v1 방 설명 한 줄 — 「방 만들기」 위에 선다 */
 #lobby #modeDesc{margin:0 0 calc(var(--ui) * .55);min-height:2.6em;line-height:1.5}
 #lobby .joinrow{display:flex;gap:calc(var(--ui) * .42);margin-top:calc(var(--ui) * .44)}
 #lobby #joinCode{
@@ -931,7 +917,7 @@ body.solo #sabPanel{display:none!important}
   border:1px solid var(--line)}
 .duelhead .dside .dhp i{display:block;height:100%;width:100%;transition:width .12s linear}
 .duelhead .dside.me .dhp i{background:linear-gradient(90deg,#3c6a8a,#69b6d6)}
-/* 상대 진영 칸은 진영색(--sc)을 받는다 — 대난투에서는 셋이 나란히 선다 */
+/* 상대 진영 칸은 진영색(--sc)을 받는다 */
 .duelhead .dside.foe .dhp i{background:linear-gradient(90deg,#8a2a24,var(--sc,#e0574d))}
 .duelhead .dside i{display:block;font-style:normal;font-family:var(--mono);font-size:9px;
   color:var(--muted);letter-spacing:.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
@@ -941,9 +927,6 @@ body.solo #sabPanel{display:none!important}
 .duelhead .dside.foe.out{opacity:.45}
 .duelhead .dside.foe.out b::after{content:" 전멸";font-size:9px;color:var(--muted)}
 .duelhead .dfoes{display:flex;gap:10px;flex:none}
-.duelhead .dfoes.many .dside{min-width:84px}
-.duelhead .dfoes.many .dside b{font-size:13px}
-.duelhead .dfoes.many .dside i{max-width:84px}
 .duelhead .duelmid{flex:1;min-width:0;text-align:center}
 .duelhead .duelmid em{display:block;font-style:normal;font-family:var(--disp);font-size:15px;
   letter-spacing:.16em;color:#f4e2b0;font-weight:700}
