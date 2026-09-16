@@ -345,12 +345,13 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
      지나치게 커지는 것을 막는 하한·상한이다. */
   --ui:clamp(11px,min(calc(var(--stage-w) / 132),3.2vw),26px);
   --btn-gap:calc(var(--ui) * .98);   /* 솔로 버튼과 위아래 글자 사이 간격 */
-  --col:min(calc(var(--ui) * 33.3),100%);   /* 글자·버튼이 쓰는 폭 */
+  --col:min(calc(var(--ui) * 35),100%);   /* 글자·버튼이 쓰는 폭 — 아래 글자를 키우면서 같이 넓혔다 */
   min-height:100vh;min-height:100dvh;
-  /* 글자·버튼은 아래로 붙인다 — 그림에서 건물 아래 빈 앞마당이 그 자리다. */
+  /* 글자·버튼은 아래로 붙인다 — 그림에서 건물 아래 빈 앞마당이 그 자리다.
+     아래 여백(11vh)이 크면 한 줄 문구·버튼 묶음이 청사 건물까지 올라와 겹치므로 절반쯤으로 줄여 둔다. */
   display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
   text-align:center;
-  padding:clamp(16px,3vh,40px) 20px clamp(36px,11vh,120px);
+  padding:clamp(16px,3vh,40px) 20px clamp(24px,8.5vh,96px);
   position:relative;z-index:1}
 /* 청사 그림 한 장을 화면에 꽉 채운다. 그림이 이미 16:9 로 만들어져 있으므로
    자르거나 가장자리를 덮는 처리는 하지 않는다 — cover 로 깔고 끝.
@@ -506,13 +507,15 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   -webkit-text-stroke:calc(var(--ui) * .068) rgba(150,231,255,.8)}
 #lobby .tagline{
   /* 아래 글·버튼 묶음의 맨 위 줄 — 설명문(.subline) 바로 위에 붙어 버튼들과 한 덩어리로 움직인다.
-     (타이틀만 그림 좌표계로 따로 띄우고, 이 문구부터는 글자 기둥 안에 둔다) */
-  font-family:var(--disp);font-size:calc(var(--ui) * 1.54);color:#fff;
+     (타이틀만 그림 좌표계로 따로 띄우고, 이 문구부터는 글자 기둥 안에 둔다)
+     타이틀(--ui × 8.8)에 견줘 아래 글자가 너무 작아 읽기 어렵다는 지적이 있어,
+     이 줄부터 버튼·안내문까지 한 단(약 1.1배) 키웠다 — --ui 자체를 올리면 타이틀·여백까지 같이 커진다. */
+  font-family:var(--disp);font-size:calc(var(--ui) * 1.74);color:#fff;
   margin:0;letter-spacing:.02em;max-width:var(--col);
   text-shadow:0 0 calc(var(--ui) * 1.15) rgba(255,154,92,.45)}
 #lobby .subline{
   /* 작은 글자에는 px 하한을 둔다 — 균일 축소만 하면 작은 창에서 8px 밑으로 내려가 못 읽는다 */
-  font-size:max(11px,calc(var(--ui) * .86));line-height:1.75;color:#c6b3e0;
+  font-size:max(12px,calc(var(--ui) * .96));line-height:1.7;color:#c6b3e0;
   margin:calc(var(--ui) * .38) 0 0;max-width:var(--col)}
 
 /* #lobby 에 max-width 가 없으므로 글자·버튼 칸은 각자 --col 로 폭을 맞춘다 */
@@ -527,7 +530,7 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 #lobby button{border-radius:calc(var(--ui) * .63);font-family:var(--disp);letter-spacing:.04em;
   transition:transform .12s ease,box-shadow .12s ease,background .12s ease}
 #lobby .entry .go{
-  width:100%;padding:calc(var(--ui) * 1.04);font-size:calc(var(--ui) * 1.38);color:#3a1c08;border:0;
+  width:100%;padding:calc(var(--ui) * 1.04);font-size:calc(var(--ui) * 1.52);color:#3a1c08;border:0;
   background:linear-gradient(180deg,#ffc07a,var(--ember));
   box-shadow:0 6px 0 #b95c2c,0 10px 26px rgba(255,140,70,.32)}
 #lobby .entry .go:hover:not(:disabled){
@@ -554,16 +557,16 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 #lobby #codeDisplay{
   font-family:var(--disp);font-size:calc(var(--ui) * 2.6);letter-spacing:.24em;text-indent:.24em;
   color:#ffd9a8;text-shadow:0 0 calc(var(--ui) * 1.25) rgba(255,154,92,.55);line-height:1.15}
-#lobby .codehint{font-size:max(10px,calc(var(--ui) * .75));color:#bda9d8;margin-top:calc(var(--ui) * .31)}
+#lobby .codehint{font-size:max(11px,calc(var(--ui) * .84));color:#bda9d8;margin-top:calc(var(--ui) * .31)}
 #lobby .or{
-  color:#9b86bd;font-size:max(10px,calc(var(--ui) * .80));margin:calc(var(--ui) * .85) 0;
+  color:#9b86bd;font-size:max(11px,calc(var(--ui) * .88));margin:calc(var(--ui) * .85) 0;
   display:flex;align-items:center;gap:calc(var(--ui) * .63)}
 #lobby .or::before,#lobby .or::after{
   content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--violet-line),transparent)}
 /* 1v1 쪽 입구는 솔로 버튼과 같은 크기, 색만 한 단 낮은 톤으로 — 첫 화면의 주인공은 솔로 플레이다.
    솔로 버튼은 테두리가 없고 이쪽은 1px 테두리가 있어, 높이를 맞추려면 안쪽 여백에서 1px 을 뺀다. */
 #lobby .entry .go.alt{
-  padding:calc(var(--ui) * 1.04 - 1px);font-size:calc(var(--ui) * 1.38);color:var(--cream);
+  padding:calc(var(--ui) * 1.04 - 1px);font-size:calc(var(--ui) * 1.52);color:var(--cream);
   background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.05));
   border:1px solid var(--violet-line);box-shadow:none}
 #lobby .entry .go.alt:hover:not(:disabled){
@@ -573,21 +576,21 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 #lobby #modeDesc{margin:0 0 calc(var(--ui) * .55);min-height:2.6em;line-height:1.5}
 #lobby .joinrow{display:flex;gap:calc(var(--ui) * .42);margin-top:calc(var(--ui) * .44)}
 #lobby #joinCode{
-  flex:1;min-width:0;font-family:var(--disp);font-size:calc(var(--ui) * 1.27);
+  flex:1;min-width:0;font-family:var(--disp);font-size:calc(var(--ui) * 1.38);
   text-transform:uppercase;letter-spacing:.22em;text-indent:.22em;text-align:center;
   padding:calc(var(--ui) * .83) calc(var(--ui) * .52);
   border-radius:calc(var(--ui) * .63);color:var(--cream);
   background:rgba(0,0,0,.28);border:1px solid var(--violet-line)}
 #lobby #joinCode:focus{outline:none;border-color:#a583e8;box-shadow:0 0 0 3px rgba(150,110,220,.25)}
 #lobby #joinCode::placeholder{
-  font-size:max(11px,calc(var(--ui) * .91));letter-spacing:.06em;text-indent:0;color:#8a76ab}
+  font-size:max(12px,calc(var(--ui) * 1));letter-spacing:.06em;text-indent:0;color:#8a76ab}
 #lobby #btnJoin{
   flex:none;padding:calc(var(--ui) * .83) calc(var(--ui) * 1.46);
-  font-size:calc(var(--ui) * 1.09);color:var(--cream);
+  font-size:calc(var(--ui) * 1.2);color:var(--cream);
   background:rgba(255,255,255,.07);border:1px solid var(--violet-line)}
 #lobby #btnJoin:hover:not(:disabled){
   background:rgba(255,255,255,.14);border-color:#a583e8;transform:translateY(-2px)}
-#lobby #joinError{color:#ff8f7d;font-size:max(10px,calc(var(--ui) * .75));margin-top:calc(var(--ui) * .63)}
+#lobby #joinError{color:#ff8f7d;font-size:max(11px,calc(var(--ui) * .84));margin-top:calc(var(--ui) * .63)}
 
 /* ── 작은 창 ──
    글자에는 읽을 수 있는 최소 크기가 있어서(--ui 하한, 본문 11px) 글자 기둥은 305px 밑으로
@@ -598,7 +601,7 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
   #lobby{
     --ui:clamp(9px,min(calc(var(--stage-w) / 132),3.2vw),26px);
     --btn-gap:calc(var(--ui) * .9);
-    padding:clamp(10px,2vh,24px) 20px clamp(18px,4.4vh,60px)}
+    padding:clamp(10px,2vh,24px) 20px clamp(14px,4vh,48px)}
   #lobby .bigtitle{font-size:min(calc(var(--ui) * 7.4),20vh,calc(var(--title-max-w) / 4.24))}
   #lobby .or{margin:calc(var(--ui) * .6) 0}
 }

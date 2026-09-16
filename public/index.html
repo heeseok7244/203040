@@ -33,7 +33,7 @@
     <div class="or">또는 함께</div>
     <!-- 함께하는 판은 1v1 하나다 (2v2 더블업 · 4인 대난투는 트래픽을 감당할 수 없어 걷어냈다).
          인원 규칙은 game.js 의 MODES 와 server/index.js 의 MODE_SIZE 가 같은 표를 본다 -->
-    <div id="modeDesc" class="codehint">둘이 같은 판·같은 웨이브를 치르고, 라운드 4·7·10 에 덱을 맞댑니다.</div>
+    <!--<div id="modeDesc" class="codehint">둘이 같은 판·같은 웨이브를 치르고, 라운드 4·7·10 에 덱을 맞댑니다.</div>-->
     <button id="btnCreate" class="go alt">1v1 대전 방 만들기</button>
     <div id="createdBox" class="hidden">
       <div id="codeDisplay">----</div>
@@ -55,7 +55,7 @@
 <div class="cols">
   <div>
     <div class="panel recruitment-panel">
-      <h2><span class="panel-title"><img src="img/game/cat_main1.png" alt="">냥타워</span><em>함께 지켜요!</em></h2>
+      <h2><span class="panel-title"><img src="img/game/cat_tower_icon.png" alt="">냥타워</span><em>함께 지켜요!</em></h2>
       <!-- 종류를 고르지 않는다. 정액을 내고 무작위로 한 명을 받는다 (확률표는 JS가 채운다) -->
       <div class="pad" id="catRoster"></div>
       <!-- 승진은 따로 사는 것이 아니라 합성의 마지막 단계다. 여기에는 지금 무엇이
@@ -67,7 +67,7 @@
              설명은 목록 아래 늘어놓지 않고 제목 옆 「강화효과 ?」에 마우스를 올리면 뜬다 -->
         <i>보유 현황
           <span class="prhelp">강화효과 <u>?</u>
-            <span class="prhint">강화는 <b>같은 종류·같은 레벨 3명</b>을 모으는 것 하나입니다 — 모이면 레벨업합니다
+            <span class="prhint">강화는 <b>같은 종류·같은 레벨 3냥이</b>를 모으는 것 하나입니다 — 모이면 레벨업합니다
               (Lv2 공격력 ×1.85, <b>Lv3</b> 는 공격력 ×3.42 에 승진 보정 ×1.25·치명타가 더 붙고, 대전장에서는 체력·공격력 ×1.3 이 얹힙니다).
               <b>Lv3</b> 이 되면 소품을 갖춘 <b>승진 원화</b>로 바뀌고 금빛 테두리와 <b>Lv 딱지</b>가 붙습니다.
               재료가 차면 판 <b>우측 상단</b>에 <b>합성</b> 단추가 뜹니다 (준비 단계에만).</span>
@@ -87,12 +87,12 @@
   <div>
     <div class="panel">
       <!-- 머리에 전장 이름(아이디어 캠퍼스 등)을 쓰지 않는다 — 원화가 이미 말해 주는 것이라
-           글자로 되풀이할 필요가 없었다. 왼쪽은 비워 두고 오른쪽에 「몬스터 정보 ?」만 둔다 -->
+           글자로 되풀이할 필요가 없었다. 왼쪽은 비워 두고 오른쪽에 「침입자 정보 ?」만 둔다 -->
       <h2><span></span>
         <span class="h2right">
-          <em id="phaseLbl">몬스터 정보</em>
+          <em id="phaseLbl">침입자 정보</em>
           <!-- 침입자 도감은 늘 펼쳐 둘 만큼 자주 보는 것이 아니라, 물음표로 접어 두고
-               필요할 때만 꺼낸다. 「몬스터 정보」 바로 옆이라 판을 보다가 손이 닿는 자리다.
+               필요할 때만 꺼낸다. 「침입자 정보」 바로 옆이라 판을 보다가 손이 닿는 자리다.
                제목표시줄(title)은 마우스를 얹으면 뜨는 도감과 겹쳐 버려서 쓰지 않는다. -->
           <button id="btnBestiary" class="qmark" type="button"
                   aria-expanded="false" aria-controls="beastPop" aria-label="침입자 도감">?</button>
@@ -161,7 +161,7 @@
       <div class="pad">
         <div class="meStats">
           <div class="stat dmg"><b id="sHp">22</b><span>원부 내구</span></div>
-          <div class="stat gold"><b id="sGold">85</b><span>특허료</span></div>
+          <div class="stat gold"><b id="sGold">₩ 85</b><span>특허료</span></div>
           <div class="stat"><b id="sWave">0/10</b><span>라운드</span></div>
         </div>
         <!-- 이 판의 성적. 10라운드가 끝나면 이 숫자가 곧 결과다 (rankScore) -->

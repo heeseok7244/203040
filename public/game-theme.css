@@ -1,7 +1,9 @@
 /* In-game navy theme; preserve the established panel dimensions. Board geometry and lobby keep their own styles. */
 body:has(#gameRoot:not(.hidden)){background:#10152d;background-image:none}
 #gameRoot{--txt:#f4f1e9;--muted:#bbc7df;--line:#526995;--paper:#1e2b4b;--paper2:#2a395b;--paper-line:#4c6189;--blue:#8fb6ee;--gold:#f4cf78;--ok:#80c4a0;--seal-soft:#ff8c87;color:var(--txt)}
-#gameRoot.wrap{max-width:1800px;padding:12px;gap:12px}
+/* 폭 상한을 두지 않는다 — 1800px 로 묶었을 때 1920 화면에서 양옆이 60px 씩 비었다.
+   판은 높이에 맞춰 줄어드므로(fitArena) 남는 폭은 양옆 칸이 나눠 갖는다 */
+#gameRoot.wrap{max-width:none;padding:12px;gap:12px}
 #gameRoot .cols{grid-template-columns:minmax(250px,1fr) minmax(360px,2fr) minmax(260px,1fr);gap:12px}
 #gameRoot .cols>div:first-child{grid-column:auto}
 /* 양옆 칸은 스크롤 대신 zoom 으로 줄여 칸 높이에 맞춘다 (game.js fitSideCols) */
@@ -13,10 +15,11 @@ body:has(#gameRoot:not(.hidden)){background:#10152d;background-image:none}
 #gameRoot .panel{background:#1e2b4b;border:2px solid #526995;border-radius:18px;box-shadow:0 3px 0 #0c1226;margin-bottom:10px}
 #gameRoot .panel>h2{background:none;border:0;color:#f4f1e9;font-size:22px;letter-spacing:0;padding:11px 14px 7px;min-height:44px}
 #gameRoot .panel>h2 em{display:none}
-/* 판 머리의 「몬스터 정보」만은 물음표 왼쪽에 살려 둔다 — 그 단추가 무엇인지 알려 주는 글자다 */
+/* 판 머리의 「침입자 정보」만은 물음표 왼쪽에 살려 둔다 — 그 단추가 무엇인지 알려 주는 글자다 */
 #gameRoot .panel>h2 em#phaseLbl{display:inline;font-family:var(--disp);font-size:16px;color:#bdcce4;letter-spacing:0}
-#gameRoot .panel-title{display:flex;align-items:center;gap:8px}
-#gameRoot .panel-title img{width:30px;height:30px;object-fit:contain}
+#gameRoot .panel-title{display:flex;align-items:center;gap:6px}
+/* 글자(22px, Jua)는 글꼴 특성상 줄 상자 안에서 살짝 위에 앉는다 — 아이콘도 그만큼 올려 눈높이를 맞춘다 */
+#gameRoot .panel-title img{width:30px;height:30px;object-fit:contain;position:relative;top:-2px}
 #gameRoot .pad{padding:9px 12px 12px}
 #gameRoot .floor{background:transparent;padding:8px 12px 12px;border-radius:0 0 16px 16px}
 #gameRoot #arenaFit{align-items:flex-start}
@@ -24,17 +27,39 @@ body:has(#gameRoot:not(.hidden)){background:#10152d;background-image:none}
 #gameRoot button:hover:not(:disabled):not([aria-disabled="true"]){background:#35496f;border-color:#829bc5}
 #gameRoot button:focus-visible{outline:3px solid #8fb6ee;outline-offset:2px}
 #gameRoot button:disabled{opacity:.65}
-#gameRoot #catRoster{padding-top:3px;padding-bottom:10px;display:grid;gap:6px}
-#gameRoot .catpick{width:100%;padding:6px 9px;margin:0;border:1.5px solid #4b618e;border-radius:13px;background:#29395d;box-shadow:none;min-height:60px}
+/* 냥타워 카드 6장 — 한 줄 세로 나열 대신 2×3 격자.
+   카드 안은 왼쪽에 원화, 오른쪽에 이름·가격을 위아래로 쌓는다 (원화가 두 줄 높이를 차지) */
+#gameRoot #catRoster{padding-top:3px;padding-bottom:10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+/* --nmfs 는 이름·가격 글자 크기 — 카드 폭(cqw)에 따라 16px 까지만 키우고, 좁으면 줄인다.
+   상한 16px 은 가장 긴 「🌐 국제출원냥」이 1920 화면의 열 폭(약 100px)에 다 들어오는 크기다.
+   「자금 부족」의 자리표시자 아이콘도 이 값을 써야 실제 아이콘과 폭이 같다 */
+#gameRoot .catpick{--nmfs:clamp(12px,7cqw,16px);width:100%;padding:8px 10px;margin:0;border:1.5px solid #4b618e;border-radius:13px;background:#29395d;box-shadow:none;min-height:0;min-width:0;container-type:inline-size}
 #gameRoot .catpick.off{opacity:1;background:#23314e;color:#a8b7d0}
 #gameRoot .catpick.off .spr{opacity:.68}
-#gameRoot .catpick .row1{gap:9px}
-#gameRoot .catpick .spr{width:46px;height:46px;border-radius:10px;background-color:transparent;border:1.5px solid transparent}
+/* 오른쫙 열(이름·가격)은 원화 옆에 남는 폭을 전부 차지한다 — 이름 길이(max-content)에 맡기면
+   「출원냥」은 좁고 「국제출원냥」은 넓어 여섯 장이 들쭉날쭉했다. 폭이 같아야 뱃지도 여섯 장이 같은 크기다 */
+#gameRoot .catpick .row1{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:10px;row-gap:5px;align-items:center}
+#gameRoot .catpick .ic{grid-row:1/3;font-size:40px}
+#gameRoot .catpick .spr{grid-row:1/3;width:84px;height:84px;border-radius:12px;background-color:transparent;border:1.5px solid transparent}
 #gameRoot .catpick:nth-child(2n) .spr{background-color:transparent;border-color:transparent}
 #gameRoot .catpick:nth-child(3n) .spr{background-color:transparent;border-color:transparent}
-#gameRoot .catpick .nm{font-size:16px;line-height:1.25;white-space:normal}
-#gameRoot .catpick .cost{font-family:var(--disp);font-size:17px;color:#fff3cc;background:#1c2a48;border:1.5px solid #50658b;border-radius:20px;padding:4px 8px}
-#gameRoot .catpick .nogold{top:auto;bottom:1px;right:13px;font-size:8px;color:#f3aaa3}
+#gameRoot .catpick .who{grid-column:2;align-self:end;min-width:0;text-align:center;position:relative}
+/* 이름은 절대 두 줄로 접지 않는다 (크기는 위 --nmfs) */
+#gameRoot .catpick .nm{display:flex;align-items:center;gap:4px;font-size:var(--nmfs);line-height:1.25;white-space:nowrap}
+/* 이름 줄은 뱃지와 같은 폭 — 아이콘은 왼쪽 끝에 고정하고, 이름은 남은 폭 안에서 가운데 정렬.
+   이름 길이가 달라도 아이콘 자리가 흔들리지 않는다 */
+#gameRoot .catpick .nmic{flex:none}
+#gameRoot .catpick .nmtx{flex:1;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis}
+/* 가격 뱃지는 열 폭을 꽉 채운다 — 이름과 같은 폭, 여섯 장이 같은 크기 */
+#gameRoot .catpick .cost{grid-column:2;justify-self:stretch;text-align:center;align-self:start;margin-left:0;box-sizing:border-box;font-family:var(--disp);font-size:var(--nmfs);color:#fff3cc;background:#1c2a48;border:1.5px solid #50658b;border-radius:20px;padding:2px 11px}
+/* 「자금 부족」 — 이름 칸(.who) 안에 절대 위치로 띄워 **이름 글자** 바로 위 가운데에 온다.
+   이름 줄(.nm)과 같은 짜임(아이콘 + 남는 폭)을 그대로 흉내 낸다: 앞의 .nmic 은 실제 아이콘과 같은
+   글자·같은 크기라 폭이 똑같고, 보이지만 않는다. 그래서 라벨(b)은 .nmtx 와 정확히 같은 폭에서 가운데 정렬된다.
+   카드 구석이 아니라 이름 위에 있어야 어느 냥의 것인지 바로 읽힌다. 절대 위치라 뜨고 사라져도 이름·가격은 안 움직인다 */
+#gameRoot .catpick .nogold{position:absolute;left:0;right:0;bottom:calc(100% + 3px);top:auto;
+  display:flex;align-items:flex-end;gap:4px;font-size:var(--nmfs);line-height:1.25;white-space:nowrap;color:#f3aaa3}
+#gameRoot .catpick .nogold .nmic{visibility:hidden}
+#gameRoot .catpick .nogold b{flex:1;min-width:0;text-align:center;font-weight:400;font-size:11px;line-height:1}
 #gameRoot .promoteBox{padding:10px 12px 12px}
 #gameRoot .promoteBox>i{font-size:21px;color:#f4f1e9;letter-spacing:0;margin-bottom:9px}
 #gameRoot .prhelp{margin-left:auto;font-size:11px;color:#bac9e0}
@@ -47,60 +72,101 @@ body:has(#gameRoot:not(.hidden)){background:#10152d;background-image:none}
 #gameRoot .lvtile.top{border-color:#c99a42;background:#504632}
 #gameRoot .lvtile.ready{border-color:#50884f;background:#315848}
 #gameRoot .lvtile.spec{border-color:#458b87;background:#294951}
-#gameRoot .sabdraw{background:#9880c6;border-color:#8a75b8;color:#fff;box-shadow:0 3px 0 #141b34;padding:8px 10px}
+/* ── 방해 공작 ── 왼쪽 기둥의 마지막 칸. 오른쪽 기둥의 상대 청사처럼 기둥에서 남는 높이를 전부 받아
+   밑줄이 다른 기둥과 같은 선에서 끝난다. 안의 줄들은 그 높이에 고르게 퍼진다.
+   글자는 냥타워 카드(18px)와 같은 눈높이 — 예전 10px 보조 글자는 너무 작아 읽히지 않았다. */
+#gameRoot .cols>div:first-child{display:flex;flex-direction:column}
+#gameRoot .cols>div:first-child>.panel{flex:none}
+#gameRoot #sabPanel{flex:1 0 auto;display:flex;flex-direction:column;margin-bottom:0}
+#gameRoot #sabPanel>.pad{flex:1;display:flex;flex-direction:column}
+#gameRoot #sabBar{flex:1}
+#gameRoot .sabdraw{background:#9880c6;border-color:#8a75b8;color:#fff;box-shadow:0 3px 0 #141b34;padding:10px 12px;gap:12px}
 #gameRoot .sabdraw:hover:not(:disabled){background:#a089d0;border-color:#b39ddb}
-#gameRoot .sabdraw .meta b{color:#fff;font-size:19px}
-#gameRoot .sabdraw .meta i,#gameRoot .sabdraw .left,#gameRoot .sabdraw .left b{color:#fff7ff;font-family:var(--body);font-size:10px}
-#gameRoot .sabdraw .cost{color:#fff5c5;font-family:var(--disp);font-size:18px}
+#gameRoot .sabdraw .ic{font-size:30px}
+#gameRoot .sabdraw .meta b{color:#fff;font-size:20px}
+#gameRoot .sabdraw .meta i,#gameRoot .sabdraw .left,#gameRoot .sabdraw .left b{color:#fff7ff;font-family:var(--body);font-size:13px}
+#gameRoot .sabdraw .cost{color:#fff5c5;font-family:var(--disp);font-size:20px}
 #gameRoot .prow2{border-radius:11px;background:#283858;margin-top:4px;padding:5px 8px}
 #gameRoot .prow2 .meta b{color:#f4f1e9;font-size:14px}
 #gameRoot .prow2 .meta i{color:#bdc8dc;font-family:var(--body);font-size:10px}
 #gameRoot .prow2 .pct{color:#e1d2ff;background:#394e79;padding:3px 7px;border-radius:12px;font-family:var(--disp);font-size:14px}
-#gameRoot .sabpool{border-top:0;padding-top:0;gap:4px}
-#gameRoot .srow{background:#283858;border-radius:10px;padding:5px 8px}
-#gameRoot .srow .meta b{color:#f4f1e9;font-family:var(--disp);font-size:14px}
-#gameRoot .srow .meta i{color:#bbc7df;font-family:var(--body);font-size:10px}
-#gameRoot .srow .pct{color:#e1d2ff;background:#394e79;border-radius:12px;padding:3px 7px;font-family:var(--disp);font-size:14px}
+#gameRoot .sabpool{border-top:0;padding-top:0;gap:6px;flex:1;justify-content:space-evenly}
+#gameRoot .srow{background:#283858;border-radius:10px;padding:8px 10px;gap:10px}
+#gameRoot .srow .ic{font-size:24px}
+#gameRoot .srow .meta b{color:#f4f1e9;font-family:var(--disp);font-size:17px}
+#gameRoot .srow .meta i{color:#d0daec;font-family:var(--body);font-size:13px;margin-top:2px}
+#gameRoot .srow .pct{color:#e1d2ff;background:#394e79;border-radius:12px;padding:3px 9px;font-family:var(--disp);font-size:17px}
 #gameRoot .sabflash{background:#343252;border-color:#8875b0;border-radius:12px}
 #gameRoot .sabflash .meta b{color:#e7dbff}
 #gameRoot .sabflash .meta i,#gameRoot .sabflash .meta em{color:#cdbfe3}
+/* ── 오른쪽 기둥: 라운드 진행 → 내 청사 → 상대 청사 ──
+   글자는 왼쪽 냥타워 칸(이름 16px · 값 17px)과 같은 눈높이로 맞춘다. 예전에는 상대 미니맵이
+   폭 100% 로 자라(1920 화면에서 430px) 기둥이 칸 높이를 넘고, fitSideCols 가 기둥 전체를
+   zoom 0.75 로 눌러 글자가 다 작아졌다. 이제 미니맵은 「남는 높이」에 맞춰 잡으므로
+   (아래 #oppPanel) 기둥이 넘치지 않고 글자도 제 크기로 선다. */
 #gameRoot .boardctl{gap:8px}
-#gameRoot .boardctl #btnGo{background:#ef8d4b;border-color:#ffc18b;color:white;font-size:18px;min-height:52px;padding:9px}
+#gameRoot .boardctl #btnGo{background:#ef8d4b;border-color:#ffc18b;color:white;font-size:20px;min-height:54px;padding:9px}
 #gameRoot .boardctl #btnGo:hover:not(:disabled){background:#f6a25c}
 #gameRoot .boardctl #btnGo:disabled{opacity:1;background:#b87447;color:#fff2de}
-#gameRoot .boardctl #btnSpeed{min-width:76px;font-size:14px;padding:8px}
-#gameRoot #btnExit{font-size:11px;border-width:1px;box-shadow:none}
+#gameRoot .boardctl #btnSpeed{min-width:84px;font-size:16px;padding:8px}
+/* 나가기 단추는 바로 아래 속도 단추와 같은 크기로 — 머릿글 오른쪽에 나란히 보이는 두 단추가 짝을 이룬다 */
+#gameRoot #btnExit{min-width:84px;font-size:16px;padding:8px;letter-spacing:0}
+#gameRoot #ctlPanel>h2{padding-top:7px;padding-bottom:6px}
 #gameRoot .stat{background:#293959;border:1.5px solid #4d628b;border-radius:12px;color:#f4f1e9;padding:11px 7px}
-#gameRoot .stat b{font-family:var(--disp);color:#f4f1e9;font-size:22px}
-#gameRoot .stat span{color:#bdc7dc;letter-spacing:0;font-size:11px}
+#gameRoot .stat b{font-family:var(--disp);color:#f4f1e9;font-size:26px}
+#gameRoot .stat span{color:#bdc7dc;letter-spacing:0;font-size:13px}
 #gameRoot .stat.dmg b{color:#ff9897}
 #gameRoot .stat.gold b{color:#f6d278}
-#gameRoot #mePanel .stat.score{padding:12px}
-#gameRoot #mePanel .stat.score>b{font-size:40px;color:#ff8f87}
-#gameRoot #mePanel .stat.score>span{font-family:var(--disp);font-size:14px;letter-spacing:0}
-#gameRoot .scorelegs span{font-family:var(--body);font-size:10px;color:#b6c3da}
-#gameRoot .stat.effects .efcol>i{font-family:var(--disp);font-size:14px;color:#e3eafb;letter-spacing:0}
-#gameRoot .passiveTags span{background:#30415f;border-color:#566d91;color:#bdcce4}
+#gameRoot #mePanel .stat.score{padding:10px 12px}
+#gameRoot #mePanel .stat.score>b{font-size:42px;color:#ff8f87}
+#gameRoot #mePanel .stat.score>span{font-family:var(--disp);font-size:16px;letter-spacing:0}
+#gameRoot .scorelegs span{font-family:var(--body);font-size:12px;color:#b6c3da}
+#gameRoot .stat.effects .efcol>i{font-family:var(--disp);font-size:15px;color:#e3eafb;letter-spacing:0}
+#gameRoot .passiveTags span{background:#30415f;border-color:#566d91;color:#bdcce4;font-size:12px;padding:2px 9px}
+#gameRoot .passiveTags span b{font-size:12px} #gameRoot .passiveTags span i{font-size:11px}
+/* 준비 표시줄 — 개시 단추 바로 아래, 누가 무엇을 기다리는지 */
+#gameRoot #readyBar{margin-top:10px;padding:7px 9px;border-radius:12px;border-color:#4e638b;background:#1c2a48}
+#gameRoot .rdy{background:#263654;border-color:#4e638b;color:#c5d0e5;border-radius:9px;min-width:104px;padding:4px 9px}
+#gameRoot .rdy b,#gameRoot .rdy i,#gameRoot #rdyTimer{color:#c5d0e5}
+#gameRoot .rdy i{font-size:11px} #gameRoot .rdy b{font-size:14px} #gameRoot #rdyTimer{font-size:11.5px;white-space:pre-line;line-height:1.35}
+#gameRoot .rdytrack{background:#18263f;height:6px;margin-top:5px;border-radius:3px}
+/* ── 상대 청사 ── 기둥에서 남는 높이를 전부 받아, 미니맵을 그 높이에 맞춰 정사각형으로 앉힌다.
+   폭에 묶으면(width:100%) 기둥이 넘쳐 zoom 이 걸리고, 폭 100% 로 늘린 280px 캔버스는 흐릿했다.
+   캔버스 해상도는 game.js(drawOppBoard)가 표시 크기 × devicePixelRatio 로 맞춰 준다. */
+#gameRoot .cols>div:nth-child(3){display:flex;flex-direction:column}
+#gameRoot .cols>div:nth-child(3)>.panel{flex:none}
+#gameRoot #oppPanel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin-bottom:0}
+#gameRoot #oppPanel>.pad{flex:1;min-height:0;display:flex;flex-direction:column}
+#gameRoot .oppgrid:not(.many){flex:1;min-height:0;display:flex;flex-direction:column}
+#gameRoot .oppgrid:not(.many) .oppcard{flex:1;min-height:0;display:flex;flex-direction:column}
+#gameRoot .oppgrid:not(.many) .oppcard canvas{
+  flex:1 1 0;min-height:140px;width:auto;height:auto;max-width:100%;aspect-ratio:1;align-self:center}
 #gameRoot .oppcard{background:#263653;border:1.5px solid #4e638d;border-radius:12px;padding:9px}
-#gameRoot .oppcard .opphead{font-family:var(--body);color:#e3eafb;font-size:12px}
-#gameRoot .oppcard .opphead b{font-family:var(--disp);font-size:18px;color:#f4f1e9}
-#gameRoot .oppcard canvas{border-color:#536994;border-radius:7px;background:#22314b}
+#gameRoot .oppcard .opphead{font-family:var(--body);color:#e3eafb;font-size:14px;margin-bottom:8px;gap:10px}
+#gameRoot .oppcard .opphead b{font-family:var(--disp);font-size:20px;color:#f4f1e9}
+#gameRoot .oppcard .opphp{color:#ff9897}
+#gameRoot .oppcard .opphp::before,#gameRoot .oppcard .oppwave::before{color:#bdc7dc}
+#gameRoot .oppcard canvas{border-color:#536994;border-radius:9px;background:#22314b}
 #gameRoot .oppcard.ally{background:#243f51;border-color:#5f9fa5}
 #gameRoot .qmark{background:#3d527c;border:2px solid #6e86b2;color:white;width:28px;height:28px;font-family:var(--disp);font-size:18px;box-shadow:none}
-#gameRoot .rdy{background:#263654;border-color:#4e638b;color:#c5d0e5;border-radius:9px}
-#gameRoot .rdy b,#gameRoot .rdy i,#gameRoot #rdyTimer{color:#c5d0e5}
-#gameRoot .rdytrack{background:#18263f}
 #gameRoot #fxTags span{color:#ffb4a6;background:#493344;border-radius:8px}
 body:has(#gameRoot:not(.hidden)) #tip,#gameRoot .beastpop,#gameRoot .prhint{background:#1e2b4b;color:#e0e8f7;border:2px solid #607ca9;border-radius:13px;box-shadow:0 5px 15px #060b1f66;font-family:var(--body)}
 body:has(#gameRoot:not(.hidden)) #tip b{color:#b6d3ff}
 body:has(#gameRoot:not(.hidden)) #tip i{color:#becbe1}
 #gameRoot .beastpop-h{color:#e0e8f7;background:#2b3d60;border-color:#4e6590;font-size:16px}
+/* 침입자 정보 말풍선 — 글자가 작아 읽기 어려웠다. 한 단계씩 키우고 그만큼 폭도 넓힌다 */
+#gameRoot .beastpop{width:390px}
+#gameRoot .beast-name{font-size:14.5px}
+#gameRoot .beast-stat{font-size:11.5px;color:#bdc8dc}
+#gameRoot .beast-desc{font-size:12.5px;line-height:1.45;color:#c9d3e6}
 @media(min-width:1101px) and (max-height:850px){
   #gameRoot.wrap{padding:8px}
   #gameRoot .panel>h2{font-size:19px;min-height:36px;padding-top:7px}
-  #gameRoot .catpick{min-height:48px;padding:4px 7px}
-  #gameRoot .catpick .spr{width:36px;height:36px}
-  #gameRoot .catpick .nm{font-size:14px}
+  #gameRoot .catpick{padding:5px 6px}
+  #gameRoot .catpick .row1{column-gap:6px;row-gap:2px}
+  #gameRoot .catpick .spr{width:64px;height:64px}
+  #gameRoot .catpick{--nmfs:clamp(11px,7cqw,14px)}
+  #gameRoot .catpick .cost{padding:1px 9px}
   #gameRoot #promoteList{--slot:55px}
   #gameRoot .promoteBox>i{font-size:18px;margin-bottom:6px}
   #gameRoot .prow2{padding:3px 7px}

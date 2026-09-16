@@ -4281,7 +4281,9 @@ function baseFixedCells() {
 function renderHud() {
   $("#sHp").textContent = `${Math.max(0, game.hp)}/${game.maxHp}`;
   const goldEl = $("#sGold");
-  goldEl.textContent = String(Math.floor(game.gold));
+  // 냥타워 가격표와 같은 꼴(₩1,234). 빚이면 ₩-120 이 아니라 -₩120 으로
+  const g = Math.floor(game.gold);
+  goldEl.textContent = `${g < 0 ? "-" : ""}₩ ${Math.abs(g).toLocaleString()}`;
   // 빚(마이너스)은 색으로 바로 알아보게 — 갚기 전까지는 아무것도 살 수 없다
   goldEl.style.color = game.gold < 0 ? "#e0574d" : "";
   goldEl.parentElement.querySelector("span").textContent = game.gold < 0 ? "특허료 (빚)" : "특허료";
@@ -4425,7 +4427,8 @@ function renderReadyBar() {
 
   const t = $("#rdyTimer");
   if (!online()) t.textContent = "서버 연결 끊김 — 혼자 진행합니다";
-  else if (!prepEndsAt) t.textContent = "상대가 웨이브를 끝내면 준비시간이 시작됩니다";
+  // 두 줄로 — #rdyTimer 가 white-space:pre-line 이라 \n 이 그대로 줄바꿈이 된다
+  else if (!prepEndsAt) t.textContent = "상대가 웨이브를 끝내면\n준비시간이 시작됩니다";
   else t.textContent = `준비시간 ${left.toFixed(1)}초`;
   /** @type {HTMLElement} */ ($("#rdyFill")).style.width =
     prepEndsAt ? `${Math.min(100, (left / BAL.prepSecs) * 100)}%` : "0%";
@@ -7259,12 +7262,16 @@ function escapeHtml(s) {
 
 /* ═══════ 판을 화면 높이에 맞추기 ═══════ */
 /**
- * 판이 화면에 들어가도록 줄여 놓은 배율 (1 = 원래 크기).
- * 판은 9×9 × 84px 고정이라 낮은 화면에서는 그대로 두면 넘친다. 칸 수나 픽셀 좌표를 건드리는 대신
- * 액자째 CSS 로 축소하고, 화면 좌표를 판 좌표로 되돌릴 때만 이 값으로 나눈다 —
- * 전투 계산은 언제나 원래 크기 그대로다.
+ * 판이 화면에 꽉 차도록 맞춘 배율 (1 = 원래 크기).
+ * 판은 9×9 × 84px 고정이라 낮은 화면에서는 그대로 두면 넘치고, 1080 전체화면(F11)처럼 칸이 판보다
+ * 높으면 아래가 비었다 — 예전에는 1 이하로만 줄여서, 양옆 기둥까지 판 밑줄에 맞춰 같이 짧아지며
+ * 화면 아래 100px 남짓이 통째로 비었다. 이제 칸 폭·높이 중 먼저 걸리는 쪽까지 키우기도 한다.
+ * 칸 수나 픽셀 좌표를 건드리는 대신 액자째 CSS 로 늘이고 줄이며, 화면 좌표를 판 좌표로 되돌릴 때만
+ * 이 값으로 나눈다 — 전투 계산은 언제나 원래 크기 그대로다.
+ * 상한(BOARD_SCALE_MAX)은 4K 같은 큰 화면에서 원화가 끝없이 커져 흐려지는 것을 막는 선이다.
  */
 let boardScale = 1;
+const BOARD_SCALE_MAX = 1.6;
 let fitKey = "";
 /** @param {boolean} [force] 액자 두께가 바뀌었을 때(전장 원화 교체)는 크기가 같아 보여도 다시 잰다 */
 function fitArena(force) {
@@ -7273,11 +7280,13 @@ function fitArena(force) {
   // 가운데 패널을 판 높이에 묶어 둔 상태(fitColsToBoard)로는 칸이 얼마나 넓어질 수 있는지
   // 알 수 없다 — 먼저 풀고 화면 전체 높이 기준으로 잰다
   const cols = $("#gameRoot .cols"), panel = box.closest(".panel");
-  const pinned = panel?.style.height;
+  const pinned = panel?.style.height, pinnedCols = cols?.style.gridTemplateColumns;
   if (panel) panel.style.height = "";
   cols?.style.removeProperty("--col-h");
+  cols?.style.removeProperty("grid-template-columns");   // 칸 폭도 CSS 기본(1:2:1)으로 되돌려 잰다
   const key = `${box.clientWidth}x${box.clientHeight}`;
-  if (!force && key === fitKey && pinned) {          // 크기가 그대로면 묶어 둔 높이만 되돌린다
+  if (!force && key === fitKey && pinned) {          // 크기가 그대로면 묶어 둔 높이·폭만 되돌린다
+    if (pinnedCols) cols.style.gridTemplateColumns = pinnedCols;
     panel.style.height = pinned;
     cols?.style.setProperty("--col-h", `${panel.offsetHeight}px`);
     return;
@@ -7286,9 +7295,33 @@ function fitArena(force) {
   a.style.transform = "none";                       // 원래 크기를 재려면 배율을 먼저 풀어야 한다
   const w = a.offsetWidth, h = a.offsetHeight;
   if (!w || !h || !box.clientHeight) return;
-  boardScale = Math.min(1, box.clientWidth / w, box.clientHeight / h);
-  if (boardScale < 1) a.style.transform = `scale(${boardScale})`;
+  fitCenterCol(cols, box, w, h);
+  boardScale = Math.min(BOARD_SCALE_MAX, box.clientWidth / w, box.clientHeight / h);
+  if (boardScale !== 1) a.style.transform = `scale(${boardScale})`;
   fitColsToBoard(box, h * boardScale);
+}
+
+/**
+ * 가운데 칸 폭을 「판이 화면 높이를 꽉 채우는 데 필요한 폭」으로 맞춘다.
+ * 칸 폭이 CSS 기본(1:2:1)으로 고정돼 있으면 세로로 긴 창에서는 판이 폭에 먼저 걸려 아래가 비고,
+ * 그 밑줄에 양옆 기둥까지 맞추니 화면 아래가 통째로 빈다. 그래서 창 비율이 어떻든 판이 높이를 다
+ * 쓰도록, 필요한 만큼 가운데를 넓히고 남는 폭을 양옆이 나눠 갖는다. 양옆은 SIDE_MIN 아래로는
+ * 내려가지 않는다 — 그 밑으로는 냥타워 카드·수치가 읽히지 않아서, 거기서부터는 판이 양보한다.
+ * 1100px 이하(두 칸 배치·세로 배치)는 CSS 미디어쿼리가 칸을 새로 짜므로 건드리지 않는다.
+ */
+const SIDE_MIN = 440;   // 냥타워 카드 2열(원화 84px + 이름·가격 100px, 두 장)이 잘리지 않는 최소 폭
+function fitCenterCol(cols, box, w, h) {
+  if (!cols || innerWidth <= 1100) return;
+  const center = box.closest(".cols>div");
+  if (!center) return;
+  const chrome = center.clientWidth - box.clientWidth;             // 패널 테두리·안쪽 여백 (판이 못 쓰는 폭)
+  const needW = w * Math.min(BOARD_SCALE_MAX, box.clientHeight / h) + chrome;
+  const gap = parseFloat(getComputedStyle(cols).columnGap) || 12;
+  const maxW = cols.clientWidth - gap * 2 - SIDE_MIN * 2;
+  // 넓히기만 한다 — 가로로 넓은 창에서 판이 높이에 걸려 폭이 남아도 기본 1:2:1 보다 좁히지는 않는다
+  const colW = Math.floor(Math.min(needW, maxW));
+  if (colW <= center.clientWidth + 1) return;
+  cols.style.gridTemplateColumns = `minmax(0,1fr) ${colW}px minmax(0,1fr)`;
 }
 
 /**
@@ -7554,16 +7587,20 @@ function renderCatRoster() {
     /* 프로필은 정면 초상화(CAT_INFO_SRC)를 먼저 쓴다. 초상화가 없는 종류는 판에 서는 원화
      * (전용 시트 0번 칸 = 평상시 자세)로 — 시트는 한 줄 4컷이라 배경을 가로 400% 로 늘리고
      * 왼쪽 끝을 보이면 첫 칸만 잘린다. 그것도 없으면 예전처럼 아이콘으로 되돌아간다.
-     * 설명(desc)은 카드에서 빼고 원화에 마우스를 올렸을 때 말풍선(showTip)으로만 보여준다. */
+     * 설명(desc)은 카드에서 빼고 원화에 마우스를 올렸을 때 말풍선(showTip)으로만 보여준다.
+     * 「자금 부족」은 이름 칸(.who) 안에 두고 CSS 로 이름 글자 바로 위 가운데에 띄운다 (game-theme.css .nogold) —
+     * 카드 오른쪽 위 구석에 있을 때는 어느 냥의 것인지 눈이 한 번 더 가야 했다.
+     * 라벨 앞의 투명한 아이콘 글자는 실제 아이콘과 같은 폭을 차지하는 자리표시자다 — 그래야 라벨의
+     * 가운데가 아이콘까지 합친 칸이 아니라 이름 글자(.nmtx)의 가운데에 온다. */
     const port = CAT_INFO_SRC[k], src = CAT_SHEET_SRC[k];
     return `<button type="button" class="pick catpick${afford ? "" : " off"}" data-k="${k}" aria-disabled="${!afford}" aria-label="${d.name} 임용, ${cost} 특허료">
-      ${prep && !afford ? '<span class="nogold">자금 부족</span>' : ""}
       <div class="row1">
         ${port ? `<span class="spr port" style="background-image:url('${port}')"></span>`
               : src ? `<span class="spr" style="background-image:url('${src}')"></span>`
                     : `<span class="ic">${d.icon}</span>`}
         <span class="who">
-          <span class="nm">${d.icon} ${d.name}</span>
+          ${prep && !afford ? `<span class="nogold"><span class="nmic" aria-hidden="true">${d.icon}</span><b>자금 부족</b></span>` : ""}
+          <span class="nm"><span class="nmic">${d.icon}</span><span class="nmtx">${d.name}</span></span>
         </span>
         <span class="cost">₩${cost.toLocaleString()}</span>
       </div>
@@ -8071,36 +8108,47 @@ function drawOpponent(now) {
 
 /** 미니맵 한 장 */
 function drawOppBoard(cv, snap, now) {
+  // 해상도는 화면에 보이는 크기에 맞춘다 — 280px 로 그려 놓고 CSS 로 늘리면 흐릿하다.
+  // 표시 크기는 CSS(game-theme.css #oppPanel)가 남는 높이에서 정하고, 여기서는 그 크기를 따라간다.
+  const px = Math.round((cv.clientWidth || cv.width) * (window.devicePixelRatio || 1));
+  if (px > 0 && cv.width !== px) { cv.width = px; cv.height = px; }
   const g = cv.getContext("2d");
   g.clearRect(0, 0, cv.width, cv.height);
   if (!snap) {
-    g.fillStyle = "rgba(90,80,60,.5)"; g.font = "12px sans-serif"; g.textAlign = "center";
+    g.fillStyle = "rgba(200,210,230,.6)"; g.font = `${Math.max(12, cv.width * 0.045)}px sans-serif`; g.textAlign = "center";
     g.fillText("정보를 기다리는 중…", cv.width / 2, cv.height / 2);
     return;
   }
   const s = snap;
-  const cell = Math.min(cv.width / s.cols, cv.height / s.rows);
+  // 실제 판처럼 잔디 액자를 두른다 — 칸 반 개 폭만큼 안으로 들여 그린다
+  g.fillStyle = "#86cf74";
+  g.fillRect(0, 0, cv.width, cv.height);
+  const cell = Math.min(cv.width / (s.cols + 0.6), cv.height / (s.rows + 0.6));
   const ox = (cv.width - cell * s.cols) / 2, oy = (cv.height - cell * s.rows) / 2;
   g.save(); g.translate(ox, oy);
+  // 타일밭 바탕 — 실제 판의 어두운 이음매 색. 타일을 살짝 작게 그려 격자선이 드러난다
+  g.fillStyle = "#3d4a3c";
+  g.fillRect(-cell * 0.04, -cell * 0.04, cell * s.cols + cell * 0.08, cell * s.rows + cell * 0.08);
+  const seam = Math.max(1, cell * 0.05);
 
-  // 바닥 — 실제 판과 같은 톤: 통로 / 심사관 터 / 성문 / 등록원부를 색으로 구분
+  // 바닥 — 실제 판(원화)과 같은 톤: 돌길 통로 / 초록 심사관 터 / 쥐구멍 / 등록원부
   s.layout.forEach((line, y) => [...line].forEach((ch, x) => {
     const checker = (x + y) % 2 === 0;
     let col;
-    if (ch === "G") col = "#b7d0af";
-    else if (ch === "X") col = "#e9cb8c";
-    else if (ch === "T") col = checker ? "#b5d3a8" : "#a9c99c";   // 심사관 터 — 초록
-    else if (ch === "#") col = "#e5dbc2"; // 아래서 해치무늬로 다시 덮인다
-    else col = checker ? "#e8dcc4" : "#ddcfa9";                    // 통로 — 침입자용
+    if (ch === "G") col = "#e8e0cf";                                // 쥐구멍(성문) — 밝은 돌
+    else if (ch === "X") col = "#7fd9a6";                           // 등록원부 — 청록
+    else if (ch === "T") col = checker ? "#6fd07a" : "#66c671";     // 심사관 터 — 초록
+    else if (ch === "#") col = "#6e7f78"; // 아래서 해치무늬로 다시 덮인다
+    else col = checker ? "#aca597" : "#a29b8d";                     // 통로 — 회색 돌길
     g.fillStyle = col;
-    g.fillRect(x * cell, y * cell, cell, cell);
+    g.fillRect(x * cell + seam / 2, y * cell + seam / 2, cell - seam, cell - seam);
   }));
   // 벽 — 실제 판과 같은 해치 패턴
   s.layout.forEach((line, y) => [...line].forEach((ch, x) => {
     if (ch !== "#") return;
-    g.fillStyle = "#92a8a0";
-    g.fillRect(x * cell, y * cell, cell, cell);
-    g.strokeStyle = "#a8bcb4"; g.lineWidth = Math.max(1, cell * 0.05);
+    g.fillStyle = "#6e7f78";
+    g.fillRect(x * cell + seam / 2, y * cell + seam / 2, cell - seam, cell - seam);
+    g.strokeStyle = "#86978f"; g.lineWidth = Math.max(1, cell * 0.05);
     g.save();
     g.beginPath(); g.rect(x * cell, y * cell, cell, cell); g.clip();
     for (let i = -cell; i < cell * 2; i += cell * 0.22) {
