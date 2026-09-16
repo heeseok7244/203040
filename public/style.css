@@ -124,7 +124,7 @@ h1{font-family:var(--disp);font-size:27px;margin:0;letter-spacing:.18em;color:#f
 /* 통로 — 침입자만 지난다. 어두운 막만 얇게 씌워 원화 바닥이 비쳐 보이게 둔다 */
 .cell.road{background:rgba(18,28,44,.34);border-color:rgba(255,255,255,.16)}
 .cell.tower.hint{background:rgba(120,230,110,.5)} .cell.tower.bad,.cell.road.bad{background:rgba(230,90,80,.5)}
-/* 가운데 조형물이 깔고 앉은 6칸 — 원화가 그대로 보이도록 칠도 벽 무늬도 걷어낸다.
+/* 가운데 조형물이 깔고 앉은 2×2칸 — 원화가 그대로 보이도록 칠도 벽 무늬도 걷어낸다.
    (통로·등록원부 규칙보다 뒤에 와야 덮어쓴다) */
 .cell.mon{background:transparent;background-image:none;border-color:rgba(255,255,255,.14)}
 .wingtag{position:absolute;pointer-events:none;z-index:2;
