@@ -7492,16 +7492,86 @@ let fitKey = "";
 function fitArena(force) {
   const box = $("#arenaFit"), a = $("#arena");
   if (!box || !a) return;
+  // 가운데 패널을 판 높이에 묶어 둔 상태(fitColsToBoard)로는 칸이 얼마나 넓어질 수 있는지
+  // 알 수 없다 — 먼저 풀고 화면 전체 높이 기준으로 잰다
+  const cols = $("#gameRoot .cols"), panel = box.closest(".panel");
+  const pinned = panel?.style.height;
+  if (panel) panel.style.height = "";
+  cols?.style.removeProperty("--col-h");
   const key = `${box.clientWidth}x${box.clientHeight}`;
-  if (!force && key === fitKey) return;
+  if (!force && key === fitKey && pinned) {          // 크기가 그대로면 묶어 둔 높이만 되돌린다
+    panel.style.height = pinned;
+    cols?.style.setProperty("--col-h", `${panel.offsetHeight}px`);
+    return;
+  }
   fitKey = key;
   a.style.transform = "none";                       // 원래 크기를 재려면 배율을 먼저 풀어야 한다
   const w = a.offsetWidth, h = a.offsetHeight;
   if (!w || !h || !box.clientHeight) return;
   boardScale = Math.min(1, box.clientWidth / w, box.clientHeight / h);
   if (boardScale < 1) a.style.transform = `scale(${boardScale})`;
+  fitColsToBoard(box, h * boardScale);
 }
-addEventListener("resize", () => fitArena(true));
+
+/**
+ * 판이 폭에 걸려 줄어들면 가운데 칸 아래가 비는데, 양옆 칸은 화면 끝까지 내려가서 밑줄이
+ * 어긋났다. 판이 실제로 차지하는 높이만큼만 가운데 패널을 잡고, 양옆 칸도 그 높이에
+ * 맞춘다 (--col-h). 옆 칸의 내용이 그보다 길면 fitSideCols 가 zoom 으로 줄인다.
+ */
+function fitColsToBoard(box, boardH) {
+  const cols = $("#gameRoot .cols"), panel = box.closest(".panel");
+  if (!cols || !panel) return;
+  panel.style.height = "";
+  cols.style.removeProperty("--col-h");
+  const spare = box.clientHeight - boardH;           // 판 아래에 남은 빈 높이
+  if (spare > 1) panel.style.height = `${panel.offsetHeight - spare}px`;
+  cols.style.setProperty("--col-h", `${panel.offsetHeight}px`);
+  fitSideCols();
+}
+addEventListener("resize", () => { fitArena(true); fitSideCols(); });
+
+/**
+ * 양옆 칸(냥타워·라운드 진행)은 스크롤을 만들지 않는다. 판은 화면 높이에 맞춰 줄어드는데
+ * 옆 칸만 제 크기를 고집하면 1v1 에서 방해 공작·상대 청사가 붙는 순간 스크롤이 생겼다.
+ * 그래서 칸의 내용이 칸 높이를 넘으면 그만큼 zoom 으로 줄인다 (transform 과 달리 레이아웃
+ * 크기도 함께 줄어 자리를 정확히 차지한다). 내용이 바뀔 때마다(MutationObserver) 다시 잰다.
+ */
+let sideFitPending = false;
+function fitSideCols() {
+  if (sideFitPending) return;
+  sideFitPending = true;
+  requestAnimationFrame(() => {
+    sideFitPending = false;
+    for (const col of document.querySelectorAll("#gameRoot .cols>div:not(:nth-child(2))")) {
+      // 칸 자체가 아니라 안의 패널들에 zoom 을 건다 — 칸에 걸면 칸 높이까지 같이 줄어 버린다
+      const kids = [...col.children];
+      const setZoom = (z) => kids.forEach((k) => { k.style.zoom = z; });
+      setZoom("");                                             // 원래 크기를 재려면 배율을 먼저 푼다
+      const need = col.scrollHeight, have = col.clientHeight;
+      if (!need || !have || need <= have) continue;
+      let z = Math.max(0.5, Math.floor((have / need) * 1000) / 1000);
+      setZoom(String(z));
+      // zoom 이 걸리면 폭이 늘어 줄바꿈이 풀리기도 하고, 상대 미니맵 캔버스(width:100%)처럼
+      // 폭에 묶인 것은 줄지 않아 비례로 맞지 않는다 — 넘치는 동안 몇 번 더 조여 수렴시킨다
+      for (let i = 0; i < 6 && z > 0.5 && col.scrollHeight > col.clientHeight + 1; i++) {
+        z = Math.max(0.5, z * (col.clientHeight / col.scrollHeight) * 0.995);
+        setZoom(String(z));
+      }
+    }
+  });
+}
+(() => {
+  const root = $("#gameRoot");
+  if (!root) return;
+  new MutationObserver(fitSideCols).observe(root, {
+    childList: true, subtree: true, characterData: true,
+    attributes: true, attributeFilter: ["class", "hidden"],
+  });
+  // 상대 미니맵 캔버스처럼 DOM 은 그대로인데 크기만 나중에 자라는 것도 있다 — 패널 크기 변화도 본다
+  // (zoom 을 걸면 다시 불리지만, 같은 값으로 수렴하므로 한 번 더 돌고 멈춘다)
+  const ro = new ResizeObserver(fitSideCols);
+  for (const p of root.querySelectorAll(".cols>div:not(:nth-child(2))>*")) ro.observe(p);
+})();
 
 /** 판 좌표(px) → 화면 좌표. 판이 줄어 있으면 그만큼 곱해야 도장이 제자리에 찍힌다. */
 function boardToScreen(cx, cy) {
@@ -7656,10 +7726,6 @@ function renderPromoteList() {
   const el = $("#promoteList");
   if (!el) return;
   const pool = B.cats(game).concat(game.tray);
-  if (!pool.length) {
-    el.innerHTML = `<div class="prnone">아직 냥타워가 없습니다 — 위에서 랜덤 임용을 돌리세요.</div>`;
-    return;
-  }
   /** @type {Record<string, number>} */
   const count = {};
   for (const c of pool) count[`${c.key}:${Math.max(1, c.lv || 1)}`] = (count[`${c.key}:${Math.max(1, c.lv || 1)}`] || 0) + 1;
@@ -7688,7 +7754,8 @@ function renderPromoteList() {
                   : `<span class="ic">${d.icon}</span>`}
       <em>Lv${lv}</em><b>${canUp ? `${count[id]}/${need}` : `×${count[id]}`}</b>
     </div>`;
-  }).join("");
+  }).join("") + '<div class="lvtile empty" aria-hidden="true"><span>🐾</span></div>'.repeat(Math.max(0, 8 - Object.keys(count).length));
+  el.setAttribute('aria-label', pool.length ? '보유 냥타워' : '보유 냥타워 없음. 위에서 냥타워를 임용하세요.');
 }
 
 /**
@@ -7712,18 +7779,18 @@ function renderCatRoster() {
      * 왼쪽 끝을 보이면 첫 칸만 잘린다. 그것도 없으면 예전처럼 아이콘으로 되돌아간다.
      * 설명(desc)은 카드에서 빼고 원화에 마우스를 올렸을 때 말풍선(showTip)으로만 보여준다. */
     const port = CAT_INFO_SRC[k], src = CAT_SHEET_SRC[k];
-    return `<div class="pick catpick${afford ? "" : " off"}" data-k="${k}">
+    return `<button type="button" class="pick catpick${afford ? "" : " off"}" data-k="${k}" aria-disabled="${!afford}" aria-label="${d.name} 임용, ${cost} 특허료">
       ${prep && !afford ? '<span class="nogold">자금 부족</span>' : ""}
       <div class="row1">
         ${port ? `<span class="spr port" style="background-image:url('${port}')"></span>`
               : src ? `<span class="spr" style="background-image:url('${src}')"></span>`
                     : `<span class="ic">${d.icon}</span>`}
-        <div class="who">
+        <span class="who">
           <span class="nm">${d.icon} ${d.name}</span>
-        </div>
+        </span>
         <span class="cost">₩${cost.toLocaleString()}</span>
       </div>
-    </div>`;
+    </button>`;
   // 이종 합성을 잠갔으므로 처방표도 붙이지 않는다 — 되살릴 때는 `+ recipeBookHtml()` 을 되돌린다
   }).join("") /* + recipeBookHtml() */;
 
@@ -8375,7 +8442,6 @@ function applyStageTheme() {
   a.style.setProperty("--map-art", `url("${th.img}")`);
   a.style.setProperty("--map-pad", th.pad.map((v) => v + "px").join(" "));
   a.dataset.stage = th.id;
-  $("#mapName").textContent = th.name;
   fitArena(true);        // 원화마다 액자 두께가 달라 판 전체 크기가 바뀐다
   if (!first) log(`<b>전장 변경</b> — 라운드 ${stageNo()}부터는 <b>${th.name}</b>입니다.`);
 }

@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Gowun+Dodum&family=Do+Hyeon&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="game-theme.css">
 </head>
 <body>
 <div id="lobby">
@@ -58,17 +59,18 @@
      「웨이브 진행」 칸 머리로, 내 덱(스테이지 강화·증강)은 「내 청사」 칸으로 옮겼다. -->
 <div class="cols">
   <div>
-    <div class="panel">
-      <h2>냥타워 <em>CAT TOWERS</em></h2>
+    <div class="panel recruitment-panel">
+      <h2><span class="panel-title"><img src="img/game/cat_main1.png" alt="">냥타워</span><em>함께 지켜요!</em></h2>
       <!-- 종류를 고르지 않는다. 정액을 내고 무작위로 한 명을 받는다 (확률표는 JS가 채운다) -->
       <div class="pad" id="catRoster"></div>
       <!-- 승진은 따로 사는 것이 아니라 합성의 마지막 단계다. 여기에는 지금 무엇이
            몇 명·몇 레벨로 서 있는지(합성의 판단 재료)만 놓는다 -->
-      <div class="pad promoteBox">
+    </div>
+      <div class="panel pad promoteBox">
         <!-- 합성은 「같은 타워 강화」 한 갈래뿐이다. 다른 종류끼리의 이종 합성(처방)은
              배우는 비용이 재미보다 커서 잠가 두었다 — core/data.js 의 RECIPES 주석 참고.
              설명은 목록 아래 늘어놓지 않고 제목 옆 「강화효과 ?」에 마우스를 올리면 뜬다 -->
-        <i>보유 현황 <b>ROSTER</b>
+        <i>보유 현황
           <span class="prhelp">강화효과 <u>?</u>
             <span class="prhint">강화는 <b>같은 종류·같은 레벨 3명</b>을 모으는 것 하나입니다 — 모이면 레벨업합니다
               (Lv2 공격력 ×1.85, <b>Lv3</b> 는 공격력 ×3.42 에 승진 보정 ×1.25·치명타가 더 붙고, 대전장에서는 체력·공격력 ×1.3 이 얹힙니다).
@@ -76,12 +78,11 @@
               재료가 차면 판 <b>우측 상단</b>에 <b>합성</b> 단추가 뜹니다 (준비 단계에만).</span>
           </span>
         </i>
-        <div id="promoteList"></div>
+        <div id="promoteList" aria-label="보유 냥타워"></div>
       </div>
-    </div>
     <!-- 냥타워는 내가 고르고, 상대를 흔드는 쪽만 운에 맡긴다 — 무엇이 나갈지는 뽑아 봐야 안다 -->
     <div class="panel hidden" id="sabPanel">
-      <h2>방해 공작 <em>SABOTAGE DRAW</em></h2>
+      <h2><span class="panel-title"><img src="img/game/mob-copy-info.png" alt="">방해 공작</span></h2>
       <div class="pad">
         <div id="sabBar"></div>
       </div>
@@ -90,7 +91,9 @@
 
   <div>
     <div class="panel">
-      <h2><span id="mapName">청사 평면도</span>
+      <!-- 머리에 전장 이름(아이디어 캠퍼스 등)을 쓰지 않는다 — 원화가 이미 말해 주는 것이라
+           글자로 되풀이할 필요가 없었다. 왼쪽은 비워 두고 오른쪽에 「몬스터 정보 ?」만 둔다 -->
+      <h2><span></span>
         <span class="h2right">
           <em id="phaseLbl">몬스터 정보</em>
           <!-- 침입자 도감은 늘 펼쳐 둘 만큼 자주 보는 것이 아니라, 물음표로 접어 두고
