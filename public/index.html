@@ -64,15 +64,19 @@
           <div class="stat"><b id="sWave">0/10</b><span>라운드</span></div>
         </div>
         <!-- 이 판의 성적. 10라운드가 끝나면 이 숫자가 곧 결과다 (rankScore) -->
-        <div class="stat score" id="scoreBox">
-          <b id="sScore">0</b><span>랭킹 점수 <i id="sGrade">D</i></span>
-          <div class="scorelegs" id="sScoreLegs"></div>
-        </div>
-        <!-- 스테이지 강화가 곧 내 덱이다. 1:1 대전장까지 그대로 실린다.
-             상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다.
-             (증강 선택은 걷어냈다 — 내증강 · 상대 증강 칸도 함께 뺐다) -->
-        <div class="stat effects">
-          <div class="efcol"><i>스테이지 강화</i><div class="passiveTags" id="myPassiveTags"></div></div>
+        <!-- 랭킹 점수와 스테이지 강화를 옆으로 나란히 -->
+        <div class="meRow">
+          <div class="stat score" id="scoreBox">
+            <span>현재 랭킹 점수</span>
+            <div class="scoreline"><i id="sGrade">D</i><b id="sScore">0</b></div>
+            <div class="scorelegs" id="sScoreLegs"></div>
+          </div>
+          <!-- 스테이지 강화가 곧 내 덱이다. 1:1 대전장까지 그대로 실린다.
+               상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다.
+               (증강 선택은 걷어냈다 — 내증강 · 상대 증강 칸도 함께 뺐다) -->
+          <div class="stat effects">
+            <div class="efcol"><i>내 강화효과</i><div class="passiveTags" id="myPassiveTags"></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -96,7 +100,7 @@
         <!-- 합성은 「같은 타워 강화」 한 갈래뿐이다. 다른 종류끼리의 이종 합성(처방)은
              배우는 비용이 재미보다 커서 잠가 두었다 — core/data.js 의 RECIPES 주석 참고.
              설명은 목록 아래 늘어놓지 않고 냥타워 머리의 「강화효과 ?」에 마우스를 올리면 뜬다 -->
-        <i>보유 현황</i>
+        <i>내 타워 현황</i>
         <div id="promoteList" aria-label="보유 냥타워"></div>
       </div>
   </div>

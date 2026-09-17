@@ -389,7 +389,7 @@ const LINES = {
     key: "aide", name: "대리", icon: "💼", col: "#7fbf6a",
     hero: "💼 변리사냥 · 🌐 국제출원냥", axis: "보좌 · 동시조준",
     t1: { name: "공동대리", short: "동시조준 증가", desc: "모든 냥타워의 동시조준 +1" },
-    t2: { name: "특허법인 설립", short: "보좌 범위·배율 증가", desc: "변리사냥 보좌가 반경 2칸으로 퍼지고 보좌 배율이 1.4배가 된다" },
+    t2: { name: "특허법인 설립", short: "변리사냥 강화", desc: "변리사냥 보좌가 반경 2칸으로 퍼지고 보좌 배율이 1.4배가 된다" },
   },
 };
 /** 계열 특수효과가 열리는 점수 — [3점에 1단계, 5점에 2단계] */
@@ -478,7 +478,7 @@ const PASSIVES = [
 
   /* ── 💼 대리 계열 — 한 사람이 여러 건을 맡는다 ── */
   { key: "staff", name: "대리인 증원", icon: "💼", line: "aide", stat: "aura", amount: 1,
-    desc: "변리사냥 보좌 강화 (화력 +22%p · 공속 +14%p)",
+    desc: "변리사냥 강화 (화력 +22%p · 공속 +14%p)",
     detail: "사무소에 사람을 더 들인다. 💼 변리사냥의 보좌 배율이 커진다 — <b>변리사냥이 판에 없으면 아무 일도 일어나지 않는다.</b> 보좌 받는 냥이 많을수록 한 장의 값이 커진다." },
   { key: "joint", name: "공동출원", icon: "🌐", line: "aide", stat: "targets", amount: 1,
     desc: "모든 냥타워 동시조준 +1",
@@ -4297,8 +4297,15 @@ function renderScore() {
   if (g) { g.textContent = r.grade; g.style.color = r.gradeCol; }
   const legs = $("#sScoreLegs");
   if (legs) legs.innerHTML =
-    `<span>⚔️ ${r.duel.toLocaleString()}</span><span>🏗️ ${r.deck.toLocaleString()}</span>` +
-    `<span>⏱️ ${r.speed.toLocaleString()}</span><span>🏛️ ${r.hp.toLocaleString()}</span>`;
+    // 항목마다 냥타워 「합성효과 ?」와 같은 말풍선(.prhint)을 단다 — 마우스를 올리면 뜬다
+    legHtml("⚔️", r.duel, "<b>대전 점수</b><br>1:1 대전의 승·무·패로 쌓입니다.") +
+    legHtml("🏗️", r.deck, "<b>덱 점수</b><br>냥타워 수·합성 레벨·강화로 계산한 지금 덱의 힘입니다.") +
+    legHtml("⏱️", r.speed, "<b>속도 점수</b><br>라운드를 기준 시간 안에 끝낼수록 높습니다.") +
+    legHtml("🏛️", r.hp, "<b>내구 점수</b><br>남아 있는 원부 내구에 비례합니다.");
+}
+/** 랭킹 세부 항목 한 칸 — 아이콘·점수와, 마우스를 올리면 뜨는 설명 말풍선 */
+function legHtml(icon, pts, hint) {
+  return `<span class="leg">${icon} ${pts.toLocaleString()}<span class="prhint">${hint}</span></span>`;
 }
 const btn = (s) => /** @type {HTMLButtonElement} */ ($(s));
 
@@ -6229,7 +6236,8 @@ function stepDuel(dt) {
 /** 시뮬레이션이 내놓는 연출 이벤트 → 대전장 위의 글씨·고리·컷인 */
 function consumeDuelEvent(ev) {
   const y = duelY(ev.x, ev.dep) - 58;
-  if (ev.t === "crit") duelFloat(ev.x, y, "Critical!", "#e0574d", true);
+  // 「Critical!」 문구는 띄우지 않는다 — 대전장에서 냥타워를 가려 판이 안 보였다 (crit 이벤트는 무시)
+  if (ev.t === "crit") { /* 표시 없음 */ }
   else if (ev.t === "heal") duelFloat(ev.x, y, `+${ev.amt}`, "#7fbf6a", false);
   else if (ev.t === "exec") duelFloat(ev.x, y, "무효!", "#e0574d", true);
   // 내 냥이 쓰러지면 화면이 살짝 흔들린다 — 전멸이 곧 패배라 한 명 한 명이 무겁다
@@ -7927,8 +7935,22 @@ function renderPassiveTags() {
   /* 계열 진행도를 **맨 위에** 놓는다 — 「내가 무슨 덱을 만들고 있는가」가 개별 강화 목록보다
    * 훨씬 중요한 정보이고, 다음에 무엇을 고를지도 이 줄을 보고 정하기 때문이다.
    * 아직 한 점도 없는 계열은 접어 둔다 (다섯 줄이 늘 떠 있으면 진행도가 오히려 안 보인다). */
-  // 강화 선택 모달과 같은 타일(lineTileHtml)을 다섯 계열 모두 늘어놓는다 — 설명 없이 점·점수만 (compact)
-  const lines = Object.keys(LINES).map((k) => lineTileHtml(k, true)).join("");
+  // 지금 점수가 있는(= 실제로 적용 중인) 계열만 — 아이콘 · 이름 · 채워지는 동그라미 한 줄씩. 테두리 없이 간략하게.
+  const max = LINE_TIER_AT[LINE_TIER_AT.length - 1];
+  const lines = Object.keys(LINES).filter((k) => (game.lineScore && game.lineScore[k]) > 0).map((k) => {
+    const L = LINES[k], score = game.lineScore[k], tier = (game.lineTier && game.lineTier[k]) || 0;
+    let dots = "";
+    for (let i = 1; i <= max; i++) dots += `<i class="${i <= score ? "on" : ""}"></i>`;
+    // 마우스를 올리면 뜨는 말풍선 — 계열 축 · 3강/5강 효과. 이미 연 단계는 계열색으로 밝힌다
+    const hint = `<span class="prhint"><b>${L.icon} ${L.name} 계열</b> · ${L.axis}<br>` +
+      LINE_TIER_AT.map((need, i) => {
+        const t = i === 0 ? L.t1 : L.t2;
+        return `<em class="${tier > i ? "on" : ""}">${need}강 ${t.name}</em> — ${t.short || t.desc}`;
+      }).join("<br>") + `</span>`;
+    return `<div class="lline ${tier ? "lit" : ""}" style="--lc:${L.col}">
+      <i class="lic">${L.icon}</i><b class="lname">${L.name}</b>
+      <span class="ldots">${dots}</span>${hint}</div>`;
+  }).join("");
 
   const parts = PASSIVES.filter((d) => count[d.key]).map((d) => {
     const n = count[d.key];
@@ -7944,8 +7966,8 @@ function renderPassiveTags() {
     return tagHtml(`${d.icon} ${d.name}`, `${total}${n > 1 && !cond ? ` (×${n})` : ""}`);
   });
   if (game.goldMul > 1) parts.push(tagHtml("💰 수수료 환급", "이번 스테이지 특허료 2배"));
-  $("#myPassiveTags").innerHTML =
-    `<div class="linetiles mini">${lines}</div>` + parts.join("");
+  void parts; // 개별 강화 태그는 헤더에 적지 않는다 — 계열 진행도(동그라미)만 보인다
+  $("#myPassiveTags").innerHTML = lines ? `<div class="linelist">${lines}</div>` : "";
 }
 /** 효과 태그 한 칸 — 이름과 실제로 무엇이 바뀌는지를 같이 보여준다 */
 function tagHtml(name, desc, bad) {

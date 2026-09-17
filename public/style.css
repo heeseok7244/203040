@@ -666,10 +666,10 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
    클릭은 JS 쪽(gold 검사)에서 막힌다. */
 .catpick.off{opacity:.45;cursor:not-allowed}
 .catpick .nogold{position:absolute;top:6px;right:8px;font-size:9px;color:#c4322a}
-.catpick .row1{display:flex;align-items:center;gap:8px;cursor:help}
+.catpick .row1{display:flex;align-items:center;gap:8px;cursor:pointer}
 .catpick .ic{font-size:22px;margin:0;line-height:1}
 /* 판 위와 같은 원화 — 전용 시트(한 줄 4컷)의 0번 칸(평상시 자세)만 잘라 보여준다 */
-.catpick .spr{flex:none;width:48px;height:48px;border-radius:4px;cursor:help;
+.catpick .spr{flex:none;width:48px;height:48px;border-radius:4px;cursor:pointer;
   background-repeat:no-repeat;background-size:400% 100%;background-position:0 0;
   background-color:rgba(183,208,175,.35);border:1px solid rgba(43,36,24,.18);
   image-rendering:auto}
@@ -801,7 +801,7 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 .promoteBox>i b{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em;font-weight:400}
 .prnone{font-size:10px;color:var(--muted);font-family:var(--mono);padding:2px 0}
 /* 제목 옆 「강화효과 ?」 — 물음표에 마우스를 올리면 설명 말풍선이 뜬다 */
-.prhelp{position:relative;margin-left:auto;letter-spacing:0;display:inline-flex;align-items:center;gap:3px;cursor:help}
+.prhelp{position:relative;margin-left:auto;letter-spacing:0;display:inline-flex;align-items:center;gap:3px;cursor:pointer}
 .prhelp u{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;
   width:13px;height:13px;border-radius:50%;border:1px solid var(--gold);color:var(--gold);font-size:9px;line-height:1}
 .prhelp:hover u{background:var(--gold);color:#1a1610}
@@ -972,7 +972,7 @@ body.solo #sabPanel{display:none!important}
 .lchip.lit{background:color-mix(in srgb,var(--lc,#cda43a) 28%,#2b2418);color:#fff;
   box-shadow:0 0 0 1px var(--lc,#cda43a) inset}
 .pchip{display:inline-flex;align-items:center;gap:2px;padding:1px 5px;line-height:1.3;font-size:13px;
-  background:#f2ecdb;border:1px solid #7a6a44;border-radius:3px;color:#2b2418;cursor:help}
+  background:#f2ecdb;border:1px solid #7a6a44;border-radius:3px;color:#2b2418;cursor:pointer}
 .pchip em{font-style:normal;font-family:var(--mono);font-size:9px;font-weight:700;color:#8a5f16}
 .dchips{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px;
   max-height:58px;overflow-y:auto}
@@ -1253,16 +1253,19 @@ body.dueling #tip{display:none!important}
    여기서만 **알약 꾸밈(테두리·배경·여백)만** 걷어낸다 — 색과 글자 크기는 건드리지 않는다.
    그걸 같이 덮으면 계열색(--lc)이 죽어 진행도가 회색 한 덩어리가 된다. */
 .passiveTags .linebar{width:100%;flex:0 0 100%}
-/* 헤더의 계열 타일 격자 — 선택 모달의 .linetiles 와 같은 타일을 다섯 칸 한 줄로 작게 세운다.
-   .passiveTags span 의 알약 꾸밈이 타일 안 <span> 에 번지지 않게 여기서 걷어낸다 */
-.passiveTags .linetiles.mini{width:100%;flex:0 0 100%;grid-template-columns:repeat(5,1fr);gap:4px;padding:0 0 6px}
-.passiveTags .linetiles.mini span{display:flex;background:none;border:0;border-radius:0;padding:0;white-space:normal}
-.ltile.compact{padding:6px 2px 5px;gap:2px;border-top-width:3px;border-radius:6px}
-.ltile.compact .lic{font-size:18px}
-.ltile.compact .lname{font-size:11px}
-.ltile.compact .ldots{gap:2px}
-.ltile.compact .ldots i{width:7px;height:7px}
-.ltile.compact .lnum{font-size:10px}
+/* 헤더의 계열 목록 — 점수가 있는 계열만, 테두리 없이 「아이콘 이름 상태」 한 줄씩.
+   .passiveTags span 의 알약 꾸밈이 안쪽 <span> 에 번지지 않게 여기서 걷어낸다 */
+.passiveTags .linelist{width:100%;flex:0 0 100%;display:flex;flex-direction:column;gap:2px;padding:0 0 4px}
+.passiveTags .linelist span{display:inline;background:none;border:0;border-radius:0;padding:0;white-space:nowrap}
+.lline{--lc:#8ba2ba;display:flex;align-items:center;gap:6px;font-size:12px;line-height:1.3}
+.lline .lic{font-style:normal;font-size:1em;line-height:1}
+.lline .lname{font-family:var(--disp);color:var(--txt);white-space:nowrap;min-width:2.4em}
+.lline.lit .lname{color:var(--lc)}
+.lline .ldots{display:flex;gap:3px;align-items:center}
+.lline .ldots i{width:9px;height:9px;border:1px solid rgba(139,162,186,.55);border-radius:50%}
+.lline .ldots i.on{background:var(--lc);border-color:var(--lc);box-shadow:0 0 4px color-mix(in srgb,var(--lc) 70%,transparent)}
+/* 강화 태그도 테두리 없이 */
+#myPassiveTags>span{border:0;background:none;padding:1px 2px}
 .passiveTags .linebar span{
   display:inline;background:none;border:0;border-radius:0;padding:0;white-space:normal}
 .passiveTags .linebar .ldots{display:flex;gap:3px}
@@ -1272,12 +1275,14 @@ body.dueling #tip{display:none!important}
    10라운드가 끝나면 이 숫자가 곧 결과이므로, 끝나고서야 처음 보게 두지 않는다.
    ══════════════════════════════════════════════════════════════════════ */
 #mePanel .stat.score{display:block;margin-top:9px;padding:7px 10px;text-align:center}
-#mePanel .stat.score>b{display:block;font-family:var(--disp);font-size:26px;line-height:1.1;
+#mePanel .stat.score .scoreline{display:flex;justify-content:center;align-items:baseline;gap:8px}
+#mePanel .stat.score .scoreline i{font-style:normal;font-weight:700;font-family:var(--mono);font-size:18px}
+#mePanel .stat.score .scoreline b{display:block;font-family:var(--disp);font-size:26px;line-height:1.1;
   color:var(--gold);letter-spacing:.04em}
 #mePanel .stat.score>span{display:block;font-size:9.5px;color:var(--muted);letter-spacing:.08em}
-#mePanel .stat.score>span i{font-style:normal;font-weight:700;font-family:var(--mono)}
+#mePanel .stat.score>span i{font-style:normal;font-family:var(--mono)}
 .scorelegs{display:flex;justify-content:center;gap:8px;margin-top:5px;flex-wrap:wrap}
-.scorelegs span{font-family:var(--mono);font-size:9.5px;color:var(--muted);white-space:nowrap}
+.scorelegs>span{font-family:var(--mono);font-size:9.5px;color:var(--muted);white-space:nowrap}
 
 /* 성적표 — 등급 · 총점 · 항목별 막대 */
 .rankbox{--rc:#cda43a;

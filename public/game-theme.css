@@ -123,10 +123,62 @@ body:has(#gameRoot:not(.hidden)){background:#10152d;background-image:none}
 #gameRoot .stat.dmg b{color:#ff9897}
 #gameRoot .stat.gold b{color:#f6d278}
 #gameRoot #mePanel .stat.score{padding:10px 12px}
-#gameRoot #mePanel .stat.score>b{font-size:42px;color:#ff8f87}
+/* 랭킹 점수 칸 — 점수를 크게 한가운데, 등급은 점수 왼쪽의 작은 네모 딱지. 세부 점수는 아래 2×2 로 가지런히 */
+#gameRoot #mePanel .stat.score{padding:9px 10px 10px;justify-content:flex-start}
+#gameRoot #mePanel .stat.score>span{font-size:15px;margin-bottom:4px}
+#gameRoot #mePanel .stat.score .scoreline{align-items:center;gap:8px;margin:0}
+#gameRoot #mePanel .stat.score .scoreline b{font-size:38px;line-height:1;color:#ff8f87}
+#gameRoot #mePanel .stat.score .scoreline i{font-family:var(--disp);font-weight:400;font-size:24px;line-height:1;
+  padding:4px 9px;border-radius:8px;background:#1c2a48;border:2px solid currentColor;box-sizing:border-box}
+#gameRoot #mePanel .stat.score .scorelegs{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;margin-top:8px;width:100%}
+#gameRoot #mePanel .scorelegs>span{display:flex;justify-content:space-between;font-size:12px;
+  padding:2px 6px;background:#1c2a48;border-radius:6px;cursor:pointer;position:relative}
+#gameRoot #mePanel .scorelegs>span:hover{background:#3d527c}
+/* 세부 항목 말풍선 — 냥타워 「합성효과 ?」의 .prhint 를 그대로 쓰되, 왼쪽 칸이라 왼쪽에 맞춰 띄운다 */
+#gameRoot #mePanel .scorelegs .prhint{display:none;position:absolute;left:0;right:auto;top:calc(100% + 6px);width:230px;padding:10px 12px;font-size:13.5px;line-height:1.5;text-align:left;cursor:default}
+#gameRoot #mePanel .scorelegs>span:hover .prhint{display:block}
+#gameRoot #mePanel .scorelegs .prhint b{display:inline;font-family:var(--body);font-size:inherit;line-height:inherit;color:#b6d3ff}
 #gameRoot #mePanel .stat.score>span{font-family:var(--disp);font-size:16px;letter-spacing:0}
-#gameRoot .scorelegs span{font-family:var(--body);font-size:12px;color:#b6c3da}
+#gameRoot .scorelegs>span{font-family:var(--body);font-size:12px;color:#b6c3da}
 #gameRoot .stat.effects .efcol>i{font-family:var(--disp);font-size:15px;color:#e3eafb;letter-spacing:0}
+/* ── 내 청사 칸 — 글자가 너무 작았다. 이름표(원부 내구·특허료·라운드·랭킹 점수)를 숫자 **위**로 올리고 키운다 ── */
+#gameRoot #mePanel .meStats .stat{display:flex;flex-direction:column-reverse;align-items:center;gap:2px;padding:9px 6px}
+#gameRoot #mePanel .meStats .stat span{font-family:var(--disp);font-weight:400;font-size:15px;color:#e3eafb;letter-spacing:0;line-height:1.2}
+#gameRoot #mePanel .meStats .stat b{font-size:28px;line-height:1.1}
+#gameRoot #mePanel .stat.score{display:flex;flex-direction:column;align-items:center;gap:2px}
+#gameRoot #mePanel .stat.score>span{order:0;font-family:var(--disp);font-weight:400;font-size:17px;color:#e3eafb}
+#gameRoot #mePanel .stat.score>span i{font-weight:400}
+#gameRoot #mePanel .stat.score .scoreline{order:1}
+#gameRoot #mePanel .stat.score>.scorelegs{order:2;margin-top:4px}
+#gameRoot .scorelegs>span{font-size:13px}
+/* 스테이지 강화 칸도 같은 크기로 — 제목 17px, 계열 줄 15px, 동그라미 12px */
+#gameRoot .stat.effects .efcol>i{font-family:var(--disp);font-weight:400;font-size:17px;margin-bottom:6px}
+/* 계열은 강화 선택 모달의 타일처럼 — 아이콘 → 이름 → 동그라미를 위에서 아래로 쌓고, 계열끼리 옆으로 나란히 (테두리 없음) */
+#gameRoot .passiveTags .linelist{display:grid;grid-template-columns:repeat(auto-fit,minmax(56px,1fr));gap:8px 2px;justify-items:center;padding-top:2px}
+#gameRoot .passiveTags .linelist span{font-size:15px}
+#gameRoot .lline{flex-direction:column;align-items:center;gap:3px;font-size:15px;min-width:0;text-align:center}
+#gameRoot .lline .lic{font-size:24px}
+#gameRoot .stat .lline .lname{min-width:0;font-size:15px;font-weight:400;line-height:1.2;color:#e3eafb}
+#gameRoot .stat .lline.lit .lname{color:var(--lc)}
+#gameRoot .lline .ldots{gap:2px}
+#gameRoot .lline .ldots i{width:10px;height:10px}
+/* 계열 말풍선 — 랭킹 세부 항목과 같은 .prhint. 오른쪽 칸이라 오른쪽에 맞춰 띄운다 */
+#gameRoot #mePanel .stat.effects{position:relative}
+#gameRoot .lline{position:static;cursor:pointer;padding:2px 4px;border-radius:6px}
+#gameRoot .lline:hover{background:#3d527c55}
+#gameRoot .passiveTags .linelist .lline .prhint{display:none;position:absolute;right:0;left:auto;top:calc(100% + 4px);z-index:30;
+  width:272px;max-width:calc(100vw - 24px);padding:10px 12px;font-size:13px;line-height:1.55;text-align:left;white-space:normal;cursor:default;
+  background:#1e2b4b;color:#e0e8f7;border:2px solid #607ca9;border-radius:13px;box-shadow:0 5px 15px #060b1f66;font-family:var(--body)}
+#gameRoot .lline:hover .prhint{display:block}
+#gameRoot .passiveTags .linelist .lline .prhint b{display:inline;font-family:var(--body);font-size:inherit;line-height:inherit;color:#b6d3ff}
+#gameRoot .passiveTags .linelist .lline .prhint em{font-style:normal;color:#9fb0cc}
+#gameRoot .passiveTags .linelist .lline .prhint em.on{color:var(--lc);font-weight:700}
+/* 랭킹 점수 · 스테이지 강화 — 옆으로 나란히 */
+#gameRoot #mePanel .meRow{display:flex;gap:8px;margin-top:9px;align-items:stretch}
+#gameRoot #mePanel .meRow>.stat{margin-top:0;min-width:0}
+#gameRoot #mePanel .meRow>.stat.score{flex:0 0 44%}
+#gameRoot #mePanel .meRow>.stat.effects{flex:1}
+@media(max-width:700px){#gameRoot #mePanel .meRow{flex-wrap:wrap}#gameRoot #mePanel .meRow>.stat{flex:1 1 100%}}
 #gameRoot .passiveTags span{background:#30415f;border-color:#566d91;color:#bdcce4;font-size:12px;padding:2px 9px}
 #gameRoot .passiveTags span b{font-size:12px} #gameRoot .passiveTags span i{font-size:11px}
 /* 준비 표시줄 — 개시 단추 바로 아래, 누가 무엇을 기다리는지 */
@@ -223,6 +275,6 @@ body:has(#gameRoot:not(.hidden)) #tip i{margin-top:5px}
 @keyframes mergeReadyBig{0%,100%{box-shadow:0 0 0 0 #ffd782cc;transform:scale(1)}
   50%{box-shadow:0 0 0 6px #ffd78222;transform:scale(1.04)}}
 @media(prefers-reduced-motion:reduce){#gameRoot .mchip{animation:none}}
-/* 「스테이지 강화」 칸의 계열 타일 — 위 .passiveTags span 알약 꾸밈이 타일 안 span(점·점수)에 번지지 않게 한다 */
-#gameRoot .passiveTags .linetiles.mini span{background:none;border:0;padding:0;font-size:10px}
-#gameRoot .ltile.compact .lname{font-size:11px}
+/* 「스테이지 강화」 칸의 계열 목록 — .passiveTags span 알약 꾸밈이 안쪽 span 에 번지지 않게 한다 */
+#gameRoot .passiveTags .linelist span{background:none;border:0;padding:0;font-size:12px;display:flex}
+#gameRoot #myPassiveTags>span{background:none;border:0;padding:1px 2px}
