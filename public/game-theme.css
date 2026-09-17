@@ -169,7 +169,7 @@ body:has(#gameRoot:not(.hidden)){background:#10152d;background-image:none}
 #gameRoot .passiveTags .linelist .lline .prhint{display:none;position:absolute;right:0;left:auto;top:calc(100% + 4px);z-index:30;
   width:272px;max-width:calc(100vw - 24px);padding:10px 12px;font-size:13px;line-height:1.55;text-align:left;white-space:normal;cursor:default;
   background:#1e2b4b;color:#e0e8f7;border:2px solid #607ca9;border-radius:13px;box-shadow:0 5px 15px #060b1f66;font-family:var(--body)}
-#gameRoot .lline:hover .prhint{display:block}
+#gameRoot .passiveTags .linelist .lline:hover .prhint{display:block}
 #gameRoot .passiveTags .linelist .lline .prhint b{display:inline;font-family:var(--body);font-size:inherit;line-height:inherit;color:#b6d3ff}
 #gameRoot .passiveTags .linelist .lline .prhint em{font-style:normal;color:#9fb0cc}
 #gameRoot .passiveTags .linelist .lline .prhint em.on{color:var(--lc);font-weight:700}
