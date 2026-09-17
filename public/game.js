@@ -91,7 +91,7 @@ const CATS = {
     name: "출원냥", row: 2, arow: 3, kind: "atk",
     dmg: 26, rate: 0.85, range: 118, tag: "중타", cost: 60, weight: 30,
     critC: 0.12, critM: 2.0,
-    desc: "한 방이 무겁고 느리다. 방사 피해를 얹으면 무리를 통째로 쓸어 담는다.",
+    desc: "느리지만 한 방이 무겁다 — 방사 피해와 궁합이 좋다.",
     filter: "none",
     icon: "📄",
     /* 대전장 — **중근거리 딜러**. 사거리를 탱커 바로 뒤(70px)까지 줄여 두 번째 줄에 서고,
@@ -107,7 +107,7 @@ const CATS = {
     name: "특허범위냥", row: 2, arow: 3, kind: "atk",
     dmg: 26, rate: 0.5, range: 304, pierce: 45, tag: "저격", cost: 70, weight: 15,
     critC: 0.22, critM: 2.2,
-    desc: "아주 느리지만 사거리가 길고 방어를 무시한다. 사거리·방어무시를 쌓을수록 세진다.",
+    desc: "아주 느린 대신 사거리가 길고 방어를 무시하는 저격수.",
     filter: "hue-rotate(195deg) saturate(1.25)",
     icon: "📐",
     /* 대전장 — 저격수. 맨 뒤에 서는 대신 몸이 약하고, 한 방은 3.3배 무겁다.
@@ -125,7 +125,7 @@ const CATS = {
     name: "국제출원냥", row: 2, arow: 3, kind: "atk",
     dmg: 7, rate: 1.6, range: 106, targets: 3, tag: "다중조준", cost: 75, weight: 5,
     critC: 0.12, critM: 1.6,
-    desc: "한 번에 여러 마리를 동시에 공격한다. 사거리는 조금 짧다.",
+    desc: "사거리는 짧지만 한 번에 3마리를 동시에 때린다.",
     filter: "hue-rotate(40deg) saturate(1.45)",
     icon: "🌐",
     // 대전장 — 셋을 같이 노리는 값을 한 방으로 키운다. hp 는 임용가 190→70 전의 체력(≈548)을 유지
@@ -145,7 +145,7 @@ const CATS = {
     name: "우선심사냥", row: 2, arow: 3, kind: "atk",
     dmg: 5, rate: 6.4, range: 118, tag: "연사", cost: 65, weight: 24,
     critC: 0.30, critM: 1.7,
-    desc: "쉬지 않고 연타한다. 한 방은 가볍지만 치명타를 쌓을수록 폭발적으로 세진다. 대전장에서는 근접 탱커로 앞을 막는다.",
+    desc: "가볍게 연타한다 — 치명타를 쌓을수록 세진다 (대전장에서는 근접 탱커).",
     filter: "hue-rotate(315deg) saturate(1.3)",
     icon: "⚡",
     /* 대전장 전용 성격 — **근접 탱커**. 청사 판에서는 사거리 118의 연사형이지만, 대전장에 서면
@@ -180,7 +180,7 @@ const CATS = {
   agent: {
     name: "변리사냥", row: 0, arow: 1, kind: "buff",
     dmg: 0, rate: 0, range: 0, auraDmg: 1.25, auraRate: 1.15, tag: "보좌", cost: 80, weight: 8,
-    desc: "비공격. 실제로 이어진 심사관 터(보통 좌우, 모서리에서는 꺾이는 방향)의 화력과 공속을 끌어올린다. 대전장에서는 뒤에서 다친 아군을 회복시킨다.",
+    desc: "비공격 — 이어진 심사관 터의 화력·공속을 올린다 (대전장에서는 아군 회복).",
     filter: "hue-rotate(15deg) saturate(1.5)",
     icon: "💼",
     // 회복 담당 — 먼저 죽으면 회복이 끊기니 튼튼하게. 1.3 이었다가 임용가 145→75 보정으로 2.0 (체력 ≈584 유지)
@@ -198,7 +198,7 @@ const CATS = {
     name: "심판합의체냥", row: 2, arow: 3, kind: "atk", special: true, weight: 0,
     dmg: 14, rate: 1.3, range: 250, targets: 6, pierce: 20, tag: "합의심결", cost: 330,
     critC: 0.16, critM: 1.8,
-    desc: "심판관 셋이 한자리에 앉는다. 사거리 안 최대 6마리를 한 번에 조준한다.",
+    desc: "사거리 안 최대 6마리를 한 번에 조준한다.",
     filter: "hue-rotate(85deg) saturate(1.6) brightness(1.05)",
     icon: "⚖️",
   },
@@ -207,7 +207,7 @@ const CATS = {
     dmg: 16, rate: 1.2, range: 180, pierce: 25, tag: "연쇄", cost: 190,
     critC: 0.18, critM: 1.8,
     chain: { n: 3, r: 110, f: 0.6 },
-    desc: "인용문헌 하나가 옆 출원까지 무너뜨린다. 명중이 근처 3마리로 튄다 (피해 60%).",
+    desc: "명중이 근처 3마리로 튄다 (피해 60%).",
     filter: "hue-rotate(160deg) saturate(1.7)",
     icon: "🔗",
   },
@@ -216,7 +216,7 @@ const CATS = {
     dmg: 6, rate: 4.0, range: 130, tag: "정지", cost: 165,
     critC: 0.22, critM: 1.5,
     stunC: 0.25, stunD: 0.6,
-    desc: "출원을 앞당겨 공개해 발을 묶는다. 명중마다 25% 확률로 0.6초 완전 정지.",
+    desc: "명중마다 25% 확률로 0.6초 완전 정지시킨다.",
     filter: "hue-rotate(285deg) saturate(1.8) brightness(1.1)",
     icon: "⏱️",
   },
@@ -225,7 +225,7 @@ const CATS = {
     dmg: 11, rate: 2.0, range: 140, tag: "징수", cost: 210,
     critC: 0.18, critM: 1.8,
     bounty: 1.2,
-    desc: "처치할 때마다 수수료를 받아 낸다. 이 냥이 잡으면 특허료가 120% 더 들어온다.",
+    desc: "이 냥이 잡으면 특허료가 120% 더 들어온다.",
     filter: "hue-rotate(55deg) saturate(2)",
     icon: "💰",
   },
@@ -234,7 +234,7 @@ const CATS = {
     dmg: 9, rate: 1.5, range: 160, pierce: 30, tag: "즉사", cost: 350,
     critC: 0.15, critM: 1.9,
     exec: 0.18,
-    desc: "흠을 찾아내면 그대로 끝이다. 체력 18% 이하 침입자를 즉시 제거한다 (특허괴물 제외).",
+    desc: "체력 18% 이하 침입자를 즉시 제거한다 (특허괴물 제외).",
     filter: "grayscale(.45) sepia(.6) hue-rotate(318deg) saturate(2.2) brightness(.92)",
     icon: "☠️",
   },
@@ -7059,7 +7059,7 @@ function showTip(e, p) {
   const lv = Math.max(1, p.lv || (s && s.lv) || 1);
   const slow = s ? s.slow : (d.slow || 0);
   t.innerHTML = `<b>${d.name}${lv > 1 ? ` <span style="color:#ffd782">Lv${lv}</span>` : ""}</b> — ${d.tag}<i>${d.desc}</i>
-    ${s && s.atk ? `<i>공격력 ${s.dmg.toFixed(1)} · 공속 ${s.rate.toFixed(2)}/s · 사거리 ${(s.range/(CS+GAP)).toFixed(1)}칸</i>` : "<i>1칸짜리 벽이기도 하다.</i>"}
+    ${s && s.atk ? `<i>공격력 ${s.dmg.toFixed(1)} · 공속 ${s.rate.toFixed(2)}/s · 사거리 ${(s.range/(CS+GAP)).toFixed(1)}칸</i>` : ""}
     ${slow ? `<i style="color:#79b7d8">둔화 ${Math.round(slow)}% · 1.6초</i>` : ""}
     ${critC ? `<i style="color:#cda43a">치명타 ${Math.round(critC * 100)}% · 피해 ×${critM.toFixed(1)}</i>` : ""}
     ${specialTipHtml(p.key, s)}
