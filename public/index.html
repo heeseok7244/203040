@@ -54,8 +54,39 @@
      「웨이브 진행」 칸 머리로, 내 덱(스테이지 강화·증강)은 「내 청사」 칸으로 옮겼다. -->
 <div class="cols">
   <div>
+    <!-- 내 청사 — 냥타워 위. 뽑기 전에 특허료·내구가 먼저 보이게 한다 -->
+    <div class="panel" id="mePanel">
+      <h2>내 청사 <em>YOUR OFFICE</em></h2>
+      <div class="pad">
+        <div class="meStats">
+          <div class="stat dmg"><b id="sHp">22</b><span>원부 내구</span></div>
+          <div class="stat gold"><b id="sGold">₩ 85</b><span>특허료</span></div>
+          <div class="stat"><b id="sWave">0/10</b><span>라운드</span></div>
+        </div>
+        <!-- 이 판의 성적. 10라운드가 끝나면 이 숫자가 곧 결과다 (rankScore) -->
+        <div class="stat score" id="scoreBox">
+          <b id="sScore">0</b><span>랭킹 점수 <i id="sGrade">D</i></span>
+          <div class="scorelegs" id="sScoreLegs"></div>
+        </div>
+        <!-- 스테이지 강화가 곧 내 덱이다. 1:1 대전장까지 그대로 실린다.
+             상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다.
+             (증강 선택은 걷어냈다 — 내증강 · 상대 증강 칸도 함께 뺐다) -->
+        <div class="stat effects">
+          <div class="efcol"><i>스테이지 강화</i><div class="passiveTags" id="myPassiveTags"></div></div>
+        </div>
+      </div>
+    </div>
+
     <div class="panel recruitment-panel">
-      <h2><span class="panel-title"><img src="img/game/cat_tower_icon.png" alt="">냥타워</span><em>함께 지켜요!</em></h2>
+      <h2><span class="panel-title"><img src="img/game/cat_tower_icon.png" alt="">냥타워</span>
+        <!-- 「강화효과 ?」 — 보유 현황 제목 옆에서 냥타워 머리로 옮겼다. 판 머리의 「침입자 정보 ?」와 같은 크기다 -->
+        <span class="h2right">
+        <span class="prhelp">합성효과 <u>?</u>
+          <span class="prhint"><b>같은 종류·같은 레벨</b>의 고양이 <b>3마리</b>를 모으면 <b>다음 레벨 고양이 1마리</b>로 합성할 수 있습니다.<br>
+            <b>Lv2</b> 공격력(×1.85) 증가<br>
+            <b>Lv3</b> 공격력(×3.42), 치명타(×1.25) 증가</span>
+        </span>
+        </span></h2>
       <!-- 종류를 고르지 않는다. 정액을 내고 무작위로 한 명을 받는다 (확률표는 JS가 채운다) -->
       <div class="pad" id="catRoster"></div>
       <!-- 승진은 따로 사는 것이 아니라 합성의 마지막 단계다. 여기에는 지금 무엇이
@@ -64,24 +95,10 @@
       <div class="panel pad promoteBox">
         <!-- 합성은 「같은 타워 강화」 한 갈래뿐이다. 다른 종류끼리의 이종 합성(처방)은
              배우는 비용이 재미보다 커서 잠가 두었다 — core/data.js 의 RECIPES 주석 참고.
-             설명은 목록 아래 늘어놓지 않고 제목 옆 「강화효과 ?」에 마우스를 올리면 뜬다 -->
-        <i>보유 현황
-          <span class="prhelp">강화효과 <u>?</u>
-            <span class="prhint">강화는 <b>같은 종류·같은 레벨 3냥이</b>를 모으는 것 하나입니다 — 모이면 레벨업합니다
-              (Lv2 공격력 ×1.85, <b>Lv3</b> 는 공격력 ×3.42 에 승진 보정 ×1.25·치명타가 더 붙고, 대전장에서는 체력·공격력 ×1.3 이 얹힙니다).
-              <b>Lv3</b> 이 되면 소품을 갖춘 <b>승진 원화</b>로 바뀌고 금빛 테두리와 <b>Lv 딱지</b>가 붙습니다.
-              재료가 차면 판 <b>우측 상단</b>에 <b>합성</b> 단추가 뜹니다 (준비 단계에만).</span>
-          </span>
-        </i>
+             설명은 목록 아래 늘어놓지 않고 냥타워 머리의 「강화효과 ?」에 마우스를 올리면 뜬다 -->
+        <i>보유 현황</i>
         <div id="promoteList" aria-label="보유 냥타워"></div>
       </div>
-    <!-- 냥타워는 내가 고르고, 상대를 흔드는 쪽만 운에 맡긴다 — 무엇이 나갈지는 뽑아 봐야 안다 -->
-    <div class="panel hidden" id="sabPanel">
-      <h2><span class="panel-title"><img src="img/game/mob-copy-info.png" alt="">방해 공작</span></h2>
-      <div class="pad">
-        <div id="sabBar"></div>
-      </div>
-    </div>
   </div>
 
   <div>
@@ -142,7 +159,7 @@
           <button id="btnGo" class="go">라운드 1 준비 완료</button>
           <button id="btnSpeed">속도 ×1</button>
         </div>
-        <!-- 모든 라운드는 방의 모두가 준비해야(또는 준비시간 15초가 끝나야) 동시에 시작된다.
+        <!-- 모든 라운드는 방의 모두가 준비해야(또는 준비시간 30초가 끝나야) 동시에 시작된다.
              그래야 라운드 번호가 어긋나지 않고, 4·7·10 의 대전이 제때 맞물린다.
              넷이 붙는 판에서는 오른쪽 칸이 「준비 2/3」처럼 인원으로 적힌다 -->
         <div id="readyBar">
@@ -156,33 +173,19 @@
       </div>
     </div>
 
-    <div class="panel" id="mePanel">
-      <h2>내 청사 <em>YOUR OFFICE</em></h2>
-      <div class="pad">
-        <div class="meStats">
-          <div class="stat dmg"><b id="sHp">22</b><span>원부 내구</span></div>
-          <div class="stat gold"><b id="sGold">₩ 85</b><span>특허료</span></div>
-          <div class="stat"><b id="sWave">0/10</b><span>라운드</span></div>
-        </div>
-        <!-- 이 판의 성적. 10라운드가 끝나면 이 숫자가 곧 결과다 (rankScore) -->
-        <div class="stat score" id="scoreBox">
-          <b id="sScore">0</b><span>랭킹 점수 <i id="sGrade">D</i></span>
-          <div class="scorelegs" id="sScoreLegs"></div>
-        </div>
-        <!-- 스테이지 강화가 곧 내 덱이다. 1:1 대전장까지 그대로 실린다.
-             상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다.
-             (증강 선택은 걷어냈다 — 내증강 · 상대 증강 칸도 함께 뺐다) -->
-        <div class="stat effects">
-          <div class="efcol"><i>스테이지 강화</i><div class="passiveTags" id="myPassiveTags"></div></div>
-        </div>
-      </div>
-    </div>
-
     <div class="panel" id="oppPanel">
       <h2>상대 청사 <em id="oppLabel">OPPONENT</em></h2>
       <div class="pad">
         <!-- 상대의 카드 하나(내구·라운드·미니맵). JS(buildOppPanel)가 채운다 -->
         <div id="oppGrid" class="oppgrid"></div>
+      </div>
+    </div>
+
+    <!-- 방해 공작 — 상대 청사 아래. 냥타워는 내가 고르고, 상대를 흔드는 쪽만 운에 맡긴다 — 무엇이 나갈지는 뽑아 봐야 안다 -->
+    <div class="panel hidden" id="sabPanel">
+      <h2><span class="panel-title"><img src="img/game/mob-copy-info.png" alt="">방해 공작</span></h2>
+      <div class="pad">
+        <div id="sabBar"></div>
       </div>
     </div>
   </div>
@@ -214,23 +217,11 @@
       <canvas id="duelCv" width="1000" height="420"></canvas>
       <div id="duelResult" class="hidden"></div>
     </div>
-    <!-- 덱 줄 — 조작이 없는 라운드라, 이 자리에는 모두가 무엇을 데려왔는지를 진영별로 놓고,
-         그 아래에 사람마다 「덱 이력」(계열 단계 · 고른 강화)을 적는다 (JS 가 채운다) -->
+    <!-- 내 덱과 상대 덱 구성만 표시한다 (JS가 채운다). -->
     <div class="duelbottom">
-      <div id="duelPower" class="even">—</div>
       <div id="duelDecks"></div>
-      <div id="duelLines"></div>
     </div>
-    <div class="duelnote">양쪽 냥타워가 <b>전부</b> 진형을 짜고 저절로 진군해 마주친 적과 싸웁니다.
-      <b>성채는 없습니다</b> — 두들길 것은 서로의 냥타워뿐이고,
-      <b>상대를 먼저 전멸시키는 쪽이 이깁니다.</b> 시간이 다 되면 <b>남은 병력 비율</b>이
-      높은 쪽이 이깁니다.
-      <b>누를 것은 없습니다</b> — 이 라운드가 재는 것은 손이 아니라 <b>덱</b>입니다.<br>
-      진형은 <b>사거리 순</b>으로 섭니다 — ⚡ 우선심사냥은 대전장에서 <b>근접 탱커</b>(체력 2.6배 · 방어 40%)가 되어 맨 앞을 막고,
-      💼 변리사냥은 맨 뒤에서 <b>다친 아군을 회복</b>시킵니다. 방어는 📐 권리범위 계열의 <b>방어무시</b>가 뚫습니다.
-      지금까지 쌓은 <b style="color:#7fbf6a">빌드 계열(스테이지 강화)</b> ·
-      <b style="color:#6fe0d0">합성 레벨</b>이 <b>그대로 실려 있습니다</b> — 아래 「덱 이력」이 그것입니다.
-      혼자 할 때는 침입자 넷이 <b style="color:var(--gold)">무작위로 편성된 쥐 침입단</b>으로 나섭니다.</div>
+
   </div>
 </div>
 

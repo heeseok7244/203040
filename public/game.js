@@ -83,7 +83,7 @@ const CATS = {
    * 출원냥 — **한 방이 무겁고 느린** 물리형. 💥 침해 계열의 주인공이다.
    * 예전에는 dmg 12 / rate 2.0 의 「무난한 중간」이라 아무 빌드도 대표하지 못했다.
    * 지금은 같은 DPS를 한 발에 몰아 담아, 방어력을 뚫는 힘(26 − 방어 8 = 18)과
-   * **방사 피해 배율의 기준**을 동시에 쥔다 — 방사는 직격 피해에 비례하므로
+   * **광역 피해 배율의 기준**을 동시에 쥔다 — 광역은 직격 피해에 비례하므로
    * 한 방이 무거울수록 광역이 세진다. 「균등침해」·「손해액 산정」을 모으면
    * 한 발이 무리를 통째로 쓸어 버리는 쪽으로 자란다.
    */
@@ -91,7 +91,7 @@ const CATS = {
     name: "출원냥", row: 2, arow: 3, kind: "atk",
     dmg: 26, rate: 0.85, range: 118, tag: "중타", cost: 60, weight: 30,
     critC: 0.12, critM: 2.0,
-    desc: "느리지만 한 방이 무겁다 — 방사 피해와 궁합이 좋다.",
+    desc: "느리지만 한 방이 무겁다 — 광역 피해와 궁합이 좋다.",
     filter: "none",
     icon: "📄",
     /* 대전장 — **중근거리 딜러**. 사거리를 탱커 바로 뒤(70px)까지 줄여 두 번째 줄에 서고,
@@ -352,7 +352,8 @@ const SKILL_CD_LV = 0.88, SKILL_MUL_LV = 1.15;
  * 「빌드를 완성했다」가 눈에 보이는 사건이 되도록 한 장치다.
  *
  * 계열마다 그 규칙으로 가장 크게 웃는 냥타워를 하나씩 붙여 두었다 (hero).
- * 출원냥은 한 방이 무거워 방사가 세지고, 우선심사냥은 초당 열네 번 주사위를 굴려
+ * t1·t2 의 short 는 강화 선택 모달 타일에 적는 한 줄 요약이다 — 수치 없이 무엇이 좋아지는지만.
+ * 출원냥은 한 방이 무거워 광역이 세지고, 우선심사냥은 초당 열네 번 주사위를 굴려
  * 치명타가 세진다 — **냥타워의 기본 수치 자체가 계열의 출발점**이다.
  *
  * @type {Record<string,{key:string,name:string,icon:string,col:string,hero:string,axis:string,
@@ -361,33 +362,34 @@ const SKILL_CD_LV = 0.88, SKILL_MUL_LV = 1.15;
 const LINES = {
   splash: {
     key: "splash", name: "침해", icon: "💥", col: "#ff9a5c",
-    hero: "📄 출원냥", axis: "방사 피해 · 무거운 한 방",
-    t1: { name: "간접침해", desc: "방사 피해가 침입자의 방어력을 완전히 무시한다" },
-    t2: { name: "징벌적 배상", desc: "방사 반경 +50% · 방사 피해 비율 +50%p" },
+    hero: "📄 출원냥", axis: "광역 피해 · 무거운 한 방",
+    t1: { name: "간접침해", short: "광역 피해 방어 무시", desc: "광역 피해가 침입자의 방어력을 완전히 무시한다" },
+    t2: { name: "징벌적 배상", short: "광역 반경·피해 증가", desc: "광역 반경 +50% · 광역 피해 비율 +50%p" },
   },
   crit: {
     key: "crit", name: "입증", icon: "🎯", col: "#e0574d",
     hero: "⚡ 우선심사냥", axis: "치명타 확률 · 치명타 배율",
-    t1: { name: "입증책임 전환", desc: "치명타 확률 상한이 75% → 100% 로 풀리고, 치명타는 방어를 무시한다" },
-    t2: { name: "고의침해 인정", desc: "치명타가 터지면 그 냥타워의 재장전이 40% 짧아진다 — 치명타가 치명타를 부른다" },
+    t1: { name: "입증책임 전환", short: "치명타 상한·방어 무시", desc: "치명타 확률 상한이 75% → 100% 로 풀리고, 치명타는 방어를 무시한다" },
+    t2: { name: "고의침해 인정", short: "치명타 시 재장전 단축", desc: "치명타가 터지면 그 냥타워의 재장전이 40% 짧아진다 — 치명타가 치명타를 부른다" },
   },
-  pierce: {
-    key: "pierce", name: "권리범위", icon: "📐", col: "#6fa8d6",
-    hero: "📐 특허범위냥", axis: "사거리 · 방어무시",
-    t1: { name: "균등론", desc: "방어무시 상한이 70%p → 100%p 로 풀리고 사거리 +20%" },
-    t2: { name: "원천특허", desc: "사거리가 기본(118px)보다 긴 만큼 공격력이 오른다 — 100px 당 +14%" },
-  },
+  // 📐 권리범위 계열 — 잠시 주석 (PASSIVES 의 세 카드도 함께). 후보 카드에도 선택 모달 타일에도 안 나온다.
+//   pierce: {
+//     key: "pierce", name: "권리범위", icon: "📐", col: "#6fa8d6",
+//     hero: "📐 특허범위냥", axis: "사거리 · 방어무시",
+//     t1: { name: "균등론", short: "방어무시·사거리 증가", desc: "방어무시 상한이 70%p → 100%p 로 풀리고 사거리 +20%" },
+//     t2: { name: "원천특허", short: "사거리 비례 공격력 증가", desc: "사거리가 기본(118px)보다 긴 만큼 공격력이 오른다 — 100px 당 +14%" },
+//   },
   control: {
     key: "control", name: "절차", icon: "⏳", col: "#a08cff",
     hero: "⏳ 보정명령냥", axis: "둔화 · 정지",
-    t1: { name: "절차 중지", desc: "둔화에 걸린 침입자가 받는 피해 +30%" },
-    t2: { name: "심사 보류", desc: "둔화 상한이 90% 로 오르고, 모든 냥타워의 명중이 10% 확률로 0.5초 정지시킨다" },
+    t1: { name: "절차 중지", short: "둔화된 적 피해 증가", desc: "둔화에 걸린 침입자가 받는 피해 +30%" },
+    t2: { name: "심사 보류", short: "둔화 강화·명중 시 정지", desc: "둔화 상한이 90% 로 오르고, 모든 냥타워의 명중이 10% 확률로 0.5초 정지시킨다" },
   },
   aide: {
     key: "aide", name: "대리", icon: "💼", col: "#7fbf6a",
     hero: "💼 변리사냥 · 🌐 국제출원냥", axis: "보좌 · 동시조준",
-    t1: { name: "공동대리", desc: "모든 냥타워의 동시조준 +1" },
-    t2: { name: "특허법인 설립", desc: "변리사냥 보좌가 반경 2칸으로 퍼지고 보좌 배율이 1.4배가 된다" },
+    t1: { name: "공동대리", short: "동시조준 증가", desc: "모든 냥타워의 동시조준 +1" },
+    t2: { name: "특허법인 설립", short: "보좌 범위·배율 증가", desc: "변리사냥 보좌가 반경 2칸으로 퍼지고 보좌 배율이 1.4배가 된다" },
   },
 };
 /** 계열 특수효과가 열리는 점수 — [3점에 1단계, 5점에 2단계] */
@@ -412,8 +414,8 @@ const LINE_TIER_AT = [3, 5];
  *   pierce/slow      방어무시·둔화에 더하는 %p
  *   targets          동시조준 +n
  *   stunC            명중 시 정지 확률 +n (지속은 0.45초)
- *   splash           방사 피해를 **부여**한다 {r: 반경 px, f: 직격 대비 비율}
- *   splashUp         이미 가진 방사를 키운다 (반경 ×(1+n) · 비율 +0.08n)
+ *   splash           광역 피해를 **부여**한다 {r: 반경 px, f: 직격 대비 비율}
+ *   splashUp         이미 가진 광역을 키운다 (반경 ×(1+n) · 비율 +0.08n)
  *   heavy/rapid/longR  조건부 — 무거운 냥 / 연사형 냥 / 장사거리 냥에게만 걸린다 (누적)
  *   aura             변리사냥 보좌 배율 강화 (누적)
  *   gold2x           그 스테이지 한 번만 — 처치 보상이 2배 (누적 없음, 판 전용)
@@ -435,14 +437,14 @@ const PASSIVES = [
 
   /* ── 💥 침해 계열 — 한 방을 무겁게, 그 무게를 옆으로 퍼뜨린다 ── */
   { key: "equiv", name: "균등침해", icon: "💥", line: "splash", stat: "splash", amount: { r: 46, f: 0.18 },
-    desc: "모든 냥타워가 방사 피해를 얻는다 (반경 +0.55칸 · 피해 18%p)",
-    detail: "문언에 없어도 실질이 같으면 침해다. 방사가 없던 냥타워도 명중 지점 둘레를 함께 때리게 되고, 이미 가진 냥은 반경과 비율이 더 커진다. <b>방사는 직격 피해에 비례</b>하므로 한 방이 무거운 📄 출원냥에게 가장 크게 실린다." },
+    desc: "모든 냥타워가 광역 피해를 얻는다 (반경 +0.55칸 · 피해 18%p)",
+    detail: "문언에 없어도 실질이 같으면 침해다. 광역이 없던 냥타워도 명중 지점 둘레를 함께 때리게 되고, 이미 가진 냥은 반경과 비율이 더 커진다. <b>광역은 직격 피해에 비례</b>하므로 한 방이 무거운 📄 출원냥에게 가장 크게 실린다." },
   { key: "damages", name: "손해액 산정", icon: "🔨", line: "splash", stat: "heavy", amount: 1,
     desc: "한 방이 무거운 냥타워 공격력 +40%",
     detail: "배상액은 한 건의 무게로 정해진다. <b>기본 공속이 초당 1.35회 이하</b>인 냥타워(📄 출원냥 · 📐 특허범위냥 · 🔗 인용문헌냥 · ⚖️ 심판합의체냥)의 공격력이 40% 오른다. 고를 때마다 누적된다." },
   { key: "destroy", name: "폐기명령", icon: "🧨", line: "splash", stat: "splashUp", amount: 0.35,
-    desc: "방사 반경 +35% · 방사 피해 비율 +8%p",
-    detail: "침해품을 그 자리에서 폐기한다. <b>이미 방사 피해를 가진 냥타워</b>만 커진다 — 「균등침해」로 방사를 먼저 얻어 두어야 값을 한다." },
+    desc: "광역 반경 +35% · 광역 피해 비율 +8%p",
+    detail: "침해품을 그 자리에서 폐기한다. <b>이미 광역 피해를 가진 냥타워</b>만 커진다 — 「균등침해」로 광역을 먼저 얻어 두어야 값을 한다." },
 
   /* ── 🎯 입증 계열 — 급소를 짚는다. 주사위를 자주 굴리는 냥일수록 웃는다 ── */
   { key: "keyclaim", name: "핵심청구항 지정", icon: "🎯", line: "crit", stat: "critC", amount: 0.08,
@@ -455,16 +457,16 @@ const PASSIVES = [
     desc: "연사형·다중조준 냥타워 치명타 확률 +16%p",
     detail: "여러 건을 들이대야 고의가 드러난다. <b>기본 공속이 초당 3회 이상</b>이거나 <b>한 번에 둘 이상을 조준</b>하는 냥타워(⚡ 우선심사냥 · 🌐 국제출원냥 · ⏱️ 조기공개냥 · ⚖️ 심판합의체냥)의 치명타 확률이 16%p 오른다 — 대전장 앞줄에 서는 둘이 같이 받는다. 고를 때마다 누적된다." },
 
-  /* ── 📐 권리범위 계열 — 멀리서, 방어를 뚫고 ── */
-  { key: "longspec", name: "명세서 보정", icon: "📏", line: "pierce", stat: "range", amount: 0.18,
-    desc: "모든 냥타워 사거리 +18%",
-    detail: "청구범위를 넓게 다시 쓴다. 같은 배치로도 실제 사격 시간이 늘어난다. 「선행조사」·「원천특허」가 사거리를 보고 값을 매기므로 그 둘과 겹쳐 쌓인다." },
-  { key: "isr", name: "국제조사보고서", icon: "🌍", line: "pierce", stat: "pierce", amount: 18,
-    desc: "모든 냥타워 방어무시 +18%p",
-    detail: "국제조사기관의 보고서로 상대 권리의 약점을 짚는다. 방어는 <b>명중마다</b> 깎이므로, 한 방이 무거운 냥일수록 원래 방어무시가 덜 아쉽고 연사형일수록 이게 절실하다 (상한 70%p — 📐 권리범위 3단계에 닿으면 100%p 까지 풀린다)." },
-  { key: "prior", name: "선행조사", icon: "🔍", line: "pierce", stat: "longR", amount: 1,
-    desc: "사거리가 긴 냥타워 공격력 +35%",
-    detail: "멀리까지 뒤져 본 만큼 날카로워진다. <b>실제 사거리가 200px(약 2.4칸) 이상</b>인 냥타워의 공격력이 35% 오른다. 「명세서 보정」으로 사거리를 늘려 두면 원래 짧던 냥도 이 조건에 들어온다." },
+  /* ── 📐 권리범위 계열 — 멀리서, 방어를 뚫고 ── **지금은 통째로 주석** (LINES.pierce 도 함께). 되살리려면 두 곳의 // 를 걷는다 */
+//   { key: "longspec", name: "명세서 보정", icon: "📏", line: "pierce", stat: "range", amount: 0.18,
+//     desc: "모든 냥타워 사거리 +18%",
+//     detail: "청구범위를 넓게 다시 쓴다. 같은 배치로도 실제 사격 시간이 늘어난다. 「선행조사」·「원천특허」가 사거리를 보고 값을 매기므로 그 둘과 겹쳐 쌓인다." },
+//   { key: "isr", name: "국제조사보고서", icon: "🌍", line: "pierce", stat: "pierce", amount: 18,
+//     desc: "모든 냥타워 방어무시 +18%p",
+//     detail: "국제조사기관의 보고서로 상대 권리의 약점을 짚는다. 방어는 <b>명중마다</b> 깎이므로, 한 방이 무거운 냥일수록 원래 방어무시가 덜 아쉽고 연사형일수록 이게 절실하다 (상한 70%p — 📐 권리범위 3단계에 닿으면 100%p 까지 풀린다)." },
+//   { key: "prior", name: "선행조사", icon: "🔍", line: "pierce", stat: "longR", amount: 1,
+//     desc: "사거리가 긴 냥타워 공격력 +35%",
+//     detail: "멀리까지 뒤져 본 만큼 날카로워진다. <b>실제 사거리가 200px(약 2.4칸) 이상</b>인 냥타워의 공격력이 35% 오른다. 「명세서 보정」으로 사거리를 늘려 두면 원래 짧던 냥도 이 조건에 들어온다." },
 
   /* ── ⏳ 절차 계열 — 발을 묶어 두고 천천히 처리한다 ── */
   { key: "stall", name: "절차 지연", icon: "⏳", line: "control", stat: "slow", amount: 14,
@@ -499,7 +501,7 @@ const PASSIVE_BY_KEY = Object.fromEntries(PASSIVES.map((p) => [p.key, p]));
  *             **절대값이 아니라 몫이다** — 침입단 전체의 세기는 내 냥타워를 재서 정하고,
  *             그 총량을 이 몫대로 나눠 준다. 그래야 내가 잘 키웠든 못 키웠든 붙어 볼 만해진다.
  *   rate/range  공속(초당 공격 수) · 사거리(대전장 px). 쥐라서 대체로 짧다
- *   sl        명중 시 둔화 % · sp/spf 방사 피해 반경·비율
+ *   sl        명중 시 둔화 % · sp/spf 광역 피해 반경·비율
  * @type {Record<string,{nm:string,hp:number,spd:number,def:number,r:number,col:string,rw:number,
  *   leak:number,fee?:number,desc:string,icon:string,
  *   ar        대전장 방어(0~1) — 받는 피해를 이 비율만큼 깎는다. 방어무시(pierce)가 이걸 뚫는다
@@ -731,7 +733,7 @@ const DUEL_WAVES = [4, 7, 10];
  *            × 종류별 배율(CATS[k].duel.hp). **예전(60 + 임용가 × 1.1)의 두 배 남짓**이다 —
  *            여덟 명씩 붙어도 5~8초에 끝나 「무엇이 통했는지」를 볼 틈이 없었다
  * dmgMul     대전장에서 공격력에 곱하는 배율. 체력을 키운 것과 함께 싸움을 **네댓 배 길게** 늘인다
- * dmgPromo   승진냥(Lv3)이 대전장에서 받는 공격력 배율. 승진의 방사 피해를 걷어낸 대신
+ * dmgPromo   승진냥(Lv3)이 대전장에서 받는 공격력 배율. 승진의 광역 피해를 걷어낸 대신
  *            「대전장에서 세다」를 여기(hpPromo 와 함께)에 실었다 — 웨이브를 쓸어 담는 대신
  *            덱 맞대기에서 값을 하도록
  * pierceDmg  방어무시 100%p 당 공격력 보너스. 방어무시는 이제 실제로 방어(armor)를 뚫지만,
@@ -776,7 +778,12 @@ const DUEL = {
   /* rows 를 5로, formDepth 를 260으로 늘린 것은 스케치의 모양을 맞추기 위해서다 —
    * 진형이 자기 **영역의 절반쯤을 채우고** 가운데가 비어 있어야 「두 영역이 마주 본다」로 읽힌다.
    * 예전(4줄·170px)에는 양 끝에 뭉쳐 서서 화면 한가운데가 통째로 비어 있었다. */
-  rows: 5, colGap: 34, formDepth: 260,
+  /* 다시 손봤다 — 원화를 2배로 키운 뒤 다섯 줄이 108px 안에 겹쳐 「누가 누군지」가 안 보였다.
+   * 줄을 셋으로 줄이고(depthRise 도 130 으로) 열 간격을 넓혔다. formDepth 를 300 으로 늘린 것은
+   * 앞줄끼리의 거리를 줄이기 위해서다 (1000 − 2×(76+34+300) = 180px) — 냥타워는 대개 원거리라
+   * 사거리(대전장 기준 130~190px) 안에서 시작해 **걸어가지 않고 그 자리에서 쏜다**. 짧은 냥(탱커)만 걷는다. */
+  // 고정 진형의 앞줄 간격은 340px. 뒤쪽 배치 폭도 함께 줄여 맵 안에 유지한다.
+  rows: 3, colGap: 60, formDepth: 220,
   /* 대전 승리 보상에서 **특허료를 뺐다** (prize 90·drawPrize 40 → 0).
    * 이긴 쪽이 특허료까지 받으면 더 좋은 덱을 사서 다음 대전도 이기고, 그 눈덩이가 세 번
    * 굴러가면 4라운드 한 판으로 판이 끝나 버린다. 대전의 승패는 이제 **최종 랭킹 점수로만**
@@ -803,7 +810,7 @@ const DUEL = {
    * 진형이 그 아래 좁은 띠에 눌려 들어가, 스물몇 명이 나와도 작게 뭉쳐 보였다.
    * 대신 깊이를 84 → 108 로 키워 진형이 그 넓어진 땅을 실제로 쓰게 했다. */
   tilt: 44,
-  depthRise: 108,
+  depthRise: 130,
   depthScale: 0.32,
   horizon: 150,
   zoneMine: "rgba(74,136,178,.28)",
@@ -879,14 +886,14 @@ const BAL = {
   hpScale: [1.0, 1.3, 1.7, 2.3, 3.6, 5.6, 8.5, 13, 20, 30],
   /* 소환 간격 — 라운드마다 spawnGapStep 씩 줄어 spawnGapMin 까지 촘촘해진다. 체력만 올리면
    * 한 마리씩 나와 한 마리씩 죽는 것은 그대로라, 후반에는 **여럿이 한꺼번에** 몰려 사거리 안에
-   * 쌓이도록 한다 — 그래야 다중조준·방사·둔화가 값을 하고 줄이 밀리는 긴장이 생긴다. */
+   * 쌓이도록 한다 — 그래야 다중조준·광역·둔화가 값을 하고 줄이 밀리는 긴장이 생긴다. */
   spawnGapStep: 0.03, spawnGapMin: 0.28,
   incomeBase: 10, incomePerWave: 3,    // 수입도 줄여서 후반 화력 스노우볼을 억제
   catCostMul: 1.0,           // 같은 종류를 더 배치해도 가격은 그대로 — 임용 비용은 항상 정가다
   pierceCap: 70, slowCap: 70,
   spawnGap: 0.52, spawnGapBoss: 2.0,   // 더 촘촘하게 몰아친다
   waveCount: 10,          // 한 판은 10라운드 — 그중 4·7·10 은 1:1 대전 (DUEL_WAVES)
-  prepSecs: 15,              // 양쪽 모두 준비 단계에 들어선 뒤 주어지는 최대 준비시간(초)
+  prepSecs: 30,              // 양쪽 모두 준비 단계에 들어선 뒤 주어지는 최대 준비시간(초). 서버의 PREP_SECS 와 맞춘다
   choiceSecs: 15,            // 패시브·증강 선택 제한시간(초). 넘기면 첫 번째가 자동으로 선택된다
   burstSecs: 8,              // 「우선권 주장」 증강의 지속시간(초)
   critCap: 0.75,             // 치명타 확률 상한 (증강으로도 이 위로는 못 올라간다)
@@ -897,8 +904,8 @@ const BAL = {
    * 최고 레벨(promoteLv)에 닿은 냥타워는 저절로 승진냥이 된다 —
    * 선글라스 원화 · 공격력 · 치명타 보정이 레벨 보정 위에 얹히고, 대전장에서는 체력·공격력이
    * 한 번 더 붙는다(DUEL.hpPromo · dmgPromo).
-   * 예전에는 여기에 **방사 피해(반경 1.4칸 · 직격의 70%)** 도 딸려 왔는데, Lv3 하나가 웨이브를
-   * 통째로 쓸어 담아 다른 빌드가 설 자리가 없었다. 방사는 이제 💥 침해 계열(균등침해)로만 얻는다. */
+   * 예전에는 여기에 **광역 피해(반경 1.4칸 · 직격의 70%)** 도 딸려 왔는데, Lv3 하나가 웨이브를
+   * 통째로 쓸어 담아 다른 빌드가 설 자리가 없었다. 광역은 이제 💥 침해 계열(균등침해)로만 얻는다. */
   promoteLv: 3,              // 이 레벨에 닿으면 승진냥이 된다 (maxLv 와 같게 두는 것이 기본)
   promoteDmg: 1.25,          // 승진 시 공격력 배율
   promoteCritC: 0.12,        // 승진 시 치명타 확률 +12%p
@@ -954,8 +961,8 @@ const BAL = {
   slowCapHi: 90,             // ⏳ 절차 5단계 — 둔화 상한이 오른다
   tierRangeUp: 0.20,         // 📐 권리범위 3단계 — 사거리 +20%
   tierLongDmg: 0.14,         // 📐 권리범위 5단계 — 기본 사거리 초과분 100px 당 공격력 +14%
-  tierSplashR: 0.50,         // 💥 침해 5단계 — 방사 반경 +50%
-  tierSplashF: 0.50,         // 💥 침해 5단계 — 방사 피해 비율 +50%p
+  tierSplashR: 0.50,         // 💥 침해 5단계 — 광역 반경 +50%
+  tierSplashF: 0.50,         // 💥 침해 5단계 — 광역 피해 비율 +50%p
   tierSlowDmg: 0.30,         // ⏳ 절차 3단계 — 둔화된 침입자가 받는 피해 +30%
   tierStunC: 0.10,           // ⏳ 절차 5단계 — 모든 명중에 붙는 정지 확률
   tierStunD: 0.5,            // 그 정지의 지속시간
@@ -1651,9 +1658,9 @@ function computeStats(b) {
       if (auraRate) auraRate = 1 + (auraRate - 1) * BAL.tierAuraMul;
     }
 
-    /* 방사 피해 — 💥 균등침해로만 얻는다. 승진(Lv3)에는 더 이상 방사가 딸려 오지 않는다 —
+    /* 광역 피해 — 💥 균등침해로만 얻는다. 승진(Lv3)에는 더 이상 광역이 딸려 오지 않는다 —
      * BAL 의 승진 주석 참고. 🧨 폐기명령은 **이미 가진 것을 키우기만** 한다 —
-     * 먼저 방사를 얻어 두어야 값을 한다. */
+     * 먼저 광역을 얻어 두어야 값을 한다. */
     let splashR = B("splashR"), splashF = B("splashF");
     if (splashR > 0) {
       if (B("splashUpR")) { splashR *= 1 + B("splashUpR"); splashF += B("splashUpF"); }
@@ -1692,11 +1699,11 @@ function computeStats(b) {
       // 실제로 사격을 하는가. 변리사냥은 평소 0이지만 「변리사 개업」을 고르면 이 값이 켜진다.
       atk: dmg > 0 && rate > 0 && range > 0,
       golden, promoted, lv,
-      // {r: 반경(px), f: 직격 대비 비율} — 둘 다 있어야 방사가 성립한다
+      // {r: 반경(px), f: 직격 대비 비율} — 둘 다 있어야 광역이 성립한다
       splash: (splashR > 0 && splashF > 0) ? { r: splashR, f: splashF } : null,
       /* ── 계열 특수효과 중 「전투 중에 판정하는」 것들 ──
        * 능력치가 아니라 규칙이라 여기 깃발로 실어 combat/duel 양쪽이 같은 것을 본다. */
-      splashPierce: tier("splash") >= 1,          // 💥 3단계 — 방사가 방어를 완전히 무시한다
+      splashPierce: tier("splash") >= 1,          // 💥 3단계 — 광역이 방어를 완전히 무시한다
       critPierce: tier("crit") >= 1,              // 🎯 3단계 — 치명타가 방어를 무시한다
       critCd: tier("crit") >= 2 ? BAL.tierCritCd : 0,   // 🎯 5단계 — 치명타가 재장전을 당긴다
       slowDmg: tier("control") >= 1 ? BAL.tierSlowDmg : 0, // ⏳ 3단계 — 둔화된 적에게 더 아프게
@@ -1765,11 +1772,11 @@ const {cats, pieceCenter, posOnPath} = __req("core/board.js");
  * @param {number} amt
  * @param {any} src 공격자의 st (또는 {})
  * @param {boolean} [crit] 이 명중이 치명타였는가 (🎯 3단계가 이걸 본다)
- * @param {boolean} [isSplash] 직격이 아니라 방사 피해인가 (💥 3단계가 이걸 본다)
+ * @param {boolean} [isSplash] 직격이 아니라 광역 피해인가 (💥 3단계가 이걸 본다)
  */
 function damage(g, e, amt, src, crit, isSplash) {
   /* ── 계열 특수효과: 방어를 어떻게 뚫는가 ──
-   * 💥 3단계「간접침해」는 방사가, 🎯 3단계「입증책임 전환」은 치명타가 방어를 통째로 무시한다.
+   * 💥 3단계「간접침해」는 광역이, 🎯 3단계「입증책임 전환」은 치명타가 방어를 통째로 무시한다.
    * 방어는 명중마다 깎이는 값이라, 이 둘은 방어 13짜리 특허괴물 앞에서 특히 크게 벌어진다. */
   let pierce = src.pierce || 0;
   if (isSplash && src.splashPierce) pierce = 100;
@@ -1930,7 +1937,7 @@ function step(g, dt, now) {
       const amount = c.st.dmg * (crit ? c.st.critM : 1);
 
       if (c.st.splash) {
-        // 방사 냥(💥 균등침해) — 샷건. 탄이 퍼지는 궤적을 몇 가닥 더 그리고, 명중 지점 둘레에 방사 피해를 준다.
+        // 광역 냥(💥 균등침해) — 샷건. 탄이 퍼지는 궤적을 몇 가닥 더 그리고, 명중 지점 둘레에 광역 피해를 준다.
         const ang = Math.atan2(target.y - cy, target.x - cx);
         for (let k = -1; k <= 1; k++) {
           if (!k) continue;
@@ -1952,7 +1959,7 @@ function step(g, dt, now) {
       target.hitCrit = crit;
       target.hitAng = Math.atan2(target.y - cy, target.x - cx);
 
-      // 방사 피해 — 직격을 맞은 적 주변까지 함께 쓸어 버린다
+      // 광역 피해 — 직격을 맞은 적 주변까지 함께 쓸어 버린다
       if (c.st.splash) {
         for (const e2 of g.enemies) {
           if (e2 === target || e2.dead) continue;
@@ -2161,7 +2168,7 @@ function makeRoster(game) {
       ar: prof.armor || 0,
       ms: prof.spd || 1,                       // 걸음 배율 (종류별 대전 성격)
       pi: Math.round(s.pierce || 0),
-      // 💥 3단계 — 방사가 방어를 완전히 무시 · 🎯 3단계 — 치명타가 방어를 무시
+      // 💥 3단계 — 광역이 방어를 완전히 무시 · 🎯 3단계 — 치명타가 방어를 무시
       spp: !!s.splashPierce, cp: !!s.critPierce,
       hl,
       // 특수 냥타워의 규칙은 대전장에서도 그대로 산다 — 연쇄는 옆 유닛으로 튀고,
@@ -2243,7 +2250,7 @@ function mobRoster(mine, wave, seed, forceBoss) {
   };
 
   // ── 얼마나 세게 나올 것인가 ── 내 총량을 재서 거기에 맞춘다
-  // 특허괴물이 끼는 마지막 대전은 같은 총량이어도 훨씬 버겁다(방어·방사·긴 사거리) — 그만큼 덜어 준다
+  // 특허괴물이 끼는 마지막 대전은 같은 총량이어도 훨씬 버겁다(방어·광역·긴 사거리) — 그만큼 덜어 준다
   const mul = (DUEL.soloBase + wave * DUEL.soloPerWave) * (forceBoss ? DUEL.soloBossMul : 1);
   let hpSum = 0, dpsSum = 0;
   for (const u of mine) {
@@ -2365,9 +2372,8 @@ class DuelSim {
    * 비전투 변리사냥은 맨 뒤에서 다친 아군을 손본다. 그래서 「무엇을 뽑았는가」만이 아니라
    * 「앞을 세울 것이 있는가」까지 덱의 성적에 들어온다.
    *
-   * 이 줄 세우기는 시작 모양일 뿐이고, 진군하는 동안 **저절로 다시 정렬된다** —
-   * 사거리에 든 유닛은 멈추고 아직 못 닿는 유닛은 계속 걸으므로, 긴 냥은 뒤에서 멈추고
-   * 짧은 냥은 앞까지 걸어 나간다. 그래서 진형이 조금 깊어도 싸움 모양은 흐트러지지 않는다.
+   * 전투 내내 이 진형을 유지한다. 기본 공격·스킬·회복은 거리 제한 없이 표적을 고르고,
+   * 사거리는 배치 순서에만 사용한다. 광역·연쇄의 표적 간 거리 판정은 유지한다.
    *
    * 앞줄은 **어느 진영이나 같은 거리**에서 시작하고, 덱이 클수록 뒤(진영 쪽)로 늘어난다.
    * 앞줄을 덱 크기에 따라 움직이면 큰 덱이 그만큼 먼저 닿아 두 번 유리해지기 때문이다.
@@ -2385,23 +2391,28 @@ class DuelSim {
       (p.u.atk === q.u.atk ? 0 : p.u.atk ? -1 : 1) ||
       ((p.u.range || 0) - (q.u.range || 0)) || (p.i - q.i));
 
-    const rows = DUEL.rows, colGap = DUEL.colGap, formDepth = DUEL.formDepth, spawnPad = DUEL.spawnPad;
+    // 앞줄은 고정하고, 기본 간격으로 배치하되 인원이 많을 때만 공간에 맞춰 줄인다.
+    const rows = order.length > 12 ? DUEL.rows + 1 : DUEL.rows;
+    const { formDepth, spawnPad } = DUEL;
     const cols = Math.max(1, Math.ceil(order.length / rows));
-    const gap = cols > 1 ? Math.min(colGap, formDepth / (cols - 1)) : 0;
+    const gap = cols > 1 ? Math.min(78, (formDepth + spawnPad) / (cols - 1)) : 0;
+    const baseRows = Math.floor(order.length / cols), extraRows = order.length % cols;
+    const cells = [];
+    for (let col = 0; col < cols; col++) {
+      const count = baseRows + (col < extraRows ? 1 : 0);
+      for (let row = 0; row < count; row++) cells.push({ col, row, count });
+    }
     // 앞줄 = 진영 기준점에서 전진 방향으로 (spawnPad + formDepth) 만큼
     const frontX = camp.cx + camp.fx * (spawnPad + formDepth);
     const frontZ = camp.cz + camp.fz * (spawnPad + formDepth);
-    const seed = SIDES.indexOf(side) * 977;
 
     order.forEach((o, n) => {
-      const col = Math.floor(n / rows), row = n % rows;
+      const { col, row, count } = cells[n];
       const u = o.u;
-      /* 줄 번호를 그대로 쓰면 다섯 줄이 자로 잰 듯 늘어서서 「종이 타일 행렬」로만 보인다.
-       * 번호에서 뽑은 흔들림을 얹어 영역 안에 흩어져 서게 한다 (jitter01 참고 — 난수가 아니다). */
-      const j = jitter01(n * 2 + seed), j2 = jitter01(n * 2 + 1 + seed);
-      // 줄 방향 오프셋 — 폭(spread) 안에서 0~1 로 흩뿌린 뒤 가운데 정렬
-      const along = ((row + 0.22 + j * 0.56) / rows - 0.5) * camp.spread;
-      const back = col * gap + (j2 - 0.5) * 12;     // 뒤로 물러나는 정도 (열)
+      // 세로 간격은 화면 기준 46px. 적은 인원은 중앙에 모으고 늘어나면 위아래로 확장한다.
+      const rowGap = count > 1 ? Math.min(46 * DUEL.depthPx / DUEL.depthRise, camp.spread / (count - 1)) : 0;
+      const along = (row - (count - 1) / 2) * rowGap;
+      const back = col * gap;
       // 진영 기준점(cz = depthPx/2)을 가운데로 줄이 흩어지므로 a·b 의 z 는 0~depthPx 안에 든다
       const x = frontX - camp.fx * back + camp.px * along;
       const z = frontZ - camp.fz * back + camp.pz * along;
@@ -2424,7 +2435,7 @@ class DuelSim {
         sk: u.sk || null, skCd: u.sk ? u.sk.cd : 0, skT: 0,
         // 뒷줄일수록 첫 발이 아주 조금 늦다 — 한 틱에 전군이 동시에 쏘면 화면이 번쩍이기만 한다
         cd: col * 0.05, slowT: 0, slowPct: 0, hitT: 0, atkT: 0, healT: 0, freezeT: 0,
-        dead: false, walking: true,
+        dead: false, walking: false,
       });
     });
   }
@@ -2434,17 +2445,6 @@ class DuelSim {
 
   /** 두 유닛 사이의 거리 — x 차이만 본다. 줄(깊이)이 달라도 같은 x 면 닿는다 (옆에서 본 한 줄 전장이라서) */
   dist(u, f) { return Math.abs(f.x - u.x); }
-
-  /**
-   * 걷기 한 걸음 — 표적이 있으면 그쪽으로, 없으면 진영의 전진 방향으로. 이동량을 돌려준다.
-   * **표적의 방향**을 본다 — 예전처럼 진영 방향으로만 걸으면, 몸이 튼튼한 냥이
-   * 상대 줄을 지나쳐 버린 뒤 서로 등을 보이고 멀어져 시간 종료까지 아무 일도 안 일어난다.
-   */
-  stepToward(u, target, spd) {
-    if (!target) return [spd * u.dir, 0];
-    const dx = target.x - u.x;
-    return [Math.abs(dx) < 1e-6 ? 0 : spd * (dx > 0 ? 1 : -1), 0];
-  }
 
   alive(side) { return this.units.filter((u) => u.side === side && !u.dead); }
   /** 아직 판에 남아 있는 병력의 체력 합 */
@@ -2528,7 +2528,7 @@ class DuelSim {
 
   /**
    * 방어를 거친 실제 피해. 방어(ar)는 받는 피해를 그 비율만큼 깎고, 때리는 쪽의 방어무시(pi)가
-   * 그 방어를 %p 만큼 깎아 낸다. 🎯 3단계의 치명타와 💥 3단계의 방사는 방어를 통째로 무시한다.
+   * 그 방어를 %p 만큼 깎아 낸다. 🎯 3단계의 치명타와 💥 3단계의 광역은 방어를 통째로 무시한다.
    * @param {any} u 때리는 쪽 @param {any} f 맞는 쪽 @param {number} raw
    * @param {{crit?:boolean, splash?:boolean}} [o]
    */
@@ -2576,7 +2576,6 @@ class DuelSim {
     if (this.over) return;
     this.t += DT;
 
-    /** @type {any[]} [유닛, dx, dz] */ const moves = [];
     /** @type {any[]} [유닛, 피해, 치명타, 발사 x, 즉사기준] */ const hits = [];
     /** @type {any[]} [유닛, 둔화율, 지속(초)] */ const slows = [];
     /** @type {any[]} [유닛, 정지시간] */ const stuns = [];
@@ -2594,7 +2593,7 @@ class DuelSim {
       const slow = u.slowT > 0 ? Math.max(0.2, 1 - u.slowPct) : 1;
 
       /* ── 합성 냥타워의 고유 스킬 ── 사격 재장전과 별개의 시계다.
-       * 청사 판(combat.fireSkill)과 같은 규칙으로 돈다 — 쿨이 차 있고 사거리 안에 적이 있으면
+       * 고정 진형에서 쿨이 차 있고 살아 있는 적이 있으면
        * 저절로 터진다. 누를 것이 없는 라운드라, 애써 합성한 것이 값을 하는 유일한 통로다. */
       if (u.sk && u.atk) {
         if (u.skCd > 0) u.skCd -= DT;
@@ -2603,7 +2602,7 @@ class DuelSim {
           const marks = [];
           for (const f of this.units) {
             if (f.dead || f.side === u.side) continue;
-            if (this.dist(u, f) > reach) continue;
+
             marks.push(f);
           }
           if (marks.length) {
@@ -2628,7 +2627,7 @@ class DuelSim {
         }
       }
 
-      /* ── 비전투 변리사냥 ── 대전장에서는 아군 뒤를 따라다니며 가장 다친 아군을 손봐 준다.
+      /* ── 비전투 변리사냥 ── 제자리에서 가장 다친 아군을 손봐 준다.
        * 청사 판의 보좌(화력·공속)는 이미 명세의 숫자에 녹아 있으므로 여기서 또 얹지 않는다.
        * 회복량 = (고정 + 대상 최대 체력의 비율) × 회복 배율(hl — 레벨·💼 강화가 녹아 있다).
        * 「적당한」 회복이다 — 한 명이 공격 한 명의 피해 절반쯤을 되돌린다. */
@@ -2636,7 +2635,7 @@ class DuelSim {
         let worst = null, worstGap = 0;
         for (const f of this.units) {
           if (f.dead || f.side !== u.side || f === u) continue;
-          if (this.dist(u, f) > DUEL.heal.range) continue;
+
           const gap = f.max - f.hp;
           if (gap > worstGap || (gap === worstGap && worst && f.id < worst.id)) { worstGap = gap; worst = f; }
         }
@@ -2647,26 +2646,9 @@ class DuelSim {
           heals.push([worst, Math.min(worstGap, amt), u]);
           u.atkT = 0.3;    // 회복 동작
         }
-        // 손볼 아군이 없으면 아군 쪽으로 따라간다 (뒤에 처져 있으면 아무 일도 못 한다)
-        if (!worst) {
-          // 가장 가까운 아군 공격 유닛을 따라간다 — 진형이 흩어져도 뒤를 놓치지 않도록.
-          // 아군이 하나도 남지 않았으면 가장 가까운 적에게 걸어간다 — 혼자 남은 힐러가 구석에서
-          // 시간을 다 쓰게 두면 라운드가 끝나지 않는다.
-          let mate = null, md = Infinity, foe = null, fd = Infinity;
-          for (const f of this.units) {
-            if (f.dead || f === u) continue;
-            const d = this.dist(u, f);
-            if (f.side === u.side) { if (f.atk && d < md) { md = d; mate = f; } }
-            else if (d < fd) { fd = d; foe = f; }
-          }
-          const spd = DUEL.moveSpd * u.ms * 0.8 * slow * DT;
-          if (mate) { if (md > 40) moves.push([u, ...this.stepToward(u, mate, spd)]); }
-          else if (foe) moves.push([u, ...this.stepToward(u, foe, spd)]);
-          u.walking = !!(mate ? md > 40 : foe);
-        } else {
-          u.walking = false;
-          u.lookX = worst.x - u.x; u.lookZ = worst.z - u.z;
-        }
+        // 회복 대상이 없어도 처음 배치된 자리를 유지한다.
+        u.walking = false;
+        if (worst) { u.lookX = worst.x - u.x; u.lookZ = worst.z - u.z; }
         continue;
       }
 
@@ -2678,21 +2660,14 @@ class DuelSim {
       }
       foes.sort((p, q) => (p[0] - q[0]) || (p[1].id - q[1].id));
 
-      const near = foes.length ? foes[0][0] : Infinity;
+      if (!foes.length) continue;
 
-      if (near > u.range) {
-        // 아직 아무에게도 못 닿는다 — 계속 걸어간다 (두들길 성채 같은 것은 없다)
-        const spd = DUEL.moveSpd * u.ms * slow * DT;
-        moves.push([u, ...this.stepToward(u, foes.length ? foes[0][1] : null, spd)]);
-        u.walking = true;
-        continue;
-      }
       u.walking = false;   // 멈춰 서서 쏜다
       if (foes.length) {
         u.lookX = foes[0][1].x - u.x; u.lookZ = foes[0][1].z - u.z;
       }
 
-      u.cd -= DT * slow;      // 둔화는 이동뿐 아니라 공속도 늦춘다
+      u.cd -= DT * slow;      // 고정 진형에서도 둔화의 공속 감소는 유지한다
       if (u.cd > 0) continue;
       u.cd = 1 / u.rate;
       u.atkT = 0.42;
@@ -2700,20 +2675,19 @@ class DuelSim {
       const n = Math.min(u.tg, foes.length);
       let anyCrit = false;
       for (let i = 0; i < n; i++) {
-        const [d, target] = foes[i];
-        if (d > u.range) break;
+        const [, target] = foes[i];
         const crit = this.rng.next() < u.cc;
         if (crit) anyCrit = true;
         const raw = u.dmg * (crit ? u.cm : 1);
         this.shots.push({ x1: u.x, dep1: this.depOf(u), x2: target.x, dep2: this.depOf(target),
-                          side: u.side, key: u.k, crit, life: 0.13, max: 0.13 });
+                          side: u.side, key: u.k, crit, life: 0.42, max: 0.42 });
         hits.push([target, this.afterArmor(u, target, raw * this.ampSlow(u, target), { crit }), crit, u.x, u.ex]);
         if (crit) this.events.push({ t: "crit", x: u.x, side: u.side, dep: this.depOf(u), id: u.id });
         if (u.sl) slows.push([target, u.sl / 100]);
         // 조기공개냥 — 확률로 상대 유닛을 그 자리에 묶는다
         if (u.stC && this.rng.next() < u.stC) stuns.push([target, u.stD]);
         if (u.sp) {
-          // 방사 피해 — 💥 침해 계열로 얻은 방사(샷건). 직격 주변까지 쓸어 버린다
+          // 광역 피해 — 💥 침해 계열로 얻은 광역(샷건). 직격 주변까지 쓸어 버린다
           this.shots.push({ ring: true, x1: target.x, dep1: this.depOf(target), r: u.sp,
                             side: u.side, life: 0.2, max: 0.2 });
           for (const f of this.units) {
@@ -2735,7 +2709,7 @@ class DuelSim {
             }
             if (!next) break;
             this.shots.push({ x1: from.x, dep1: this.depOf(from), x2: next.x, dep2: this.depOf(next),
-                              side: u.side, crit: false, chain: true, life: 0.16, max: 0.16 });
+                              side: u.side, key: u.k, crit: false, chain: true, life: 0.42, max: 0.42 });
             hits.push([next, this.afterArmor(u, next, left * this.ampSlow(u, next)), false, from.x, u.ex]);
             hopped.push(next); from = next; left *= u.ch.f;
           }
@@ -2746,13 +2720,6 @@ class DuelSim {
     }
 
     // ── 적용 ── 이 순간까지는 아무도 죽지 않았다. 같은 틱에 서로를 눕히는 것도 그래서 가능하다.
-    for (const [u, dx, dz] of moves) {
-      if (Math.abs(dx) + Math.abs(dz || 0) > 1e-6) { u.lookX = dx; u.lookZ = dz || 0; }
-      u.x += dx; u.z += dz || 0;
-      // 상대 진영선을 지나쳐 화면 밖으로 걸어 나가지 않게 붙잡는다.
-      const lim = campX(u.side === "a" ? "b" : "a");
-      u.x = u.dir > 0 ? Math.min(u.x, lim) : Math.max(u.x, lim);
-    }
     for (const [u, amt, from] of heals) {
       u.hp = Math.min(u.max, u.hp + amt);
       this.events.push({ t: "heal", x: u.x, side: u.side, dep: this.depOf(u), amt: Math.round(amt) });
@@ -3647,7 +3614,7 @@ class Game {
       // 다음 라운드 한 번만. 그 라운드가 끝나면 closeRound 가 도로 1로 돌려놓는다.
       this.goldMul = def.amount;
     } else if (def.stat === "splash") {
-      // 방사는 반경과 비율 두 값이 함께 움직인다 — 하나만 올리면 방사가 성립하지 않는다
+      // 광역은 반경과 비율 두 값이 함께 움직인다 — 하나만 올리면 광역이 성립하지 않는다
       this.bonus.splashR = (this.bonus.splashR || 0) + def.amount.r;
       this.bonus.splashF = (this.bonus.splashF || 0) + def.amount.f;
     } else if (def.stat === "splashUp") {
@@ -4005,7 +3972,7 @@ const playerOf = (slot) => players.find((p) => p.slot === slot);
 /* ── 웨이브 동시 개시 ──
  * 예전에는 「웨이브 개시」를 누르는 즉시 내 판에서만 웨이브가 굴러가서, 먼저 누르고 먼저 끝내는 쪽이
  * 계속 앞서 나가는 구조였다. 이제 개시 버튼은 "준비 완료" 신호일 뿐이고, 실제 개시는 서버가
- * 양쪽에게 동시에 알린다 — 둘 다 준비되면 바로, 아니면 준비시간 15초가 끝나는 순간에.
+ * 양쪽에게 동시에 알린다 — 둘 다 준비되면 바로, 아니면 준비시간 30초가 끝나는 순간에.
  */
 let iReady = false;        // 내가 준비를 눌렀는가
 let oppReady = false;      // 다른 사람 **모두**가 준비를 눌렀는가
@@ -4074,7 +4041,7 @@ function onServerMessage(msg) {
         log(oppReady ? "상대가 <b>준비 완료</b>했습니다." : "상대가 준비를 취소했습니다.");
       break;
     }
-    case "prepSync":         // 모두 준비 단계 — 여기서부터 15초를 잰다
+    case "prepSync":         // 모두 준비 단계 — 여기서부터 30초를 잰다
       oppInPrep = true;
       prepEndsAt = performance.now() + (msg.secs || BAL.prepSecs) * 1000;
       break;
@@ -4258,7 +4225,8 @@ function pieceEl(p, onBoard) {
    * 예전에는 최고 레벨에만 따로 「승」 계급장을 달았는데, 지금은 **표시를 Lv 딱지 하나로 통일**
    * 한다 — 같은 것을 두 가지 방식으로 말하면 어느 쪽이 진짜인지 판에서 되묻게 된다.
    * 최고 레벨은 금빛 테두리와 승진 원화(usePortrait)로 갈린다. */
-  if (lv > 1) {
+  // Lv1 도 딱지를 단다 — 판 위에서 어느 냥이 몇 레벨인지 한눈에 비교되게
+  {
     const tag = document.createElement("span");
     tag.className = "lvtag";
     tag.textContent = "Lv" + lv;
@@ -5178,7 +5146,7 @@ function drawRatSilhouette(g, r, slowed) {
   g.strokeStyle = out; g.lineWidth = 1.1;
 }
 
-/** 방사 피해의 범위 — 명중 지점에서 퍼지는 주황 고리 한 겹. */
+/** 광역 피해의 범위 — 명중 지점에서 퍼지는 주황 고리 한 겹. */
 function drawBlastRing(g, s) {
   const p = 1 - Math.max(0, s.life / s.max);
   g.save();
@@ -5414,7 +5382,7 @@ function drawImpact(g, x, y, bp, crit, look, mul) {
 
 /** 탄환 한 발 — 포물선을 그리며 날아가는 소품 + 궤적 + 착탄. s.life 가 s.max 에서 0 으로 줄어드는 것을
  *  진행도로 삼는다 (0=발사 직후, 1=명중). 장거리탄(s.long — 특허범위냥)은 수명이 길어 그만큼 천천히 멀리 간다. */
-function drawMissile(g, s) {
+function drawMissile(g, s, emitSparks = true) {
   if (s.ring) return drawBlastRing(g, s);
   const p = 1 - Math.max(0, s.life / s.max);          // 0..1 진행도
   const crit = !!s.crit || s.col === "#cda43a";
@@ -5491,7 +5459,7 @@ function drawMissile(g, s) {
     // 총구 화염은 맨 위에 — 막 떠난 탄을 잠깐 가릴 만큼 밝다
     if (muzzle >= 0) drawMuzzle(g, s.x1, s.y1, straight, muzzle, S * (style === "slug" ? 0.9 : 1));
   } else {
-    if (!s.burst) { s.burst = true; spawnSparks(s.x2, s.y2, crit, look.ring); }
+    if (!s.burst) { s.burst = true; if (emitSparks) spawnSparks(s.x2, s.y2, crit, look.ring); }
     const bp = (p - HIT) / (1 - HIT);
     drawImpact(g, s.x2, s.y2, bp, crit, look, look.blast * (s.long ? 1.5 : 1));
   }
@@ -6395,8 +6363,11 @@ function closeDuelRound() {
  * 내가 늘 왼쪽에 보이도록 좌표만 뒤집는다(계산은 진영 순서 그대로). 그래서 「내 진영은 늘 왼쪽,
  * 내 냥은 오른쪽으로 걸어간다」가 판마다 변하지 않는다. */
 const duelX = (x) => (mySide() === "b" ? DUEL.w - x : x);
-/** 그 화면 좌표에서의 지면 높이 — 왼쪽이 낮고 오른쪽이 높은 비스듬한 땅 */
-const duelGroundY = (sx) => DUEL.ground + DUEL.tilt * (0.5 - sx / DUEL.w);
+const duelMapImage = new Image();
+duelMapImage.src = "map/campus_duel.png";
+const duelMapReady = () => duelMapImage.complete && duelMapImage.naturalWidth > 0;
+/** 새 대련장은 수평 바닥이다. 이미지 로딩 전에는 기존 지형과 기울기를 사용한다. */
+const duelGroundY = (sx) => DUEL.ground + (duelMapReady() ? 0 : DUEL.tilt * (0.5 - sx / DUEL.w));
 /** 유닛이 서는 높이 — 지면에서 깊이(dep)만큼 뒤로 물러난다 */
 const duelYAt = (sx, dep) => duelGroundY(sx) - (dep || 0) * DUEL.depthRise;
 /** 뒤로 물러난 만큼 작게 — 원근의 나머지 절반 */
@@ -6424,6 +6395,10 @@ function duelFrontLine() {
 
 /** 하늘·먼 산·기운 지면 세 겹, 그리고 그 위에 영역을 가르는 전선. */
 function drawDuelField(g) {
+  if (duelMapReady()) {
+    g.drawImage(duelMapImage, 0, 0, DUEL.w, DUEL.h);
+    return;
+  }
   const H = DUEL.h, HZ = DUEL.horizon;
 
   // ── 하늘 ── 지평선까지
@@ -6664,14 +6639,32 @@ function drawDuelUnit(g, u, ms) {
   }
   g.restore();
 
+}
+
+/** 체력은 모든 캐릭터·투사체 위에 그려 다른 타워에 가려지지 않도록 한다. */
+function drawDuelHealth(g, u) {
   if (u.dead) return;
-  // 체력줄 — 확대된 캐릭터의 머리 위에 표시한다.
+  const dep = u.z / DUEL.depthPx, sc = duelScale(dep) * 2;
+  const x = duelX(u.x), y = duelYAt(x, dep);
   const top = y - (u.mob ? (ENEMIES[u.k] ? ENEMIES[u.k].r : 18) * 2.2 : 66) * sc;
-  const hp = Math.max(0, u.hp / u.max), bw = 40 * sc;
+  const hp = Math.max(0, Math.min(1, u.hp / u.max)), bw = Math.max(62, 36 * sc), bh = 9;
+  g.save();
   g.globalAlpha = 1;
-  g.fillStyle = "rgba(0,0,0,.5)"; g.fillRect(x - bw / 2, top, bw, 4);
-  g.fillStyle = hp > .5 ? "#7fbf6a" : hp > .25 ? "#cda43a" : "#c4322a";
-  g.fillRect(x - bw / 2, top, bw * hp, 4);
+  g.fillStyle = "#101b2b"; g.fillRect(x - bw / 2 - 2, top - 1, bw + 4, bh + 2);
+  g.strokeStyle = "#fff4d6"; g.lineWidth = 1;
+  g.strokeRect(x - bw / 2 - 2, top - 1, bw + 4, bh + 2);
+  g.fillStyle = hp > .5 ? "#26965a" : hp > .25 ? "#b47b13" : "#c43737";
+  g.fillRect(x - bw / 2, top, bw * hp, bh);
+  g.restore();
+}
+
+/** 디펜스 맵과 같은 투사체를 대전 화면 좌표로 그린다. */
+function drawDuelMissile(g, s, x1, y1, x2, y2) {
+  g.save();
+  // Share defense-map projectile art, flight, trails and impact effects.
+  // Defense-map particles have their own update loop; use the shared impact here.
+  drawMissile(g, { ...s, x1, y1, x2, y2 }, false);
+  g.restore();
 }
 
 function drawDuel(now) {
@@ -6694,7 +6687,8 @@ function drawDuel(now) {
     return;
   }
 
-  for (const s of duel.sim.sides) drawDuelCamp(g, s);
+  // 새 맵에는 양쪽 깃발이 이미 그려져 있다.
+  if (!duelMapReady()) for (const s of duel.sim.sides) drawDuelCamp(g, s);
 
   // 유닛 — 깊은 쪽(뒤)부터 그려 앞에 선 놈이 위에 오게 한다
   const ms = duel.sim.t * 1000;
@@ -6725,27 +6719,21 @@ function drawDuel(now) {
       g.globalAlpha = 1; continue;
     }
     const x2 = duelX(s.x2), y2 = duelYAt(x2, s.dep2) - 52 * duelScale(s.dep2);
-    g.globalAlpha = a;
-    g.strokeStyle = s.heal ? "#7fbf6a" : s.chain ? "#6fe0d0" : s.crit ? "#cda43a" : sideCol(s.side)[2];
-    g.lineWidth = s.crit ? 3 : s.heal ? 2.4 : 1.8;
-    if (s.heal) g.setLineDash([4, 4]);
-    g.beginPath();
-    g.moveTo(x1, y1); g.lineTo(x2, y2);
-    g.stroke();
-    g.setLineDash([]);
-    // 줄 위를 날아가는 소품 — 청사 판과 같은 것을 던진다 (SHOT_STYLE). 줄은 진영 색 예광으로 남긴다.
-    if (s.key && SHOT_STYLE[s.key]) {
-      const p = 1 - a, style = SHOT_STYLE[s.key], look = SHOT_LOOK[style];
-      const heading = Math.atan2(y2 - y1, x2 - x1);
+    if (s.heal) {
       g.save();
-      g.globalAlpha = 1;
-      g.translate(x1 + (x2 - x1) * p, y1 + (y2 - y1) * p);
-      g.rotate(look.spin ? p * look.spin * Math.PI * 2 + (style === "bomb" ? 0 : heading) : heading);
-      drawShotBody(g, style, look.size * 0.8 * duelScale(s.dep1), !!s.crit);
+      g.globalAlpha = a;
+      g.strokeStyle = "#7fbf6a"; g.lineWidth = 2.4;
+      g.setLineDash([4, 4]);
+      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
       g.restore();
+    } else {
+      drawDuelMissile(g, s, x1, y1, x2, y2);
     }
   }
   g.globalAlpha = 1;
+
+  // 타워가 겹쳐도 개별 체력은 마지막에 선명하게 표시한다.
+  for (const u of order) drawDuelHealth(g, u);
 
   // 떠오르는 글씨
   g.textAlign = "center";
@@ -6754,8 +6742,8 @@ function drawDuel(now) {
     g.save();
     g.globalAlpha = Math.min(1, p / .15) * Math.min(1, Math.max(0, (1 - p) / .4));
     g.translate(duelX(f.x), f.y - 22 * p);
-    g.font = f.big ? "bold 15px 'Jua',sans-serif" : "bold 11px ui-monospace,monospace";
-    g.lineWidth = 3; g.strokeStyle = "rgba(24,16,10,.85)"; g.lineJoin = "round";
+    g.font = f.big ? "bold 21px 'Jua',sans-serif" : "bold 16px 'Jua',sans-serif";
+    g.lineWidth = 4; g.strokeStyle = "#14243b"; g.lineJoin = "round";
     g.strokeText(f.txt, 0, 0);
     g.fillStyle = f.col; g.fillText(f.txt, 0, 0);
     g.restore();
@@ -6766,19 +6754,15 @@ function drawDuel(now) {
 
 /* ── 덱 표시줄 (화면 아래) ──
  * 누를 것이 없는 라운드다. 그래서 이 자리에는 조작 대신 **모두가 무엇을 데려왔는지**를
- * 진영별로 늘어놓는다 — 종류·레벨별로 한 칸씩, 몇 명인지와 함께. 위에는 덱 지수를 적어
- * 지금 붙고 있는 덱들의 우열이 한눈에 보이게 한다. 그 아래에는 **덱의 이력**(어느 계열을
- * 몇 단계까지 열었는가 · 무슨 강화를 골랐는가)을 사람마다 적는다 — 고른 강화가 대전에 실려
- * 있다는 것이 여기서 눈에 보인다.
+ * 진영별로 늘어놓는다 — 종류·레벨별로 한 칸씩, 몇 명인지와 함께.
+ * 하단에는 내 덱과 상대 덱 구성만 표시한다.
  * 싸움이 시작될 때 한 번만 그린다 (구성이 도중에 바뀌지 않는다).
  */
 function clearDuelDecks() {
-  for (const id of ["#duelDecks", "#duelLines", "#duelFoes"]) {
+  for (const id of ["#duelDecks", "#duelFoes"]) {
     const el = $(id);
     if (el) el.innerHTML = "";
   }
-  const pw = $("#duelPower");
-  if (pw) { pw.textContent = "—"; pw.className = "even"; }
   $("#duelMine").textContent = "-";
   /** @type {HTMLElement} */ ($("#duelMineFill")).style.width = "100%";
 }
@@ -6795,29 +6779,6 @@ function deckChips(groups) {
   }).join("");
 }
 
-/**
- * 한 사람의 **덱 이력** 칸 — 열린 계열 단계와 고른 강화 아이콘.
- * 명세에 딸려 온 meta(makeMeta)를 그대로 읽는다. 쥐 침입단 자리는 「없음」이다.
- */
-function metaChips(slot) {
-  const m = duel.metas[slot];
-  if (!m) return `<span class="dempty">강화 없음</span>`;
-  const lines = Object.keys(LINES).filter((k) => (m.score && m.score[k]) > 0)
-    .sort((a, b) => m.score[b] - m.score[a])
-    .map((k) => {
-      const L = LINES[k], t = (m.lines && m.lines[k]) || 0;
-      return `<span class="lchip${t ? " lit" : ""}" style="--lc:${L.col}">${L.icon} ${L.name} ${m.score[k]}${t ? ` · ${t}단계` : ""}</span>`;
-    }).join("");
-  const tally = {};
-  for (const k of m.passives || []) tally[k] = (tally[k] || 0) + 1;
-  const picks = Object.keys(tally).map((k) => {
-    const p = PASSIVE_BY_KEY[k]; if (!p) return "";
-    return `<span class="pchip" title="${p.name} — ${p.desc}">${p.icon}${tally[k] > 1 ? `<em>×${tally[k]}</em>` : ""}</span>`;
-  }).join("");
-  if (!lines && !picks) return `<span class="dempty">강화 없음</span>`;
-  return lines + picks;
-}
-
 function renderDuelDecks() {
   if (!duel || !duel.sim) return;
   const me = mySide();
@@ -6826,25 +6787,10 @@ function renderDuelDecks() {
   const colOf = (s) => (s === me ? "var(--blue)" : sideCol(s)[1]);
   $("#duelDecks").innerHTML = order.map((s) => `
     <div class="ddeck">
-      <span class="dlbl" style="color:${colOf(s)}">${s === me ? "내 덱" : sideLabel(s)}</span>
+      <span class="dlbl" style="color:${colOf(s)}">${s === me ? "내 덱" : "상대 덱"}</span>
       <div class="dchips">${deckChips(sim.deck[s])}</div>
     </div>`).join("");
 
-  // 덱 이력 — 사람마다 한 줄, 내가 먼저. 솔로에서는 내 것만
-  const slots = soloMode ? [mySlot] : Array.from({ length: roomSize }, (_, i) => i)
-    .sort((p, q) => (p === mySlot ? -1 : q === mySlot ? 1 : p - q));
-  $("#duelLines").innerHTML = `<i>덱 이력 — 고른 강화가 그대로 실려 있습니다</i>` + slots.map((s) => `
-    <div class="dline">
-      <span class="dlbl" style="color:${colOf(sideOfSlot(s))}">${s === mySlot ? "나" : duel.mobs.has(s) ? "쥐 침입단" : slotName(s)}</span>
-      <div class="dchips">${duel.mobs.has(s) ? `<span class="dempty">강화 없음</span>` : metaChips(s)}</div>
-    </div>`).join("");
-
-  // 덱 지수 — 내 것과 남의 것. 내가 가장 높으면 금빛, 아니면 붉은빛으로 기운다
-  const mp = sim.power[me];
-  const best = Math.max(...sim.sides.filter((s) => s !== me).map((s) => sim.power[s]));
-  const pw = $("#duelPower");
-  pw.innerHTML = order.map((s, i) => `${i ? `<span>${i === 1 ? "덱 지수" : "·"}</span>` : ""}<b style="color:${colOf(s)}">${sim.power[s]}</b>`).join("");
-  pw.className = mp > best ? "up" : mp < best ? "down" : "even";
 }
 
 /** 위쪽 표시줄의 상대 칸을 만든다 (한 번) */
@@ -7064,11 +7010,11 @@ function showTip(e, p) {
     ${critC ? `<i style="color:#cda43a">치명타 ${Math.round(critC * 100)}% · 피해 ×${critM.toFixed(1)}</i>` : ""}
     ${specialTipHtml(p.key, s)}
     ${d.special ? `<i style="color:#6fe0d0">이종 합성 전용 — ${(RECIPES.find((r) => r.key === p.key) || { need: [] }).need.map((k) => CATS[k].name).join(" + ") || "지금은 잠겨 있습니다"}</i>` : ""}
-    ${lv < BAL.maxLv ? `<i style="color:#8a7c5e">같은 종류 Lv${lv} ${BAL.mergeNeed}명을 모으면 Lv${lv + 1}로 합성됩니다${lv + 1 >= BAL.promoteLv ? " (승진냥)" : ""}</i>` : ""}
     ${s && s.golden ? `<i style="color:#cda43a">직권보정 — 이번 웨이브 공격력 3배</i>` : ""}`;
   t.style.display = "block";
-  t.style.left = Math.min(e.clientX + 14, innerWidth - 244) + "px";
-  t.style.top = Math.min(e.clientY + 14, innerHeight - 120) + "px";
+  // 말풍선 크기는 테마·내용에 따라 다르므로 그린 뒤 실제 크기로 화면 안에 넣는다
+  t.style.left = Math.max(0, Math.min(e.clientX + 14, innerWidth - t.offsetWidth - 8)) + "px";
+  t.style.top = Math.max(0, Math.min(e.clientY + 14, innerHeight - t.offsetHeight - 8)) + "px";
 }
 const hideTip = () => { $("#tip").style.display = "none"; };
 
@@ -7093,7 +7039,7 @@ function specialTipHtml(key, s) {
   const tg = (s ? s.targets : d.targets) || 1;
   if (tg > 1) out += line(`동시조준 ${tg}마리`);
   const sp = s && s.splash;
-  if (sp) out += line(`방사 — 반경 ${(sp.r / 84).toFixed(1)}칸 안에 직격의 ${Math.round(sp.f * 100)}% 피해`);
+  if (sp) out += line(`광역 — 반경 ${(sp.r / 84).toFixed(1)}칸 안에 직격의 ${Math.round(sp.f * 100)}% 피해`);
   /* 고유 스킬 — 합성으로만 나오는 다섯이 가진 「한 수」. 쿨은 레벨을 타므로
    * 실제 계산이 끝난 st(s)가 있으면 그 값을, 없으면 정의된 기본값을 적는다. */
   const sk = CAT_SKILLS[key];
@@ -7375,7 +7321,9 @@ function fitSideCols() {
     sideFitPending = false;
     for (const col of document.querySelectorAll("#gameRoot .cols>div:not(:nth-child(2))")) {
       // 칸 자체가 아니라 안의 패널들에 zoom 을 건다 — 칸에 걸면 칸 높이까지 같이 줄어 버린다
-      const kids = [...col.children];
+      // 냥타워 뽑기 칸은 줄이지 않는다 — 카드 크기가 곧 조작감이라, 넘치면 나머지(내 청사·보유 현황)만 조인다
+      const kids = [...col.children].filter((k) => !k.classList.contains("recruitment-panel"));
+      if (!kids.length) continue;
       const setZoom = (z) => kids.forEach((k) => { k.style.zoom = z; });
       setZoom("");                                             // 원래 크기를 재려면 배율을 먼저 푼다
       const need = col.scrollHeight, have = col.clientHeight;
@@ -7789,6 +7737,31 @@ function closeChoiceModal() {
  * 「내가 지금 몇 점인가」를 화면마다 다시 세어 봐야 한다.
  * @param {string} key 계열 키 @param {boolean} full 열린 단계의 이름까지 적을 것인가
  */
+/**
+ * 강화 선택 모달 위의 계열 타일 — 계열마다 아이콘 하나를 크게 세우고, 그 아래에 중첩 상태(점·점수·다음 단계)를
+ * 적는다. 카드에서 중첩 표시를 걷어낸 뒤로는 여기가 유일한 진행도라, 세로 줄(lineRowHtml)보다 크게 읽히게 했다.
+ */
+function lineTileHtml(key) {
+  const L = LINES[key];
+  const score = (game.lineScore && game.lineScore[key]) || 0;
+  const tier = (game.lineTier && game.lineTier[key]) || 0;
+  const max = LINE_TIER_AT[LINE_TIER_AT.length - 1];
+  let dots = "";
+  for (let i = 1; i <= max; i++) dots += `<i class="${i <= score ? "on" : ""}"></i>`;
+  // 아래 두 줄 — 「3강 : 효과 설명」「5강 : 효과 설명」. 이미 연 단계는 계열 색으로 밝힌다
+  const steps = LINE_TIER_AT.map((need, i) => {
+    const t = i === 0 ? L.t1 : L.t2;
+    return `<em class="lstep ${tier > i ? "on" : ""}"><b>${need}강</b>${t.short || t.desc}</em>`;
+  }).join("");
+  return `<div class="ltile ${tier ? "lit" : ""}" style="--lc:${L.col}">
+    <i class="lic">${L.icon}</i>
+    <b class="lname">${L.name}</b>
+    <span class="ldots">${dots}</span>
+    <span class="lnum">${score} / ${max}</span>
+    ${steps}
+  </div>`;
+}
+
 function lineRowHtml(key, full) {
   const L = LINES[key];
   const score = (game.lineScore && game.lineScore[key]) || 0;
@@ -7818,30 +7791,58 @@ function lineRowHtml(key, full) {
  * 무엇을 고를 것인가가 아니라 **무엇을 포기할 것인가**가 매번 생긴다.
  * 위쪽에는 지금 계열 점수가 어디까지 왔는지, 다음 단계가 무엇을 열어 주는지를 펼쳐 둔다.
  */
+/** 이 카드만으로 쌓인 보너스. 다른 강화·기본 능력치·상한 적용 전 수치다. */
+function passiveStackBonus(def, count) {
+  const value = def.amount * count;
+  const fmt = (n) => String(Math.round(n * 100) / 100);
+  const pct = (n) => fmt(n * 100);
+  switch (def.stat) {
+    case "dmg": return `공격력 +${pct(value)}%`;
+    case "rate": return `공속 +${pct(value)}%`;
+    case "range": return `사거리 +${pct(value)}%`;
+    case "critC": return `치명타 확률 +${pct(value)}%p`;
+    case "critM": return `치명타 배율 +${fmt(value)}`;
+    case "pierce": return `방어무시 +${fmt(value)}%p`;
+    case "slow": return `둔화 +${fmt(value)}%p`;
+    case "stunC": return `정지 확률 +${pct(value)}%p`;
+    case "heavy": return `조건부 공격력 +${pct(BAL.heavyDmg * value)}%`;
+    case "rapid": return `조건부 치명타 확률 +${pct(BAL.rapidCrit * value)}%p`;
+    case "longR": return `조건부 공격력 +${pct(BAL.longDmg * value)}%`;
+    case "aura": return `보좌 화력 +${pct(BAL.auraDmgUp * value)}%p · 공속 +${pct(BAL.auraRateUp * value)}%p`;
+    case "targets": return `동시조준 +${fmt(value)}`;
+    case "splash": return `광역 반경 +${fmt(def.amount.r * count)}px · 피해 +${pct(def.amount.f * count)}%p`;
+    case "splashUp": return `광역 반경 +${pct(value)}% · 피해 +${pct(0.08 * count)}%p`;
+    default: return def.desc;
+  }
+}
+
+function passiveStackHtml(def) {
+  if (def.stat === "gold2x") return `<div class="upstack temporary"><b>1스테이지 한정</b><span>중첩 없음 · 처치 특허료 2배</span></div>`;
+  const count = game.myPassives.filter((p) => p.key === def.key).length;
+  const capped = ["critC", "rapid", "pierce", "slow", "stunC"].includes(def.stat);
+  return `<div class="upstack${count ? " stacked" : ""}">
+    <b>${count ? `${count} → ${count + 1}중첩` : "첫 획득 · 1중첩"}</b>
+    <span class="stacklabel">이 강화의 누적 보너스${capped ? " · 상한 적용 전" : ""}</span>
+    ${count ? `<span class="stackbefore">현재 ${passiveStackBonus(def, count)}</span>` : ""}
+    <strong>선택 후 ${passiveStackBonus(def, count + 1)}</strong>
+  </div>`;
+}
+
 function openPassiveModal() {
   const offer = game.passiveOffers();
-  const lines = Object.keys(LINES).map((k) => lineRowHtml(k, false)).join("");
-  $("#sheet").innerHTML = `<h3>라운드 ${game.wave} 클리어 — 강화 넷 중 하나를 고르세요</h3>
-    <div class="upnote">같은 <b>계열</b>을 모을수록 그 계열의 카드가 더 잘 나옵니다.
-      <b>3점</b>과 <b>5점</b>에 닿으면 그 계열에만 있는 <b>특수효과</b>가 열립니다 —
-      숫자가 오르는 게 아니라 <b>규칙이 하나 바뀝니다</b>.
-      고른 것은 합성과 함께 쌓여 <b>1:1 대전장에도 그대로 실립니다</b>
-      (수수료 환급만 청사 판 전용입니다).</div>
-    <div class="linebar">${lines}</div>
+  const lines = Object.keys(LINES).map((k) => lineTileHtml(k)).join("");
+  $("#sheet").innerHTML = `<h3>라운드 ${game.wave} 클리어 — 강화 선택</h3>
+    <div class="linetiles">${lines}</div>
     <div class="picks upgrades">${offer.map((def) => {
       const L = def.line ? LINES[def.line] : null;
-      const sc = def.line ? (game.lineScore[def.line] || 0) : 0;
-      const next = LINE_TIER_AT.find((n) => n > sc);
+      // 중첩 수·계열 점수 변화(passiveStackHtml·lnext)는 카드에서 뺐다 — 위 계열 줄(linebar)에 이미 있어
+      // 카드마다 되풀이하면 무엇을 고르는지보다 숫자가 먼저 읽혔다
       return `
       <div class="pick up ${L ? "lined" : ""}" data-k="${def.key}" style="${L ? `--lc:${L.col}` : ""}">
-        <span class="ltag">${L ? `${L.icon} ${L.name} ${sc}→${sc + 1}` : "공통"}</span>
+        <span class="ltag">${L ? `${L.icon} ${L.name}` : "공통"}</span>
         <span class="ic">${def.icon}</span>
         <span class="nm">${def.name}</span>
-        <span class="ef">${def.desc}</span>
-        <span class="fl">${def.detail}</span>
-        ${L && next ? `<span class="lnext">${next === sc + 1
-          ? `<b>이걸 고르면 ${next}점 — ${next === LINE_TIER_AT[0] ? L.t1.name : L.t2.name} 개방!</b>`
-          : `${next}점에서 ${next === LINE_TIER_AT[0] ? L.t1.name : L.t2.name}`}</span>` : ""}
+        <span class="ef">${def.stat === "gold2x" ? "처치 특허료 2배" : def.desc}</span>
       </div>`;
     }).join("")}</div>${choiceBarHtml()}`;
   $("#modal").classList.add("on");
@@ -7893,15 +7894,13 @@ function openAugmentModal() {
   if (!offer.length) { game.awaitingAugment = false; return; }
   const round = AUGMENT_WAVES.indexOf(game.wave) + 1;
   $("#sheet").innerHTML = `<h3 class="augtitle">증강 ${round}차 — 판을 뒤집을 하나를 고르세요</h3>
-    <div class="augnote">패시브와 달리 <b>규칙 자체가 바뀝니다</b>. 이번 판에서 같은 증강은 다시 나오지 않습니다.
-      ${soloMode ? "" : "상대에게도 같은 3장이 갔습니다."}</div>
+    <div class="augnote">하나를 선택하세요 · 중복 획득 불가</div>
     <div class="picks augpicks">${offer.map((d) => `
       <div class="pick aug" data-k="${d.key}">
         <span class="ic">${d.icon}</span>
         <span class="nm">${d.name}</span>
         <span class="augtag">${d.tag}</span>
         <span class="ef">${d.desc}</span>
-        <span class="fl">${d.detail}</span>
       </div>`).join("")}</div>${choiceBarHtml()}`;
   $("#modal").classList.add("on");
   const choose = (key) => {

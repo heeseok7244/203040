@@ -168,7 +168,7 @@ const rooms = new Map();
 const MODE_SIZE = { duel: 2 };
 
 /** 모두 준비 단계에 들어선 뒤 주어지는 최대 준비시간(초). 클라이언트의 BAL.prepSecs 와 맞춘다. */
-const PREP_SECS = 15;
+const PREP_SECS = 30;
 
 function makeCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 헷갈리는 글자(0/O, 1/I) 제외
@@ -330,7 +330,7 @@ attachWebSocketServer(httpServer, (conn) => {
 
     /* ── 웨이브 동시 개시 ──
      * 「준비 완료」를 눌러도 남들이 누르기 전에는 시작되지 않는다.
-     * 준비시간 15초는 모두가 준비 단계에 들어선 뒤에야 흐르기 시작하므로,
+     * 준비시간 30초는 모두가 준비 단계에 들어선 뒤에야 흐르기 시작하므로,
      * 웨이브를 먼저 끝냈다고 해서 혼자 앞서 나갈 수 없다. */
     if (msg.t === 'prep') {
       const wave = Number(msg.wave) || 0;

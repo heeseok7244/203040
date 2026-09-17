@@ -1009,6 +1009,53 @@ body.solo #sabPanel{display:none!important}
 /* 대전장이 덮은 동안 청사 판에서 딸려 온 말풍선이 위에 떠 있으면 안 된다 */
 body.dueling #tip{display:none!important}
 
+/* 대전 가독성: 작은 보조 문구도 충분한 크기와 대비로 표시한다. */
+#duelStage .duelhead{background:#14243b;padding:12px 16px;gap:16px}
+#duelStage .duelhead .dside>i{font-family:var(--disp);font-size:15px;font-weight:700;
+  color:#e9f1ff;letter-spacing:0;line-height:1.5}
+#duelStage .duelhead .dside>b{font-size:24px;line-height:1.35;font-variant-numeric:tabular-nums}
+#duelStage .duelhead .dside.me>b{color:#9cddff}
+#duelStage .duelhead .dside.foe>b{color:#ffb5ac}
+#duelStage .duelhead .dside.foe.out{opacity:1}
+#duelStage .duelhead .dside.foe.out b::after{font-size:13px;color:#ffb5ac}
+#duelStage .duelhead .duelmid em{font-size:22px;letter-spacing:.02em;color:#fff0be;line-height:1.4}
+#duelStage .duelhead .duelmid em span{font-size:14px;letter-spacing:0;color:#e9f1ff}
+#duelStage .duelhead .dtime{font-size:19px;font-weight:700;color:#fff;line-height:1.4;
+  font-variant-numeric:tabular-nums}
+#duelStage .duelbottom{background:#14243b;padding:8px 12px}
+#duelStage .ddeck{gap:9px;padding:5px 0}
+#duelStage .ddeck .dlbl{width:72px;font-family:var(--disp);font-size:14px;font-weight:700;
+  line-height:1.5;letter-spacing:0;color:#9cddff!important}
+#duelStage .ddeck+.ddeck .dlbl{color:#ffb5ac!important}
+#duelStage .dchips{gap:5px;max-height:none;overflow:visible}
+#duelStage .dchip{padding:3px 6px;gap:4px;background:#fff5dd;color:#172238;border-color:#dbc58e;line-height:1.4}
+#duelStage .dchip b{font-size:16px}
+#duelStage .dchip i{font-size:13px}
+#duelStage .dchip em{font-size:13px;color:#67410b}
+#duelStage .dempty{font-size:13px;color:#e9f1ff;line-height:1.4}
+#duelResult{line-height:1.5;background:#14243b;width:min(460px,88%);min-width:0;box-sizing:border-box}
+#duelResult>b{font-size:30px;letter-spacing:.03em;color:#ffe2a0}
+#duelResult>i{font-size:16px;line-height:1.6;color:#f0f4fc;letter-spacing:0}
+#duelResult>span{font-size:17px;line-height:1.5;color:#fff}
+#duelResult>span b{display:inline;font-size:inherit;letter-spacing:0;color:#ffe2a0}
+#duelResult.lose>b{color:#ffb5ac}
+@media(max-width:600px){
+  #duelStage .duelhead{gap:8px;padding:10px}
+  #duelStage .duelhead .dside{min-width:0;max-width:100px}
+  #duelStage .duelhead .dside>i{font-size:13px;max-width:100%}
+  #duelStage .duelhead .dside>b{font-size:20px}
+  #duelStage .duelhead .duelmid em{font-size:18px}
+  #duelStage .duelhead .dtime{font-size:17px}
+  #duelStage .duelbottom{padding:8px 10px}
+  #duelStage .ddeck{flex-direction:column;gap:5px}
+  #duelStage .ddeck .dlbl{width:auto}
+  #duelStage .dchip{padding:3px 6px}
+  #duelStage .dchip i,#duelStage .dchip em{font-size:13px}
+  #duelResult{padding:12px}
+  #duelResult>b{font-size:23px}
+  #duelResult>i,#duelResult>span{font-size:14px}
+}
+
 /* 다음 라운드가 대전이면 개시 버튼이 금빛으로 바뀐다 — 무엇이 시작되는지 눌러 보기 전에 알도록 */
 .boardctl #btnGo.duelnext{background:#8a6a1c;border-color:var(--gold)}
 .boardctl #btnGo.duelnext:hover:not(:disabled){background:#a37f22;border-color:#e6bf55}
@@ -1090,6 +1137,20 @@ body.dueling #tip{display:none!important}
 .pick.up .lnext{display:block;margin-top:7px;font-size:10px;color:#6b5e42;
   border-top:1px dashed rgba(107,94,66,.4);padding-top:5px;width:100%}
 .pick.up .lnext b{color:#b2531f}
+
+#sheet .pick.up .ef{font-size:16px;line-height:1.5;color:#254b25}
+#sheet .pick.up .nm{font-size:18px}
+#sheet .pick.up .ltag{font-size:11px}
+#sheet .upstack{align-self:stretch;margin-top:12px;padding:10px;border:1px solid #b9c9ad;
+  border-radius:7px;background:#f5f8ee;text-align:left;line-height:1.45}
+#sheet .upstack>b{display:inline-block;padding:3px 9px;border-radius:5px;background:#254b35;
+  color:#fff;font-size:15px}
+#sheet .upstack.stacked{border:2px solid #a4771f;background:#fff6dc}
+#sheet .upstack.stacked>b{background:#765014;color:#fff5ce;font-size:17px}
+#sheet .upstack .stacklabel{display:block;font-size:11px;color:#615b47;margin-top:7px}
+#sheet .upstack .stackbefore{display:block;font-size:13px;color:#575341;margin-top:3px}
+#sheet .upstack strong{display:block;font-size:15px;color:#203e2b;margin-top:3px}
+#sheet .upstack.temporary>span{display:block;font-size:13px;color:#575341;margin-top:6px}
 
 /* 계열 단계 개방 축포 — 규칙이 바뀌는 순간이라 한 번은 크게 터진다 */
 .tierpop{--lc:#cda43a;
@@ -1271,3 +1332,34 @@ body.dueling #tip{display:none!important}
 /* 방금 올린 내 줄 */
 .lbtable tr.me td{background:rgba(205,164,58,.16);color:#ffd782}
 .lbtable tr.me td.l{font-weight:700}
+
+/* ── 강화 선택 모달: 계열 타일 (아이콘 한 줄 + 아래 중첩 상태) ──
+   카드에서 중첩 표시를 걷어낸 뒤로는 여기가 유일한 진행도다. 계열 수만큼 가로로 나란히 놓고,
+   아이콘 → 이름 → 점 → 「n중첩 / 5」 → 다음 단계 순으로 아래로 쌓는다. */
+.linetiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;padding:12px 14px 2px;min-width:0}
+@media(max-width:560px){.linetiles{grid-template-columns:repeat(3,1fr)}}
+.ltile{--lc:#8ba2ba;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;
+  padding:10px 6px 9px;border:1px solid rgba(139,162,186,.3);border-top:4px solid var(--lc);border-radius:8px;
+  background:rgba(105,182,214,.06);text-align:center}
+.ltile.lit{background:color-mix(in srgb,var(--lc) 16%,transparent);border-color:color-mix(in srgb,var(--lc) 55%,transparent);
+  border-top-color:var(--lc)}
+.ltile .lic{font-style:normal;font-size:30px;line-height:1}
+.ltile .lname{font-family:var(--disp);font-size:16px;color:var(--txt);letter-spacing:0}
+.ltile.lit .lname{color:var(--lc)}
+.ltile .ldots{display:flex;gap:4px;margin-top:2px}
+.ltile .ldots i{width:13px;height:13px;border:1px solid rgba(139,162,186,.55);border-radius:50%}
+.ltile .ldots i.on{background:var(--lc);border-color:var(--lc);box-shadow:0 0 6px color-mix(in srgb,var(--lc) 70%,transparent)}
+.ltile .lnum{font-family:var(--disp);font-size:14px;color:#e8eef4}
+.ltile.lit .lnum{color:var(--lc)}
+.ltile .lstep{font-style:normal;font-size:13px;line-height:1.4;color:var(--txt);font-weight:700;display:block;text-align:left;width:100%;margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ltile .lstep b{display:block;font-family:var(--disp);font-size:14px;color:var(--txt);font-weight:700;margin-bottom:1px}
+.ltile .lstep.on{color:#fff}
+.ltile .lstep.on b{color:var(--lc)}
+
+/* 강화 카드의 계열 딱지(공통·절차·침해…) — 9~11px 모노 글자로는 어느 계열인지 안 읽혔다 */
+#sheet .pick.up .ltag{font-family:var(--disp);font-size:14px;letter-spacing:0;padding:4px 10px;
+  border-radius:0 0 8px 0;font-weight:700}
+#sheet .pick.up{padding-top:34px}
+/* 타일 글자를 키운 만큼 모달도 넓힌다 — 640px 에 다섯 타일이면 한 줄에 여섯 글자밖에 안 들어간다 */
+/* 계열이 넷이 된 뒤로는 780px 이면 가장 긴 설명(「둔화 강화·명중 시 정지」)까지 한 줄에 들어간다 */
+.sheet:has(.linetiles){max-width:780px}
