@@ -7269,9 +7269,18 @@ function escapeHtml(s) {
  * 칸 수나 픽셀 좌표를 건드리는 대신 액자째 CSS 로 늘이고 줄이며, 화면 좌표를 판 좌표로 되돌릴 때만
  * 이 값으로 나눈다 — 전투 계산은 언제나 원래 크기 그대로다.
  * 상한(BOARD_SCALE_MAX)은 4K 같은 큰 화면에서 원화가 끝없이 커져 흐려지는 것을 막는 선이다.
+ *
+ * 원화 액자가 10:9(1000×900)로 넓어지면서 칸 비율과 안 맞는 경우가 생겼다 — 1080 전체화면은 칸이
+ * 964×908 이라 폭에 먼저 걸려 아래 40px 이 비고, 보통 창(964×780쯤)은 높이에 걸려 양옆이 빈다.
+ * 그래서 이제 액자를 「덮기」로 맞춘다: 폭·높이 중 큰 쪽 배율로 키우고, 넘치는 쪽은 원화의 바깥
+ * 여백(잔디·나무)을 깎아 낸다. 판 자체는 절대 잘리지 않는다 — 여백은 ARENA_PAD_MIN 까지만 깎고,
+ * 그래도 안 들어가면 그때부터 배율을 줄인다. 깎는 건 padding 을 줄이고 원화를 같은 크기로 고정한 채
+ * 위치만 밀어서 한다 (background-size 를 액자 원래 크기로, position 을 음수로).
  */
 let boardScale = 1;
 const BOARD_SCALE_MAX = 1.6;
+/** 원화 여백을 깎아도 남겨 둘 최소 두께 [세로, 가로] — 액자 돌띠(판 바로 옆 20px)와 귀퉁이 덤불이 대부분 보이는 선 */
+const ARENA_PAD_MIN = [36, 30];
 let fitKey = "";
 /** @param {boolean} [force] 액자 두께가 바뀌었을 때(전장 원화 교체)는 크기가 같아 보여도 다시 잰다 */
 function fitArena(force) {
@@ -7293,12 +7302,23 @@ function fitArena(force) {
   }
   fitKey = key;
   a.style.transform = "none";                       // 원래 크기를 재려면 배율을 먼저 풀어야 한다
-  const w = a.offsetWidth, h = a.offsetHeight;
-  if (!w || !h || !box.clientHeight) return;
+  const board = $("#board"), bw = board.offsetWidth, bh = board.offsetHeight;
+  const pad = stageTheme?.pad || [0, 0, 0, 0];      // [위, 오른쪽, 아래, 왼쪽] — 원화 액자의 온전한 여백
+  const w = bw + pad[1] + pad[3], h = bh + pad[0] + pad[2];   // 액자 원래 크기 (여백을 하나도 안 깎았을 때)
+  if (!bw || !bh || !box.clientHeight) return;
   fitCenterCol(cols, box, w, h);
-  boardScale = Math.min(BOARD_SCALE_MAX, box.clientWidth / w, box.clientHeight / h);
-  if (boardScale !== 1) a.style.transform = `scale(${boardScale})`;
-  fitColsToBoard(box, h * boardScale);
+  const bxW = box.clientWidth, bxH = box.clientHeight;
+  // 덮기 배율 — 단, 여백을 최소치까지 깎아도 판이 안 들어가는 쪽이 있으면 거기에 맞춰 줄인다
+  let s = Math.min(BOARD_SCALE_MAX, Math.max(bxW / w, bxH / h));
+  s = Math.min(s, bxW / (bw + ARENA_PAD_MIN[1] * 2), bxH / (bh + ARENA_PAD_MIN[0] * 2));
+  const vw = Math.min(w, bxW / s), vh = Math.min(h, bxH / s);   // 이 배율에서 칸에 보이는 액자 크기
+  const cx = (w - vw) / 2, cy = (h - vh) / 2;                    // 양쪽에서 똑같이 깎는 두께
+  a.style.padding = `${pad[0] - cy}px ${pad[1] - cx}px ${pad[2] - cy}px ${pad[3] - cx}px`;
+  a.style.backgroundSize = `${w}px ${h}px`;
+  a.style.backgroundPosition = `${-cx}px ${-cy}px`;
+  boardScale = s;
+  a.style.transform = s !== 1 ? `scale(${s})` : "none";
+  fitColsToBoard(box, vh * s);
 }
 
 /**
@@ -8234,16 +8254,19 @@ function drawOppBoard(cv, snap, now) {
  * 타일밭 격자는 원화의 이음매(그라우트)를 찾아 최소제곱으로 맞춘 값이다 — 바깥 테두리 선은
  * 액자와 겹쳐 안쪽으로 밀려 잡히므로, 안쪽 선 8개만 써서 시작점과 간격을 낸 뒤 양끝으로 늘렸다.
  * 눈대중으로 바깥 테두리를 재면 세로 길이가 9px쯤 짧게 잡혀, 아래쪽 줄로 갈수록 6px 넘게 어긋난다.
- *   캠퍼스   x 36.07 + 131.26k · y 93.41 + 118.22k  (1254×1254, 단순화 전구 맵)
- *   연구단지 x 36.23 + 131.27k · y 92.91 + 118.30k  (1254×1254, 단순화 원자 맵)
- *   우주기지 x 36.18 + 131.24k · y 92.93 + 118.32k  (1254×1254, 단순화 행성 맵)
+ * 이 계산과 원화 손질(바깥 칸 폭 고르기 · 여백 오려내기)은 tools/fit-map-art.js 가 한다 —
+ * 원화(img/src/map*.png)를 넣고 돌리면 map/*.png 와 아래 pad 값을 같이 뱉는다.
+ * 세 전장 모두 액자 1000×900 (가운데 패널을 꽉 채우는 10:9) 으로 맞춰 두어 전장이 바뀌어도 판 크기가 같다.
+ *   캠퍼스   x 148.9 + 102.55k · y 78.2 + 90.74k   (1221×973, 냥집 원화 map1_idea_campus.png)
+ *   연구단지 x 193.6 + 131.32k · y 101.9 + 118.32k (1563×1268, 예전 정사각 원화를 --no-monument --no-sharpen 으로
+ *   우주기지 x 193.4 + 131.26k · y 101.4 + 118.37k (1562×1268,  다시 돌린 것 — 모자란 양옆 여백은 배경색으로 채웠다)
  */
 /* 세 전장이 판을 셋으로 나눈다. 한 판이 12라운드에서 **10라운드**로 줄면서 경계도 같이 당겼다 —
  * 3/7 로 끊으면 대전 라운드(4·7·10) 직전마다 전장이 바뀌어, 「전장이 바뀌면 곧 대전」이 된다. */
 const STAGE_THEMES = [
-  { to: 3,        id: "idea_campus",      name: "아이디어 캠퍼스", img: "map/Idea_campus.png",      pad: [68.37, 25.40, 70.62, 25.08] },
-  { to: 7,        id: "research_complex", name: "연구 개발 단지",  img: "map/research_complex.png", pad: [67.97, 25.27, 70.46, 25.19] },
-  { to: Infinity, id: "space_base",       name: "우주 기술 기지",  img: "map/space_base.png",       pad: [67.97, 25.48, 70.28, 25.16] },
+  { to: 3,        id: "idea_campus",      name: "아이디어 캠퍼스", img: "map/Idea_campus.png",      pad: [74.23, 124.24, 74.16, 123.97] },
+  { to: 7,        id: "research_complex", name: "연구 개발 단지",  img: "map/research_complex.png", pad: [74.35, 123.81, 73.88, 123.98] },
+  { to: Infinity, id: "space_base",       name: "우주 기술 기지",  img: "map/space_base.png",       pad: [74.13, 123.84, 73.70, 123.72] },
 ];
 const themeForStage = (n) => STAGE_THEMES.find((t) => n <= t.to) || STAGE_THEMES[STAGE_THEMES.length - 1];
 /** 지금 보여줄 스테이지 번호 — 준비 단계에서는 곧 치를 다음 웨이브의 전장을 미리 보여준다 */
