@@ -7732,16 +7732,10 @@ function closeChoiceModal() {
 }
 
 /**
- * 계열 진행도 한 줄 — `🎯 입증 ●●●○○ 3/5` 과 열린 단계.
- * 선택 모달 위쪽과 헤더의 「스테이지 강화」 칸이 같은 함수를 쓴다 — 두 곳이 어긋나면
- * 「내가 지금 몇 점인가」를 화면마다 다시 세어 봐야 한다.
- * @param {string} key 계열 키 @param {boolean} full 열린 단계의 이름까지 적을 것인가
- */
-/**
  * 강화 선택 모달 위의 계열 타일 — 계열마다 아이콘 하나를 크게 세우고, 그 아래에 중첩 상태(점·점수·다음 단계)를
- * 적는다. 카드에서 중첩 표시를 걷어낸 뒤로는 여기가 유일한 진행도라, 세로 줄(lineRowHtml)보다 크게 읽히게 했다.
+ * 적는다. 카드에서 중첩 표시를 걷어낸 뒤로는 여기가 유일한 진행도라, 크게 읽히게 했다. compact 로 부르면(헤더의 「스테이지 강화」 칸) 효과 설명 없이 점·점수만 적는다.
  */
-function lineTileHtml(key) {
+function lineTileHtml(key, compact) {
   const L = LINES[key];
   const score = (game.lineScore && game.lineScore[key]) || 0;
   const tier = (game.lineTier && game.lineTier[key]) || 0;
@@ -7749,37 +7743,17 @@ function lineTileHtml(key) {
   let dots = "";
   for (let i = 1; i <= max; i++) dots += `<i class="${i <= score ? "on" : ""}"></i>`;
   // 아래 두 줄 — 「3강 : 효과 설명」「5강 : 효과 설명」. 이미 연 단계는 계열 색으로 밝힌다
-  const steps = LINE_TIER_AT.map((need, i) => {
+  // compact(헤더의 「스테이지 강화」 칸)에서는 효과 설명 줄을 뺀다 — 거기서는 지금 상태만 보이면 된다
+  const steps = compact ? "" : LINE_TIER_AT.map((need, i) => {
     const t = i === 0 ? L.t1 : L.t2;
     return `<em class="lstep ${tier > i ? "on" : ""}"><b>${need}강</b>${t.short || t.desc}</em>`;
   }).join("");
-  return `<div class="ltile ${tier ? "lit" : ""}" style="--lc:${L.col}">
+  return `<div class="ltile ${tier ? "lit" : ""}${compact ? " compact" : ""}" style="--lc:${L.col}">
     <i class="lic">${L.icon}</i>
     <b class="lname">${L.name}</b>
     <span class="ldots">${dots}</span>
     <span class="lnum">${score} / ${max}</span>
     ${steps}
-  </div>`;
-}
-
-function lineRowHtml(key, full) {
-  const L = LINES[key];
-  const score = (game.lineScore && game.lineScore[key]) || 0;
-  const tier = (game.lineTier && game.lineTier[key]) || 0;
-  const max = LINE_TIER_AT[LINE_TIER_AT.length - 1];
-  let dots = "";
-  for (let i = 1; i <= max; i++) dots += `<i class="${i <= score ? "on" : ""}"></i>`;
-  const steps = full ? LINE_TIER_AT.map((need, i) => {
-    const t = i === 0 ? L.t1 : L.t2;
-    const got = tier > i;
-    return `<span class="lstep ${got ? "on" : ""}"><b>${got ? "✔" : need + "점"}</b>
-      <i>${t.name}</i><em>${t.desc}</em></span>`;
-  }).join("") : "";
-  return `<div class="lrow ${tier ? "lit" : ""}" style="--lc:${L.col}">
-    <span class="lname">${L.icon} ${L.name}</span>
-    <span class="ldots">${dots}</span>
-    <span class="lnum">${score}/${max}</span>
-    ${steps ? `<div class="lsteps">${steps}</div>` : ""}
   </div>`;
 }
 
@@ -7953,10 +7927,8 @@ function renderPassiveTags() {
   /* 계열 진행도를 **맨 위에** 놓는다 — 「내가 무슨 덱을 만들고 있는가」가 개별 강화 목록보다
    * 훨씬 중요한 정보이고, 다음에 무엇을 고를지도 이 줄을 보고 정하기 때문이다.
    * 아직 한 점도 없는 계열은 접어 둔다 (다섯 줄이 늘 떠 있으면 진행도가 오히려 안 보인다). */
-  const lines = Object.keys(LINES)
-    .filter((k) => (game.lineScore && game.lineScore[k]) > 0)
-    .sort((a, b) => game.lineScore[b] - game.lineScore[a])
-    .map((k) => lineRowHtml(k, false)).join("");
+  // 강화 선택 모달과 같은 타일(lineTileHtml)을 다섯 계열 모두 늘어놓는다 — 설명 없이 점·점수만 (compact)
+  const lines = Object.keys(LINES).map((k) => lineTileHtml(k, true)).join("");
 
   const parts = PASSIVES.filter((d) => count[d.key]).map((d) => {
     const n = count[d.key];
@@ -7973,8 +7945,7 @@ function renderPassiveTags() {
   });
   if (game.goldMul > 1) parts.push(tagHtml("💰 수수료 환급", "이번 스테이지 특허료 2배"));
   $("#myPassiveTags").innerHTML =
-    (lines ? `<div class="linebar mini">${lines}</div>` : "") +
-    (parts.join("") || (lines ? "" : `<span class="none">없음</span>`));
+    `<div class="linetiles mini">${lines}</div>` + parts.join("");
 }
 /** 효과 태그 한 칸 — 이름과 실제로 무엇이 바뀌는지를 같이 보여준다 */
 function tagHtml(name, desc, bad) {

@@ -223,3 +223,6 @@ body:has(#gameRoot:not(.hidden)) #tip i{margin-top:5px}
 @keyframes mergeReadyBig{0%,100%{box-shadow:0 0 0 0 #ffd782cc;transform:scale(1)}
   50%{box-shadow:0 0 0 6px #ffd78222;transform:scale(1.04)}}
 @media(prefers-reduced-motion:reduce){#gameRoot .mchip{animation:none}}
+/* 「스테이지 강화」 칸의 계열 타일 — 위 .passiveTags span 알약 꾸밈이 타일 안 span(점·점수)에 번지지 않게 한다 */
+#gameRoot .passiveTags .linetiles.mini span{background:none;border:0;padding:0;font-size:10px}
+#gameRoot .ltile.compact .lname{font-size:11px}
