@@ -2409,7 +2409,9 @@ class DuelSim {
         id: this._id++, side, own: u.own == null ? -1 : u.own,
         k: u.k, lv: u.lv || 1, pr: !!u.pr, mob: !!u.mob,
         x, z, dir: camp.fx || (camp.fz > 0 ? 1 : -1),
-        lookX: camp.fx, lookZ: camp.fz, // 표시 방향만 기록하며 전투 판정에는 사용하지 않는다
+        // 표시 방향만 기록하며 전투 판정에는 쓰지 않는다 — 냥타워가 정면 원화로 고정된 뒤로는
+        // 그리기에서도 읽지 않지만, 4방향 시트를 되살릴 때 필요해 그대로 둔다
+        lookX: camp.fx, lookZ: camp.fz,
         hp: u.hp, max: u.hp,
         dmg: u.dmg, rate: u.rate, range: u.range, tg: u.tg || 1,
         cc: u.cc || 0, cm: u.cm || 1, sl: u.sl || 0,
@@ -6554,11 +6556,14 @@ function drawDuelCamp(g, side) {
   g.restore();
 }
 
-const duelCatFrame = DuelCatArt.create(Object.fromEntries(
-  Object.entries(CAT_SHEET_SRC).map(([key, src]) => [key, src.replace("cat_attack", "cat_duel")])
-));
+/* 대전 전용 4방향 시트(cat_duel*.png)는 지금 쓰지 않는다 — 냥타워가 판 위와 같은 정면 원화로
+ * 서고 공격은 투사체로만 보이기 때문이다. 되살리려면 아래 한 줄의 주석을 풀고 drawDuelUnit 의
+ * 냥타워 가지에서 duelCatFrame 을 다시 부르면 된다 (duel-cat-art.js · 시트 · 테스트 모두 그대로 있다).
+ * const duelCatFrame = DuelCatArt.create(Object.fromEntries(
+ *   Object.entries(CAT_SHEET_SRC).map(([key, src]) => [key, src.replace("cat_attack", "cat_duel")])));
+ */
 
-/** 유닛 하나 — 냥타워는 대전 전용 4방향 시트를 사용한다. */
+/** 유닛 하나 — 냥타워는 판 위와 같은 정면 원화로 서고, 공격은 투사체로만 보인다. */
 function drawDuelUnit(g, u, ms) {
   const mine = u.side === mySide();
   const dep = u.z / DUEL.depthPx;
@@ -6616,12 +6621,13 @@ function drawDuelUnit(g, u, ms) {
     g.beginPath(); g.arc(-r * 0.9, -r * 2 - 4, 4, 0, 7); g.fill();
   } else {
     const S = 52;
-    const dir = DuelCatArt.direction(u.lookX || 0, 0,
-      mySide() === "b", facing > 0 ? DIR.right : DIR.left);
+    /* 냥타워는 판 위와 **똑같은 정면 원화**로 선다. 대전 전용 4방향 시트(cat_duel*.png)를 쓰던
+     * 때는 옆·뒷모습 걸음이 쥐의 4방향 걸음과 같은 틀이라 어색했다 — 정면으로 고정하면 판 위와
+     * 같은 그림이 되고, 어디를 노리는지는 투사체가 대신 알린다.
+     * (duel-cat-art.js 와 cat_duel 시트는 되돌릴 때를 위해 그대로 남겨 두었다) */
     const walking = u.walking && !u.dead && !(u.freezeT > 0);
-    const movingArt = duelCatFrame(u.k, dir, walking ? Math.floor(duel.sim.t * 7 + u.id) : 0);
     // 걸을 때는 살짝 위아래로 튄다 — 멈춰 서서 쏠 때는 가만히 있는다
-    const bob = !movingArt && walking ? Math.abs(Math.sin(duel.sim.t * 7 + u.id)) * 3 : 0;
+    const bob = walking ? Math.abs(Math.sin(duel.sim.t * 7 + u.id)) * 3 : 0;
     g.translate(0, -bob);
     // 투명한 캐릭터 뒤에는 바닥만 보인다. 진영·승진 표시는 발밑 고리로 남긴다.
     g.lineWidth = u.pr ? 3 : 2;
@@ -6630,7 +6636,7 @@ function drawDuelUnit(g, u, ms) {
 
     const fake = { key: u.k, uid: u.id * 97, atkEnd: u.atkT > 0 ? ms + u.atkT * 1000 : 0 };
     const [row, fr] = frameOf(fake, ms);
-    const art = movingArt || catFrameCanvas(u.k, row, fr);
+    const art = catFrameCanvas(u.k, row, fr);
     g.save();
     // 피격·상태 효과도 그림의 투명 영역을 유지한다.
     if (hit) g.filter = "brightness(1.7)";
@@ -6638,13 +6644,7 @@ function drawDuelUnit(g, u, ms) {
       g.shadowColor = u.freezeT > 0 ? "#a078ff" : "#79b7d8";
       g.shadowBlur = 6;
     }
-    if (!movingArt) g.scale(facing, 1);
-    // 이동 시트는 정지 중 0번 컷을 유지하고 공격할 때만 표적 쪽으로 짧게 내민다.
-    if (movingArt && u.atkT > 0 && !u.dead && !(u.freezeT > 0)) {
-      const lean = Math.sin(Math.min(1, u.atkT / .42) * Math.PI) * 2;
-      g.translate(dir === DIR.right ? lean : dir === DIR.left ? -lean : 0,
-        dir === DIR.down ? lean : dir === DIR.up ? -lean : 0);
-    }
+    // 정면 원화라 좌우를 뒤집지 않는다 — 어느 편인지는 발밑 고리 색으로 읽는다
     if (art) g.drawImage(art, -25, -50, 50, 50);
     else { g.fillStyle = mine ? "#5bc8e8" : main; g.beginPath(); g.arc(0, -25, 16, 0, 7); g.fill(); }
     g.restore();

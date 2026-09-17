@@ -30,18 +30,20 @@ assert.equal(direction(1, 10, false, 0), 3);
 assert.equal(direction(1, -10, true, 0), 1);
 assert.equal(direction(0, 0, false, 2), 2);
 
+/* 대전장 그리기 — 냥타워는 **판 위와 같은 정면 원화**로 서고 좌우로 뒤집히지 않는다.
+ * 어디를 노리는지는 투사체가 알리므로 4방향 시트는 그리기에 쓰이지 않는다 (위의 원화 검사는
+ * 시트를 되살릴 때를 위해 남겨 둔 것이다 — 되돌린다면 아래도 예전 판본으로 함께 되돌려야 한다). */
 const source = fs.readFileSync(path.join(root, "public/game.js"), "utf8");
 const start = source.indexOf("function drawDuelUnit(");
 const end = source.indexOf("function drawDuel(now)", start);
-const chosen = [], scales = [], images = [], labels = [];
+const asked = [], scales = [], images = [], labels = [];
 let side = "a", available = true;
 const context = {
-  DuelCatArt: { direction }, DIR: { right: 0, down: 1, left: 2, up: 3 },
   mySide: () => side, soloMode: true, mySlot: 0, DUEL: { depthPx: 300, w: 1000 },
   duelX: x => x, duelYAt: () => 200, duelScale: () => 1,
   sideCol: () => ["black", "blue"], duel: { sim: { t: 1 } },
-  duelCatFrame: (key, dir, frame) => { chosen.push({ key, dir, frame }); return available ? {} : null; },
-  frameOf: () => [0, 0], catFrameCanvas: () => ({}), CAT_SKILLS: {},
+  frameOf: () => [0, 0], CAT_SKILLS: {},
+  catFrameCanvas: (key, row, frame) => { asked.push({ key, row, frame }); return available ? {} : null; },
 };
 vm.createContext(context);
 vm.runInContext(source.slice(start, end), context);
@@ -59,22 +61,21 @@ const u = { side: "a", k: "spec", id: 2, lv: 2, x: 100, z: 150, hp: 100, max: 10
 context.drawDuelUnit(g, u, 1000);
 assert.equal(images.length, 1, "cat image must be drawn");
 assert.ok(labels.includes("Lv2"), "level label must be drawn");
-assert.equal(chosen.at(-1).dir, 2); // 지나친 적을 쫓아 왼쪽을 본다
-assert.equal(chosen.at(-1).frame, 9);
-assert.ok(!scales.some(([x]) => x < 0), "directional sprites must not be mirrored");
+// 판 위와 같은 정면 시트(catFrameCanvas)에서 가져온다 — 방향 인자 자체가 없다
+assert.deepEqual(asked.at(-1), { key: "spec", row: 0, frame: 0 });
+assert.ok(!scales.some(([x]) => x < 0), "front-facing sprite must not be mirrored");
+// 상대 진영에서 봐도, 어떤 상태에서도 같은 정면 원화 한 장만 그린다
 side = "b";
-context.drawDuelUnit(g, u, 1000);
-assert.equal(chosen.at(-1).dir, 0);
-context.drawDuelUnit(g, { ...u, walking: false, atkT: .2 }, 1000);
-assert.equal(chosen.at(-1).frame, 0);
-context.drawDuelUnit(g, { ...u, freezeT: 1 }, 1000);
-assert.equal(chosen.at(-1).frame, 0);
-context.drawDuelUnit(g, { ...u, dead: true, deadT: .1 }, 1000);
-assert.equal(chosen.at(-1).frame, 0);
-// 한 줄 전장뿐이라 깊이(lookZ)는 방향에 실리지 않는다 — 옆을 본다
-context.drawDuelUnit(g, { ...u, lookX: 0, lookZ: 1 }, 1000);
-assert.notEqual(chosen.at(-1).dir, 3);
+for (const extra of [{}, { walking: false, atkT: .2 }, { freezeT: 1 },
+                     { dead: true, deadT: .1 }, { lookX: 0, lookZ: 1 }]) {
+  const before = images.length;
+  context.drawDuelUnit(g, { ...u, ...extra }, 1000);
+  assert.equal(images.length, before + 1, "exactly one sprite per unit");
+  assert.equal(asked.at(-1).key, "spec");
+}
+assert.ok(!scales.some(([x]) => x < 0), "no side or state may mirror the sprite");
 available = false;
-context.drawDuelUnit(g, u, 1000); // 로드 실패 시 기존 그림으로 표시
-assert.ok(scales.some(([x]) => x < 0));
-console.log("PASS: 96 sprite bounds, side view only, mirrored viewpoint, movement/attack/freeze/death, fallback");
+const drawn = images.length;
+context.drawDuelUnit(g, u, 1000); // 원화가 아직 안 실렸으면 진영색 동그라미로 대신한다
+assert.equal(images.length, drawn, "missing art must fall back to a plain circle");
+console.log("PASS: 96 sprite bounds, front-facing only, never mirrored, movement/attack/freeze/death, fallback");
