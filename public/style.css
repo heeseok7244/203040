@@ -112,6 +112,10 @@ h1{font-family:var(--disp);font-size:27px;margin:0;letter-spacing:.18em;color:#f
 .cell.gate{background:transparent;border-color:rgba(255,255,255,.14)}
 .cell.goal{background:transparent;border-color:rgba(255,255,255,.14)}
 .cell.hint{background:rgba(120,230,110,.45)} .cell.bad{background:rgba(230,90,80,.45)}
+/* 다른 냥 위에 끌어다 놓으면 자리를 맞바꾼다 — 빈 칸(초록)과 구별되는 노랑 */
+.cell.swap{background:rgba(255,215,130,.55);box-shadow:inset 0 0 0 3px rgba(255,200,80,.9)}
+.piece.swapto{outline:4px solid #ffbf3a;outline-offset:-2px;border-radius:10px;filter:brightness(1.18);z-index:8;
+  box-shadow:0 0 0 6px rgba(255,191,58,.35),0 0 18px rgba(255,191,58,.8)}
 /* 고정 구조물 — 청사 건물 */
 .cell.fixed{background:rgba(14,22,34,.62);border-color:rgba(255,255,255,.2);
   background-image:linear-gradient(135deg,rgba(255,255,255,.16) 25%,transparent 25%,
@@ -1154,10 +1158,10 @@ body.dueling #tip{display:none!important}
 
 /* 판 위 안내 띠 — 「냥타워를 놓고 시작하세요」 같은 짧은 안내. 축포(.tierpop)와 같은 색조에 글꼴은 표시용 */
 .notice{position:fixed;transform:translate(-50%,-50%);z-index:400;pointer-events:none;
-  max-width:min(92vw,560px);padding:10px 22px;text-align:center;white-space:pre-wrap;
-  background:rgba(12,21,36,.94);border:2px solid var(--gold);border-radius:4px;
-  box-shadow:0 0 0 4px rgba(12,21,36,.6),0 0 28px color-mix(in srgb,var(--gold) 50%,transparent);
-  font-family:var(--disp);font-size:18px;letter-spacing:.06em;color:var(--gold);
+  max-width:min(92vw,1100px);padding:20px 44px;text-align:center;white-space:pre-wrap;
+  background:rgba(12,21,36,.94);border:4px solid var(--gold);border-radius:8px;
+  box-shadow:0 0 0 8px rgba(12,21,36,.6),0 0 56px color-mix(in srgb,var(--gold) 50%,transparent);
+  font-family:var(--disp);font-size:36px;letter-spacing:.06em;color:var(--gold);
   text-shadow:0 0 14px color-mix(in srgb,var(--gold) 60%,transparent);
   animation:tierIn .32s cubic-bezier(.2,1.5,.4,1) forwards}
 
@@ -1176,6 +1180,20 @@ body.dueling #tip{display:none!important}
 .tierpop strong{display:block;font-family:var(--disp);font-size:26px;letter-spacing:.1em;
   color:var(--lc);margin:4px 0 6px;text-shadow:0 0 18px color-mix(in srgb,var(--lc) 70%,transparent)}
 .tierpop em{display:block;font-style:normal;font-size:12px;color:var(--txt);max-width:420px}
+/* 모달 안에 세우는 안내 띠 — 판 위 띠(.notice)와 같은 모양, 자리만 흐름 안에 */
+.notice.inline{position:static;transform:none;display:block;width:fit-content;min-width:60%;margin:14px auto 10px;padding:11px 28px;text-align:center;border-width:2px;
+  font-size:21px;letter-spacing:.08em;border-radius:10px;
+  background:linear-gradient(90deg,rgba(205,164,58,.10),rgba(205,164,58,.28),rgba(205,164,58,.10)),rgba(12,21,36,.94);
+  animation:noticeIn .32s cubic-bezier(.2,1.5,.4,1) forwards,noticeGlow 1.6s ease-in-out .32s infinite alternate}
+@keyframes noticeGlow{from{box-shadow:0 0 0 4px rgba(12,21,36,.6),0 0 16px color-mix(in srgb,var(--gold) 35%,transparent)}
+  to{box-shadow:0 0 0 4px rgba(12,21,36,.6),0 0 34px color-mix(in srgb,var(--gold) 80%,transparent)}}
+@media(prefers-reduced-motion:reduce){.notice.inline{animation:none}}
+@keyframes noticeIn{0%{opacity:0;transform:scale(.7)}60%{opacity:1;transform:scale(1.06)}100%{opacity:1;transform:none}}
+/* 강화 카드는 누르는 것이다 — 손가락 커서, 마우스를 얹으면 떠오르며 금색으로 빛난다 */
+#sheet .pick.up{cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+#sheet .pick.up:hover{transform:translateY(-5px);border-color:var(--gold);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--gold) 70%,transparent),0 10px 22px rgba(0,0,0,.35)}
+@media(prefers-reduced-motion:reduce){#sheet .pick.up{transition:none}#sheet .pick.up:hover{transform:none}}
 @keyframes tierIn{
   0%{opacity:0;transform:translate(-50%,-50%) scale(.55) rotate(-4deg)}
   60%{opacity:1;transform:translate(-50%,-50%) scale(1.08) rotate(1deg)}
@@ -1266,6 +1284,24 @@ body.dueling #tip{display:none!important}
    .passiveTags span 의 알약 꾸밈이 안쪽 <span> 에 번지지 않게 여기서 걷어낸다 */
 .passiveTags .linelist{width:100%;flex:0 0 100%;display:flex;flex-direction:column;gap:2px;padding:0 0 4px}
 .passiveTags .linelist span{display:inline;background:none;border:0;border-radius:0;padding:0;white-space:nowrap}
+/* 강화 합계 목록 — 「공격력 +36%」 같은 한 줄씩. 칸에 늘어놓지 않고 「강화효과 ?」 제목의 말풍선(.efpop) 안에 든다 */
+.efflist{width:100%;display:grid;grid-template-columns:1fr;gap:2px 8px;padding:6px 0 0;
+  margin-top:6px;border-top:1px dashed rgba(139,162,186,.35)}
+.efflist span.eff{display:flex;align-items:center;gap:4px;background:none;border:0;border-radius:0;padding:1px 0;
+  font-size:11.5px;min-width:0;white-space:nowrap}
+.efflist span.eff i{font-style:normal;flex:none;font-size:12px;line-height:1}
+.efflist span.eff b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:400;color:var(--muted);font-size:11px}
+.efflist span.eff em{font-style:normal;flex:none;font-family:var(--mono);color:#e8eef4;font-size:11.5px}
+.efflist span.eff.guard em{color:#9fe0b4}
+/* 「강화효과 ?」 제목 — 마우스를 올리면 지금까지 쌓인 강화 합계 말풍선이 칸 아래에 뜬다 (.prhint 재사용) */
+#mePanel .stat.effects{position:relative}
+.efhead{cursor:pointer}
+.efhead u{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;
+  width:13px;height:13px;border-radius:50%;border:1px solid var(--gold);color:var(--gold);font-size:9px;line-height:1}
+.efhead:hover u{background:var(--gold);color:#1a1610}
+.efhead .efpop{left:0;right:auto;top:calc(100% + 4px);cursor:default;letter-spacing:0}
+.efhead:hover .efpop{display:block}
+.efpop .efnone{color:var(--muted)}
 .lline{--lc:#8ba2ba;display:flex;align-items:center;gap:6px;font-size:12px;line-height:1.3}
 .lline .lic{font-style:normal;font-size:1em;line-height:1}
 .lline .lname{font-family:var(--disp);color:var(--txt);white-space:nowrap;min-width:2.4em}
@@ -1330,6 +1366,13 @@ body.dueling #tip{display:none!important}
 .lbhead{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
 .lbhead b{font-family:var(--disp);font-size:14px;letter-spacing:.12em;color:#f4e2b0}
 .lbhead i{font-style:normal;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.08em}
+/* 랭킹 탭 — 솔로 · 1v1. 머리글 오른쪽 끝에 붙는다 */
+.lbtabs{margin-left:auto;display:inline-flex;gap:2px;background:rgba(12,21,36,.6);border:1px solid var(--line);border-radius:8px;padding:2px}
+/* 전역 button 꾸밈(배경·테두리·hover 파랑)보다 우선하도록 .lbtabs 를 앞에 붙인다 */
+.lbtabs .lbtab{appearance:none;border:0;background:none;color:var(--muted);font-family:var(--disp);font-size:12px;letter-spacing:.04em;
+  padding:3px 10px;border-radius:6px;cursor:pointer;line-height:1.3;box-shadow:none}
+.lbtabs .lbtab:hover:not(:disabled){background:rgba(139,162,186,.18);border-color:transparent;color:var(--txt)}
+.lbtabs .lbtab.on,.lbtabs .lbtab.on:hover:not(:disabled){background:var(--gold);color:#1a1610}
 .lbform{display:flex;gap:6px;margin-bottom:6px}
 .lbform input{flex:1;min-width:0;background:var(--ink);border:1px solid var(--line);color:var(--txt);
   padding:6px 10px;font-family:var(--body);font-size:13px}

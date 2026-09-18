@@ -75,7 +75,10 @@
                상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다.
                (증강 선택은 걷어냈다 — 내증강 · 상대 증강 칸도 함께 뺐다) -->
           <div class="stat effects">
-            <div class="efcol"><i>강화효과</i><div class="passiveTags" id="myPassiveTags"></div></div>
+            <!-- 칸에는 계열 진행도(동그라미)만 남긴다. 지금까지 쌓인 강화 합계는 라운드마다 줄줄이 늘어나
+                 아래 그림을 밀어내므로, 「강화효과 ?」 제목에 마우스를 올렸을 때만 말풍선으로 보인다 -->
+            <div class="efcol"><i class="efhead">강화효과 <u>?</u><span class="prhint efpop" id="myEffPop"></span></i>
+              <div class="passiveTags" id="myPassiveTags"></div></div>
           </div>
         </div>
       </div>
@@ -88,7 +91,9 @@
         <span class="prhelp">합성효과 <u>?</u>
           <span class="prhint"><b>같은 종류·같은 레벨</b>의 고양이 <b>3마리</b>를 모으면 <b>다음 레벨 고양이 1마리</b>로 합성할 수 있습니다.<br>
             <b>Lv2</b> 공격력(×1.85) 증가<br>
-            <b>Lv3</b> 공격력(×3.42), 치명타(×1.25) 증가</span>
+            <b>Lv3</b> 공격력(×3.42), 치명타(×1.25) 증가<br>
+            <b>Lv3 승진 효과</b> — 대전장에서 <b>아군 전체</b>가 단단해집니다 (종류마다 다름 · 냥타워에 마우스를 올리면 표시)<br>
+            📄 방어력 +10%p · 📐 체력 +15% · ⚡ 받는 피해 −10% · 🌐 받는 광역 피해 −35% · 💼 체력 +10% 방어력 +8%p · ⏳ 받는 치명타 피해 −35%</span>
         </span>
         </span></h2>
       <!-- 종류를 고르지 않는다. 정액을 내고 무작위로 한 명을 받는다 (확률표는 JS가 채운다) -->
@@ -160,7 +165,7 @@
         </span></h2>
       <div class="pad">
         <div class="boardctl">
-          <button id="btnGo" class="go">라운드 1 준비 완료</button>
+          <button id="btnGo" class="go">라운드 1 시작</button>
           <button id="btnSpeed">속도 ×1</button>
         </div>
         <!-- 모든 라운드는 방의 모두가 준비해야(또는 준비시간 30초가 끝나야) 동시에 시작된다.
