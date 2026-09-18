@@ -7896,6 +7896,7 @@ function passiveStackHtml(def) {
 function openPassiveModal() {
   const offer = game.passiveOffers();
   const lines = Object.keys(LINES).map((k) => lineTileHtml(k)).join("");
+  // 「골라야 한다」가 바로 읽히도록 — 첫 라운드의 「냥타워를 배치하고…」 안내 띠와 같은 모양으로 맨 아래에 세운다
   $("#sheet").innerHTML = `<h3>라운드 ${game.wave} 클리어 — 강화 선택</h3>
     <div class="linetiles">${lines}</div>
     <div class="picks upgrades">${offer.map((def) => {
@@ -7909,7 +7910,8 @@ function openPassiveModal() {
         <span class="nm">${def.name}</span>
         <span class="ef">${def.stat === "gold2x" ? "처치 특허료 1.5배" : def.desc}</span>
       </div>`;
-    }).join("")}</div>${choiceBarHtml()}`;
+    }).join("")}</div>
+    <div class="notice inline">강화 효과를 선택하세요.</div>${choiceBarHtml()}`;
   $("#modal").classList.add("on");
   const choose = (key) => {
     const def = PASSIVE_BY_KEY[key];

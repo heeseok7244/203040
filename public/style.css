@@ -1176,6 +1176,20 @@ body.dueling #tip{display:none!important}
 .tierpop strong{display:block;font-family:var(--disp);font-size:26px;letter-spacing:.1em;
   color:var(--lc);margin:4px 0 6px;text-shadow:0 0 18px color-mix(in srgb,var(--lc) 70%,transparent)}
 .tierpop em{display:block;font-style:normal;font-size:12px;color:var(--txt);max-width:420px}
+/* 모달 안에 세우는 안내 띠 — 판 위 띠(.notice)와 같은 모양, 자리만 흐름 안에 */
+.notice.inline{position:static;transform:none;display:block;width:fit-content;min-width:60%;margin:14px auto 10px;padding:11px 28px;text-align:center;
+  font-size:21px;letter-spacing:.08em;border-radius:10px;
+  background:linear-gradient(90deg,rgba(205,164,58,.10),rgba(205,164,58,.28),rgba(205,164,58,.10)),rgba(12,21,36,.94);
+  animation:noticeIn .32s cubic-bezier(.2,1.5,.4,1) forwards,noticeGlow 1.6s ease-in-out .32s infinite alternate}
+@keyframes noticeGlow{from{box-shadow:0 0 0 4px rgba(12,21,36,.6),0 0 16px color-mix(in srgb,var(--gold) 35%,transparent)}
+  to{box-shadow:0 0 0 4px rgba(12,21,36,.6),0 0 34px color-mix(in srgb,var(--gold) 80%,transparent)}}
+@media(prefers-reduced-motion:reduce){.notice.inline{animation:none}}
+@keyframes noticeIn{0%{opacity:0;transform:scale(.7)}60%{opacity:1;transform:scale(1.06)}100%{opacity:1;transform:none}}
+/* 강화 카드는 누르는 것이다 — 손가락 커서, 마우스를 얹으면 떠오르며 금색으로 빛난다 */
+#sheet .pick.up{cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+#sheet .pick.up:hover{transform:translateY(-5px);border-color:var(--gold);
+  box-shadow:0 0 0 2px color-mix(in srgb,var(--gold) 70%,transparent),0 10px 22px rgba(0,0,0,.35)}
+@media(prefers-reduced-motion:reduce){#sheet .pick.up{transition:none}#sheet .pick.up:hover{transform:none}}
 @keyframes tierIn{
   0%{opacity:0;transform:translate(-50%,-50%) scale(.55) rotate(-4deg)}
   60%{opacity:1;transform:translate(-50%,-50%) scale(1.08) rotate(1deg)}
