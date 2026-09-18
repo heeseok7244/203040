@@ -180,7 +180,7 @@ const CATS = {
   agent: {
     name: "변리사냥", row: 0, arow: 1, kind: "buff",
     dmg: 0, rate: 0, range: 0, auraDmg: 1.25, auraRate: 1.15, tag: "보좌", cost: 80, weight: 8,
-    desc: "비공격 — 이어진 심사관 터의 화력·공속을 올린다 (대전장에서는 아군 회복).",
+    desc: "비공격 — 양 옆 심사관 터의 화력·공속을 올린다 (대전장에서는 아군 회복).",
     filter: "hue-rotate(15deg) saturate(1.5)",
     icon: "💼",
     // 회복 담당 — 먼저 죽으면 회복이 끊기니 튼튼하게. 1.3 이었다가 임용가 145→75 보정으로 2.0 (체력 ≈584 유지)
@@ -7131,9 +7131,16 @@ function specialTipHtml(key, s) {
 function endMatch(iWon, reasonText) {
   clearChoiceTimer();
   // 대전장이 열린 채로 판이 끝날 수 있다 (대전에서 져 내구가 0이 된 경우). 먼저 접는다.
-  duel = null;
+  duel = null; pendingOver = null;
   $("#duelStage").classList.add("hidden");
   document.body.classList.remove("dueling");
+  /* 여기서 판을 확실히 끝낸다. 내 쪽이 무너져 들어온 길(finishOver)은 core 가 이미 phase 를
+   * lost/won 으로 바꿔 두었지만, **상대가 무너져**(oppLost/oppWon/oppLeft) 들어온 길은 내 phase 가
+   * wave/prep 그대로였다 — 성적표 밑에서 웨이브가 계속 돌다가 wave_end 가 강화 선택 모달로
+   * 성적표를 덮어 버리고, 내구가 더 깎이면 이긴 성적표가 진 성적표로 바뀌기까지 했다. */
+  game.phase = iWon ? "won" : "lost";
+  game.awaitingPassive = false; game.awaitingAugment = false;
+  game.shots = [];
   const s = game.summary();
   /* 성적표 — 한 판의 결말은 O/X 가 아니라 **점수**다.
    * 판이 도중에 끝났다면(내구 0) 덱 지수는 지금 판을 재서 넣는다 — 마지막 대전까지 가지
