@@ -4471,8 +4471,28 @@ function safe(what, fn) {
     if (errShown.has(what)) return;
     errShown.add(what);
     console.error(`[${what}]`, e);
-    log(`<b style="color:#e0574d">${what} 오류</b> ${e && e.message ? e.message : e} — F12 콘솔에 자세한 내용이 남았습니다`);
+    const msg = `${what} 오류: ${e && e.message ? e.message : e}`;
+    log(`<b style="color:#e0574d">${msg}</b> — F12 콘솔에 자세한 내용이 남았습니다`);
+    /* 심사현황 로그 패널이 빠진 뒤로 log() 는 아무 데도 안 보인다. 그리기 단계가 터지면 그 단계의
+     * 나머지(예: 예외 난 쥐 이후의 침입자 전부)가 그 프레임에서 통째로 빠지는데, 그게 「쥐가 안 보인다」로만
+     * 보고되고 원인은 묻혔다. 그래서 화면 아래에 붉은 띠로 한 번은 반드시 보여 준다. */
+    showErrToast(msg);
   }
+}
+/** 화면 아래 오류 띠 — 같은 단계는 한 번만(errShown), 12초 뒤 사라진다 */
+function showErrToast(msg) {
+  let el = document.getElementById("errToast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "errToast";
+    el.style.cssText = "position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:500;max-width:min(92vw,720px);" +
+      "padding:8px 14px;border-radius:10px;background:#3a1418;border:2px solid #e0574d;color:#ffd7d3;" +
+      "font:13px/1.45 system-ui,sans-serif;white-space:pre-wrap;pointer-events:none;box-shadow:0 4px 14px #0008";
+    document.body.appendChild(el);
+  }
+  el.textContent = (el.textContent ? el.textContent + "\n" : "") + msg;
+  clearTimeout(showErrToast._t);
+  showErrToast._t = setTimeout(() => { el.remove(); }, 12000);
 }
 
 function draw(now) {
@@ -7255,8 +7275,27 @@ const BOARD_SCALE_MAX = 1.6;
 /** 원화 여백을 깎아도 남겨 둘 최소 두께 [세로, 가로] — 액자 돌띠(판 바로 옆 20px)와 귀퉁이 덤불이 대부분 보이는 선 */
 const ARENA_PAD_MIN = [36, 30];
 let fitKey = "";
+
+/* ── 창이 좁으면 화면 전체를 비율대로 줄인다 ──
+ * 예전에는 1100px 아래에서 미디어쿼리가 칸을 두 줄로 다시 짰는데, 그 순간 라운드 진행 칸이 아래로
+ * 밀려 잘리고 냥타워 카드가 보유 현황을 덮었다. 이제 세 칸 배치는 그대로 두고, 창 폭이
+ * LAYOUT_MIN_W 보다 좁으면 #gameRoot 에 zoom 을 걸어 판·글자·카드가 **같은 비율로** 작아진다.
+ * (진짜 휴대폰 폭(640px 이하)만 세로 배치로 넘긴다 — game-theme.css) */
+const LAYOUT_MIN_W = 1280;
+let rootZoom = 1;
+function fitRootZoom() {
+  const root = $("#gameRoot");
+  if (!root) return;
+  const z = innerWidth <= 640 ? 1 : Math.min(1, innerWidth / LAYOUT_MIN_W);
+  rootZoom = z;
+  root.style.zoom = z === 1 ? "" : String(z);
+  // 100dvh 는 zoom 을 모른다 — 줄인 만큼 높이를 되돌려 주어야 화면 아래가 비지 않는다
+  root.style.height = z === 1 ? "" : `${Math.floor(innerHeight / z)}px`;
+}
+
 /** @param {boolean} [force] 액자 두께가 바뀌었을 때(전장 원화 교체)는 크기가 같아 보여도 다시 잰다 */
 function fitArena(force) {
+  fitRootZoom();
   const box = $("#arenaFit"), a = $("#arena");
   if (!box || !a) return;
   // 가운데 패널을 판 높이에 묶어 둔 상태(fitColsToBoard)로는 칸이 얼마나 넓어질 수 있는지
@@ -7304,7 +7343,7 @@ function fitArena(force) {
  */
 const SIDE_MIN = 440;   // 냥타워 카드 2열(원화 84px + 이름·가격 100px, 두 장)이 잘리지 않는 최소 폭
 function fitCenterCol(cols, box, w, h) {
-  if (!cols || innerWidth <= 1100) return;
+  if (!cols || innerWidth <= 640) return;
   const center = box.closest(".cols>div");
   if (!center) return;
   const chrome = center.clientWidth - box.clientWidth;             // 패널 테두리·안쪽 여백 (판이 못 쓰는 폭)
@@ -7382,13 +7421,22 @@ function fitSideCols() {
 /** 판 좌표(px) → 화면 좌표. 판이 줄어 있으면 그만큼 곱해야 도장이 제자리에 찍힌다. */
 function boardToScreen(cx, cy) {
   const bb = $("#board").getBoundingClientRect();
-  return [bb.left + cx * boardScale, bb.top + cy * boardScale];
+  const k = boardScreenScale(bb);
+  return [bb.left + cx * k, bb.top + cy * k];
 }
 
 /** 보드 기준 픽셀 좌표 — fx 캔버스와 좌표계가 정확히 같다 */
 function boardPoint(e) {
   const bb = $("#board").getBoundingClientRect();
-  return [(e.clientX - bb.left) / boardScale, (e.clientY - bb.top) / boardScale];
+  const k = boardScreenScale(bb);
+  return [(e.clientX - bb.left) / k, (e.clientY - bb.top) / k];
+}
+
+/** 판 1px 이 화면에서 몇 px 인가 — 판 축소(boardScale)와 화면 전체 축소(rootZoom)가 함께 실린 값.
+ *  화면 사각형과 레이아웃 폭의 비로 재므로 어느 쪽이 걸려 있든 맞는다. */
+function boardScreenScale(bb) {
+  const w = $("#board").offsetWidth;
+  return w ? bb.width / w : boardScale * rootZoom;
 }
 
 /* ═══════ 방해 공작 (상대 판에 거는 훼방) ═══════ */
@@ -8449,15 +8497,17 @@ function placeBestiary() {
   const btn = $("#btnBestiary");
   if (!pop || !btn || pop.classList.contains("hidden")) return;
   const r = btn.getBoundingClientRect();
-  const w = pop.offsetWidth;
+  // 말풍선은 #gameRoot 안에 있어 rootZoom 이 같이 걸린다 — 화면 px 로 자리를 잡고 넣을 때만 되돌린다
+  const z = rootZoom || 1;
+  const w = pop.offsetWidth * z;
   const GAP = 10, EDGE = 8;
   // 기본은 물음표에서 오른쪽 아래로. 다리(::before)가 물음표를 덮도록 살짝 왼쪽에서 시작한다.
   let left = r.left - 22;
   const flip = left + w > innerWidth - EDGE;
   if (flip) left = innerWidth - w - EDGE;   // 넘치면 화면 오른쪽 끝에 붙인다
   pop.classList.toggle("flip", flip);
-  pop.style.left = `${Math.max(EDGE, left)}px`;
-  pop.style.top = `${r.bottom + GAP}px`;
+  pop.style.left = `${Math.max(EDGE, left) / z}px`;
+  pop.style.top = `${(r.bottom + GAP) / z}px`;
 }
 // 창이 움직이면 물음표도 움직인다 — 열려 있는 동안에는 따라간다
 addEventListener("resize", placeBestiary);

@@ -860,8 +860,6 @@ button.go:hover:not(:disabled){background:#d8443a;border-color:#d8443a}
 /* 솔로 플레이 — 상대를 기다리는 자리(준비 표시줄·상대 청사·상대효과)는 아예 지운다 */
 body.solo #readyBar,body.solo #oppPanel,
 body.solo #sabPanel{display:none!important}
-/* 판 머리의 「침입자 정보 ?」는 솔로 플레이에서만 보인다 — 1:1 에서는 판 위를 비워 둔다 */
-body:not(.solo) #phaseLbl,body:not(.solo) #btnBestiary,body:not(.solo) #beastPop{display:none!important}
 .boardctl #btnGo.waiting{background:#3f7a2f;border-color:#3f7a2f}
 .boardctl #btnGo.waiting:hover:not(:disabled){background:#4a8f37;border-color:#4a8f37}
 
