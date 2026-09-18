@@ -267,16 +267,17 @@ body:has(#gameRoot:not(.hidden)) #tip i{margin-top:5px}
 
 /* ── 합성 단추(판 우측 상단) — 글자가 9~11px 인 데다 판 배율까지 곱해져 잘 안 보였다.
    테마 색으로 맞추고 글자·칩·테두리를 한 단계 이상 키운다. 깜빡임도 더 뚜렷하게. ── */
-#gameRoot #mergeDock{top:8px;right:10px;gap:8px;padding:8px 10px;border:2px solid #ffd782;border-radius:14px;
-  background:#1e2b4bee;box-shadow:0 0 0 3px #ffd78244,0 6px 18px #060b1f99}
-#gameRoot #mergeDock .mhead{font-family:var(--disp);font-size:15px;letter-spacing:0;color:#fff}
-#gameRoot #mergeDock .mhead b{font-size:18px;color:#ffd782}
-#gameRoot .mchip{gap:9px;padding:7px 11px;border:2px solid #ffd782;border-radius:11px;background:#3d527c;
+/* 합성 안내(판 우측 상단) — 작아서 안 읽힌다는 말이 있어 글자·여백을 1.5배로 */
+#gameRoot #mergeDock{top:8px;right:10px;gap:12px;padding:12px 15px;border:3px solid #ffd782;border-radius:18px;
+  background:#1e2b4bee;box-shadow:0 0 0 4px #ffd78244,0 8px 24px #060b1f99}
+#gameRoot #mergeDock .mhead{font-family:var(--disp);font-size:22px;letter-spacing:0;color:#fff}
+#gameRoot #mergeDock .mhead b{font-size:27px;color:#ffd782}
+#gameRoot .mchip{gap:13px;padding:10px 16px;border:3px solid #ffd782;border-radius:16px;background:#3d527c;
   animation:mergeReadyBig 1.2s ease-in-out infinite}
-#gameRoot .mchip .ic{font-size:24px}
-#gameRoot .mchip .meta b{font-size:16px;font-weight:400;color:#fff}
-#gameRoot .mchip .meta i{font-family:var(--body);font-size:12.5px;color:#d9e3f5}
-#gameRoot .mchip .go{font-size:17px;color:#ffd782;padding-left:10px;border-left:2px solid #ffd78266}
+#gameRoot .mchip .ic{font-size:36px}
+#gameRoot .mchip .meta b{font-size:24px;font-weight:400;color:#fff}
+#gameRoot .mchip .meta i{font-family:var(--body);font-size:19px;color:#d9e3f5}
+#gameRoot .mchip .go{font-size:25px;color:#ffd782;padding-left:15px;border-left:3px solid #ffd78266}
 #gameRoot .mchip:hover:not(:disabled){background:#ffd782;border-color:#ffd782}
 #gameRoot .mchip:hover .meta b,#gameRoot .mchip:hover .meta i,#gameRoot .mchip:hover .go{color:#1a2440}
 @keyframes mergeReadyBig{0%,100%{box-shadow:0 0 0 0 #ffd782cc;transform:scale(1)}
