@@ -547,7 +547,7 @@ const WAVES = [
   {copy:44,fast:30,tank:16},              // 6
   {},                                     // 7 — ⚔️ 1:1 대전
   {copy:50,fast:38,tank:24},              // 8
-  {copy:48,fast:46,tank:32,boss:3},       // 9 — 마지막 전투 라운드 · 특허괴물 셋 등장
+  {copy:48,fast:46,tank:32,boss:5},       // 9 — 마지막 전투 라운드 · 특허괴물 다섯 등장
   {},                                     // 10 — ⚔️ 1:1 대전 (여기서 판이 끝나고 점수를 낸다)
 ];
 
@@ -4405,21 +4405,24 @@ function baseFixedCells() {
   return out;
 }
 
+/** 바뀔 때만 쓴다 — 같은 글을 매 프레임 다시 쓰면 MutationObserver(fitSideCols)가 매 프레임 레이아웃을 다시 잰다 */
+function setText(el, str) { if (el && el.textContent !== str) el.textContent = str; }
+function setHtml(el, html) { if (el && el.__html !== html) { el.__html = html; el.innerHTML = html; } }
 function renderHud() {
-  $("#sHp").textContent = `${Math.max(0, game.hp)}/${game.maxHp}`;
+  setText($("#sHp"), `${Math.max(0, game.hp)}/${game.maxHp}`);
   const goldEl = $("#sGold");
   // 냥타워 가격표와 같은 꼴(₩1,234). 빚이면 ₩-120 이 아니라 -₩120 으로
   const g = Math.floor(game.gold);
-  goldEl.textContent = `${g < 0 ? "-" : ""}₩ ${Math.abs(g).toLocaleString()}`;
+  setText(goldEl, `${g < 0 ? "-" : ""}₩ ${Math.abs(g).toLocaleString()}`);
   // 빚(마이너스)은 색으로 바로 알아보게 — 갚기 전까지는 아무것도 살 수 없다
-  goldEl.style.color = game.gold < 0 ? "#e0574d" : "";
-  goldEl.parentElement.querySelector("span").textContent = game.gold < 0 ? "특허료 (빚)" : "특허료";
-  $("#sWave").textContent = `${game.wave}/${BAL.waveCount}`;
+  { const col = game.gold < 0 ? "#e0574d" : ""; if (goldEl.style.color !== col) goldEl.style.color = col; }
+  setText(goldEl.parentElement.querySelector("span"), game.gold < 0 ? "특허료 (빚)" : "특허료");
+  setText($("#sWave"), `${game.wave}/${BAL.waveCount}`);
   // 등록번호 칸(머릿글)은 걷어냈다 — 남아 있는 판에만 찍는다.
   // 없는 칸에 그대로 쓰면 renderHud 가 통째로 터져서 그 아래(전장 원화·개시 단추·합성 묶음)가
   // 전부 멈춘다. 실제로 웨이브를 눌러도 침입자가 나오지 않던 원인이었다.
   const regEl = $("#regHead");
-  if (regEl) regEl.textContent = String(game.reg);
+  if (regEl) setText(regEl, String(game.reg));
 
   renderScore();
   applyStageTheme();         // 스테이지 구간이 넘어가면 전장 원화도 같이 갈린다
@@ -4518,22 +4521,22 @@ function renderReadyBar() {
   // 솔로에는 맞출 상대가 없다 — 「개시」 버튼 하나로 끝난다
   const sync = !soloMode && needsSync(next);
   if (game.phase === "duel") {
-    b.disabled = true; b.textContent = `${duelWord} 중…`;
+    if (b.disabled !== true) b.disabled = true; setText(b, `${duelWord} 중…`);
   } else if (game.phase === "wave") {
-    b.disabled = true; b.textContent = "심사 중…";
+    if (b.disabled !== true) b.disabled = true; setText(b, "심사 중…");
   } else if (game.awaitingAugment) {
-    b.disabled = true; b.textContent = "증강 선택 중";
+    if (b.disabled !== true) b.disabled = true; setText(b, "증강 선택 중");
   } else if (game.awaitingPassive) {
-    b.disabled = true; b.textContent = "효과 선택 중";
+    if (b.disabled !== true) b.disabled = true; setText(b, "효과 선택 중");
   } else if (game.phase === "prep") {
-    b.disabled = false;
+    if (b.disabled !== false) b.disabled = false;
     // 솔로에서는 "준비"가 아니라 곧바로 개시다 — 기다릴 상대가 없다.
     // 다음이 대전 라운드면 무엇이 시작되는지 버튼에 그대로 적는다.
-    b.textContent = duelNext
+    setText(b, duelNext
       ? (!sync ? `⚔ 라운드 ${next} ${duelWord} 시작` : iReady ? "준비 취소" : `⚔ 라운드 ${next} ${duelWord} 준비`)
-      : (!sync ? `라운드 ${next} 시작` : iReady ? "준비 취소" : `라운드 ${next} 준비 완료`);
+      : (!sync ? `라운드 ${next} 시작` : iReady ? "준비 취소" : `라운드 ${next} 준비 완료`));
   } else {
-    b.disabled = true;
+    if (b.disabled !== true) b.disabled = true;
   }
   b.classList.toggle("duelnext", duelNext && game.phase === "prep");
 
@@ -4541,8 +4544,8 @@ function renderReadyBar() {
   const sp = btn("#btnSpeed");
   if (sp) {
     const lock = game.phase === "duel";
-    sp.disabled = lock;
-    sp.textContent = lock ? "배속 없음" : "속도 ×" + speed;
+    if (sp.disabled !== lock) sp.disabled = lock;
+    setText(sp, lock ? "배속 없음" : "속도 ×" + speed);
   }
   b.classList.toggle("waiting", sync && iReady && game.phase === "prep");
 
@@ -4553,19 +4556,20 @@ function renderReadyBar() {
   if (!show) return;
 
   const left = prepEndsAt ? Math.max(0, (prepEndsAt - performance.now()) / 1000) : 0;
-  $("#rdyMe").className = "rdy " + (iReady ? "on" : "off");
-  $("#rdyMe").querySelector("b").textContent = iReady ? "준비 완료" : "준비 중";
-  $("#rdyOpp").className = "rdy " + (oppReady ? "on" : oppInPrep ? "off" : "away");
-  $("#rdyOpp").querySelector("i").textContent = "상대";
-  $("#rdyOpp").querySelector("b").textContent = oppReady ? "준비 완료" : oppInPrep ? "준비 중" : "라운드 진행 중";
+  { const c = "rdy " + (iReady ? "on" : "off"); if ($("#rdyMe").className !== c) $("#rdyMe").className = c; }
+  setText($("#rdyMe").querySelector("b"), iReady ? "준비 완료" : "준비 중");
+  { const c = "rdy " + (oppReady ? "on" : oppInPrep ? "off" : "away"); if ($("#rdyOpp").className !== c) $("#rdyOpp").className = c; }
+  setText($("#rdyOpp").querySelector("i"), "상대");
+  setText($("#rdyOpp").querySelector("b"), oppReady ? "준비 완료" : oppInPrep ? "준비 중" : "라운드 진행 중");
 
   const t = $("#rdyTimer");
-  if (!online()) t.textContent = "서버 연결 끊김 — 혼자 진행합니다";
+  if (!online()) setText(t, "서버 연결 끊김 — 혼자 진행합니다");
   // 두 줄로 — #rdyTimer 가 white-space:pre-line 이라 \n 이 그대로 줄바꿈이 된다
-  else if (!prepEndsAt) t.textContent = "상대가 웨이브를 끝내면\n준비시간이 시작됩니다";
-  else t.textContent = `준비시간 ${left.toFixed(1)}초`;
-  /** @type {HTMLElement} */ ($("#rdyFill")).style.width =
-    prepEndsAt ? `${Math.min(100, (left / BAL.prepSecs) * 100)}%` : "0%";
+  else if (!prepEndsAt) setText(t, "상대가 웨이브를 끝내면\n준비시간이 시작됩니다");
+  else setText(t, `준비시간 ${left.toFixed(1)}초`);
+  const fillW = prepEndsAt ? `${Math.min(100, (left / BAL.prepSecs) * 100).toFixed(1)}%` : "0%";
+  const fill = /** @type {HTMLElement} */ ($("#rdyFill"));
+  if (fill.style.width !== fillW) fill.style.width = fillW;
 }
 
 /** 실제 개시. 서버의 waveGo 신호(또는 서버가 없을 때의 직접 개시)로만 들어온다. */
@@ -7682,13 +7686,17 @@ function fitSideCols() {
 (() => {
   const root = $("#gameRoot");
   if (!root) return;
-  new MutationObserver(fitSideCols).observe(root, {
+  /* DOM 이 바뀔 때마다 곧장 재지 않는다 — 웨이브 중에는 숫자·태그가 프레임마다 바뀌어 매 프레임
+   * scrollHeight 를 읽고 zoom 을 쓰는 레이아웃 왕복이 생겼다. 200ms 에 한 번(뒤 가장자리)으로 모은다. */
+  let fitT = 0;
+  const fitSoon = () => { if (fitT) return; fitT = setTimeout(() => { fitT = 0; fitSideCols(); }, 200); };
+  new MutationObserver(fitSoon).observe(root, {
     childList: true, subtree: true, characterData: true,
     attributes: true, attributeFilter: ["class", "hidden"],
   });
   // 상대 미니맵 캔버스처럼 DOM 은 그대로인데 크기만 나중에 자라는 것도 있다 — 패널 크기 변화도 본다
   // (zoom 을 걸면 다시 불리지만, 같은 값으로 수렴하므로 한 번 더 돌고 멈춘다)
-  const ro = new ResizeObserver(fitSideCols);
+  const ro = new ResizeObserver(fitSoon);
   for (const p of root.querySelectorAll(".cols>div:not(:nth-child(2))>*")) ro.observe(p);
 })();
 
@@ -7772,11 +7780,11 @@ function updateSabotageBar() {
   if (!b) return;
   const blocked = game.sabotageBlocked();
   const why = blocked || (online() ? null : "서버 연결 끊김") || (enemySlots().length ? null : "남은 상대 없음");
-  b.disabled = !!why;
+  if (b.disabled !== !!why) b.disabled = !!why;
   const state = b.querySelector(".state");
-  if (state) state.textContent = why || "무작위 1개 · 상대 판에 즉시";
+  setText(state, why || "무작위 1개 · 상대 판에 즉시");
   const left = $("#sabLeft");
-  if (left) left.textContent = String(game.sabotageLeft);
+  setText(left, String(game.sabotageLeft));
 }
 
 /**
@@ -7829,7 +7837,7 @@ function renderFxTags() {
       ? `<span>⛔ 냥타워 정지 · ${fx.freezeT.toFixed(1)}초 남음</span>`
       : `<span>⛔ 다음 웨이브 첫 ${fx.freezeT.toFixed(1)}초 냥타워 정지</span>`);
   if (mods.extra) tags.push(`<span>📨 다음 웨이브 침입자 ${mods.extra}마리 추가</span>`);
-  el.innerHTML = tags.join("");
+  setHtml(el, tags.join(""));
   el.classList.toggle("hidden", !tags.length);
 }
 
@@ -8491,15 +8499,18 @@ function renderOppCard(p) {
   if (!card) return;
   card.classList.toggle("gone", !!p.gone);
   if (p.snap) {
-    card.querySelector(".opphp").textContent = `${Math.max(0, Math.ceil(p.snap.hp))}/${p.snap.maxHp}`;
-    card.querySelector(".oppwave").textContent = `${p.snap.wave}/${BAL.waveCount}`;
+    setText(card.querySelector(".opphp"), `${Math.max(0, Math.ceil(p.snap.hp))}/${p.snap.maxHp}`);
+    setText(card.querySelector(".oppwave"), `${p.snap.wave}/${BAL.waveCount}`);
   }
-  if (p.gone) card.querySelector(".opphp").textContent = "탈락";
+  if (p.gone) setText(card.querySelector(".opphp"), "탈락");
 }
 
 /** 다른 사람들의 보드 미니맵 — 받은 스냅샷을 그린다 (그쪽 클라이언트가 계산한 결과를 그대로 그림) */
+let oppDrawnAt = 0;
 function drawOpponent(now) {
   if (soloMode) return;   // 상대 청사 패널 자체가 없다
+  if (now - oppDrawnAt < 50 && !sabStamps.some((s) => s.opp != null)) return;   // 20fps (도장이 찍히는 동안만 매 프레임)
+  oppDrawnAt = now;
   for (const p of players) {
     if (p.slot === mySlot) continue;
     const cv = /** @type {HTMLCanvasElement} */ ($(`#oppGrid canvas[data-slot="${p.slot}"]`));
