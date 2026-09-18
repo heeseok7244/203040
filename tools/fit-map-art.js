@@ -20,7 +20,7 @@ const CELL = 84;
 
 const args = process.argv.slice(2), flags = new Set(args.filter((a) => a.startsWith("--")));
 const [inFile, outFile] = args.filter((a) => !a.startsWith("--"));
-if (!inFile || !outFile) { console.error("사용: node tools/fit-map-art.js <원화.png> <출력.png> [--no-monument] [--no-sharpen]"); process.exit(1); }
+if (!inFile || !outFile) { console.error("사용: node tools/fit-map-art.js <원화.png> <출력.png> [--no-monument] [--no-sharpen] [--no-erase]"); process.exit(1); }
 // 이미 한 번 손질한 map/*.png 를 액자 규격만 바꿔 다시 돌릴 때는 조형물 옮기기·선명화를 건너뛴다 —
 // 조형물은 이미 2×2 에 맞아 있고, 선명화를 두 번 먹이면 외곽선이 거칠어진다.
 let img = decode(inFile);
@@ -259,6 +259,9 @@ if (x0 < 0 || y0 < 0 || x1 > srcW || y1 > srcH) {
 
 /* ── 4. 위·아래에 걸려 잘린 장식 지우기 ── */
 (function eraseCut(im) {
+  // 우주 배경처럼 어두운 바탕에 별·소행성이 흩어져 있으면 단색 검사는 통과하는데, 액자가 장식을 타고
+  // 가장자리와 이어져 판까지 통째로 지워진다 — 그런 원화는 --no-erase 로 건너뛴다.
+  if (flags.has("--no-erase")) return;
   const { w, h, data } = im;
   const { bg, flat } = bgColor(im);
   if (!flat) { console.log("배경이 단색이 아니라 잘린 장식은 그대로 둔다"); return; }

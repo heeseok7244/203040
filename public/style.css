@@ -1152,6 +1152,15 @@ body.dueling #tip{display:none!important}
 #sheet .upstack strong{display:block;font-size:15px;color:#203e2b;margin-top:3px}
 #sheet .upstack.temporary>span{display:block;font-size:13px;color:#575341;margin-top:6px}
 
+/* 판 위 안내 띠 — 「냥타워를 놓고 시작하세요」 같은 짧은 안내. 축포(.tierpop)와 같은 색조에 글꼴은 표시용 */
+.notice{position:fixed;transform:translate(-50%,-50%);z-index:400;pointer-events:none;
+  max-width:min(92vw,560px);padding:10px 22px;text-align:center;white-space:pre-wrap;
+  background:rgba(12,21,36,.94);border:2px solid var(--gold);border-radius:4px;
+  box-shadow:0 0 0 4px rgba(12,21,36,.6),0 0 28px color-mix(in srgb,var(--gold) 50%,transparent);
+  font-family:var(--disp);font-size:18px;letter-spacing:.06em;color:var(--gold);
+  text-shadow:0 0 14px color-mix(in srgb,var(--gold) 60%,transparent);
+  animation:tierIn .32s cubic-bezier(.2,1.5,.4,1) forwards}
+
 /* 계열 단계 개방 축포 — 규칙이 바뀌는 순간이라 한 번은 크게 터진다 */
 .tierpop{--lc:#cda43a;
   position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);

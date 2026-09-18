@@ -4494,6 +4494,23 @@ function showErrToast(msg) {
   clearTimeout(showErrToast._t);
   showErrToast._t = setTimeout(() => { el.remove(); }, 12000);
 }
+/** 판 위 안내 띠(.notice) — 판의 셋째 줄 한가운데에 띄운다. 판은 배율이 걸려 있어 화면 좌표는
+ *  getBoundingClientRect 로 잰다. 다시 부르면 글을 갈아 끼우고 2초 뒤 사라진다. */
+function showNotice(msg) {
+  let el = document.getElementById("noticeToast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "noticeToast";
+    el.className = "notice";
+    document.body.appendChild(el);
+  }
+  const b = $("#board"), r = b ? b.getBoundingClientRect() : null;
+  if (r && r.height) { el.style.left = r.left + r.width / 2 + "px"; el.style.top = r.top + r.height / 9 * 2.5 + "px"; }
+  else { el.style.left = "50%"; el.style.top = "30%"; }
+  el.textContent = msg;
+  clearTimeout(showNotice._t);
+  showNotice._t = setTimeout(() => { el.remove(); }, 2000);
+}
 
 function draw(now) {
   const cv = fxCanvas();
@@ -8314,15 +8331,15 @@ function drawOppBoard(cv, snap, now) {
  * 원화(img/src/map*.png)를 넣고 돌리면 map/*.png 와 아래 pad 값을 같이 뱉는다.
  * 세 전장 모두 액자 1000×900 (가운데 패널을 꽉 채우는 10:9) 으로 맞춰 두어 전장이 바뀌어도 판 크기가 같다.
  *   캠퍼스   x 148.9 + 102.55k · y 78.2 + 90.74k   (1221×973, 냥집 원화 map1_idea_campus.png)
- *   연구단지 x 193.6 + 131.32k · y 101.9 + 118.32k (1563×1268, 예전 정사각 원화를 --no-monument --no-sharpen 으로
- *   우주기지 x 193.4 + 131.26k · y 101.4 + 118.37k (1562×1268,  다시 돌린 것 — 모자란 양옆 여백은 배경색으로 채웠다)
+ *   연구단지 x 171.5 + 101.00k · y 198.7 + 94.55k  (1202×1013, 원화 map2_research_complex.png — 배경이 무늬라 잘린 장식은 안 지웠다)
+ *   우주기지 x 129.4 + 110.59k · y 135.5 + 100.99k (1316×1082, 원화 map3_space_base.png — --no-erase, 모자란 양옆은 배경색으로 채웠다)
  */
 /* 세 전장이 판을 셋으로 나눈다. 한 판이 12라운드에서 **10라운드**로 줄면서 경계도 같이 당겼다 —
  * 3/7 로 끊으면 대전 라운드(4·7·10) 직전마다 전장이 바뀌어, 「전장이 바뀌면 곧 대전」이 된다. */
 const STAGE_THEMES = [
   { to: 3,        id: "idea_campus",      name: "아이디어 캠퍼스", img: "map/Idea_campus.png",      pad: [74.23, 124.24, 74.16, 123.97] },
-  { to: 7,        id: "research_complex", name: "연구 개발 단지",  img: "map/research_complex.png", pad: [74.35, 123.81, 73.88, 123.98] },
-  { to: Infinity, id: "space_base",       name: "우주 기술 기지",  img: "map/space_base.png",       pad: [74.13, 123.84, 73.70, 123.72] },
+  { to: 7,        id: "research_complex", name: "연구 개발 단지",  img: "map/research_complex.png", pad: [73.39, 123.80, 74.19, 123.80] },
+  { to: Infinity, id: "space_base",       name: "우주 기술 기지",  img: "map/space_base.png",       pad: [74.20, 123.73, 74.08, 123.85] },
 ];
 const themeForStage = (n) => STAGE_THEMES.find((t) => n <= t.to) || STAGE_THEMES[STAGE_THEMES.length - 1];
 /** 지금 보여줄 스테이지 번호 — 준비 단계에서는 곧 치를 다음 웨이브의 전장을 미리 보여준다 */
@@ -8411,6 +8428,11 @@ function beginBattle() {
  */
 $("#btnGo").addEventListener("click", () => {
   if (!canPrep()) return;
+  // 첫 라운드는 냥타워를 하나도 안 놓고 열면 그냥 침입자가 지나가는 판이 된다 — 놓고 오라고 안내하고 막는다
+  if (game.wave === 0 && !B.cats(game).length) {
+    showNotice("냥타워를 판에 배치하고 라운드를 시작하세요.");
+    return;
+  }
   // 서버가 없거나, 맞출 필요가 없는 웨이브(첫 스테이지 이후)라면 곧바로 시작한다
   if (!online() || !needsSync(game.wave + 1)) { doStartWave(); return; }
   iReady = !iReady;
