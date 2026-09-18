@@ -2680,7 +2680,7 @@ class DuelSim {
         if (crit) anyCrit = true;
         const raw = u.dmg * (crit ? u.cm : 1);
         this.shots.push({ x1: u.x, dep1: this.depOf(u), x2: target.x, dep2: this.depOf(target),
-                          side: u.side, key: u.k, crit, life: 0.42, max: 0.42 });
+                          side: u.side, key: u.k, mob: !!u.mob, crit, life: 0.42, max: 0.42 });
         hits.push([target, this.afterArmor(u, target, raw * this.ampSlow(u, target), { crit }), crit, u.x, u.ex]);
         if (crit) this.events.push({ t: "crit", x: u.x, side: u.side, dep: this.depOf(u), id: u.id });
         if (u.sl) slows.push([target, u.sl / 100]);
@@ -5251,9 +5251,9 @@ const SHOT_STYLE = {
   pct: "shuriken",   panel: "shuriken",    // 🌐 국제출원냥 · ⚖️ 심판합의체냥 — 수리검
   fast: "slug",      rush: "slug",         // ⚡ 우선심사냥 · ⏱️ 조기공개냥 — 개틀링 탄
   delay: "bomb",                           // ⏳ 보정명령냥 — 폭탄
-  // 대전장의 쥐 유닛(u.mob) — 훔친 치즈 조각을 던진다 (사망 연출의 치즈 부스러기와 같은 그림)
-  copy: "cheese", fast: "cheese", tank: "cheese", boss: "cheese",
 };
+// 대전장의 쥐 유닛(u.mob)은 훔친 치즈 조각을 던진다. 쥐 종류 키(fast 등)가 냥타워 키(⚡ 우선심사냥 = fast)와
+// 겹치므로 키가 아니라 탄의 mob 표시로 가른다 (아래 shotLook · 대전 sim 의 shots.push 참고)
 
 /**
  * 모양별 성격.
@@ -5265,10 +5265,10 @@ const SHOT_STYLE = {
  */
 const SHOT_LOOK = {
   paper:    { arc: [0.12, 16], spin: 1.2, size: 13, col: "rgba(120,170,235,", ring: "#6aa6e8", blast: 1 },
-  bullet:   { arc: [0, 0],     spin: 0,   size: 14, col: "rgba(240,150,40,",  ring: "#f0a030", blast: 1.2 },
+  bullet:   { arc: [0, 0],     spin: 0,   size: 14, col: "rgba(150,95,45,",   ring: "#9a6a3a", blast: 1.2 },   // 📐 특허범위냥 — 갈색 예광
   monocle:  { arc: [0.10, 14], spin: 0.5, size: 12, col: "rgba(245,200,60,",  ring: "#f2c230", blast: 1 },
   shuriken: { arc: [0.08, 12], spin: 3,   size: 14, col: "rgba(60,190,255,",  ring: "#3ac0ff", blast: 0.9 },
-  slug:     { arc: [0.04, 6],  spin: 0,   size: 10, col: "rgba(255,170,80,",  ring: "#ffa04a", blast: 0.7 },
+  slug:     { arc: [0.04, 6],  spin: 0,   size: 10, col: "rgba(165,105,50,",  ring: "#a86e3c", blast: 0.7 },   // ⚡ 우선심사냥 — 갈색 탄
   bomb:     { arc: [0.28, 40], spin: 0.6, size: 14, col: "rgba(255,130,60,",  ring: "#ff7a3a", blast: 1.6 },
   cheese:   { arc: [0.14, 18], spin: 1.6, size: 14, col: "rgba(244,197,60,",  ring: "#f4c53c", blast: 1 },
   /** key 가 없는 탄 — 예전 발광 미사일 그대로 */
@@ -5276,7 +5276,8 @@ const SHOT_LOOK = {
 };
 
 /** 탄 하나의 모양 — key 로 고르고, 없으면 예전 미사일 */
-const shotLook = (s) => SHOT_LOOK[SHOT_STYLE[s.key] || "missile"];
+const shotStyleOf = (s) => s.mob ? "cheese" : (SHOT_STYLE[s.key] || "missile");
+const shotLook = (s) => SHOT_LOOK[shotStyleOf(s)];
 
 /**
  * 소품 하나를 원점에 그린다. 진행 방향이 +x 이고, 도는 소품은 이미 돌려져 있다.
@@ -5340,7 +5341,7 @@ function drawShotBody(g, style, S, crit) {
     case "bullet": {
       // 저격탄 — 놋쇠 탄피에 검은 탄두. 길쭉해서 빠르다는 느낌이 난다.
       const L = S * 1.6, W = S * 0.42;
-      g.fillStyle = crit ? "#e9c25a" : "#c9a45a"; g.strokeStyle = out; g.lineWidth = 1;
+      g.fillStyle = crit ? "#e9c25a" : "#8b5a2b"; g.strokeStyle = out; g.lineWidth = 1;   // 탄피 — 갈색(치명타만 금빛)
       g.beginPath();
       g.moveTo(-L * 0.5, -W / 2); g.lineTo(L * 0.1, -W / 2); g.lineTo(L * 0.1, W / 2); g.lineTo(-L * 0.5, W / 2);
       g.closePath(); g.fill(); g.stroke();
@@ -5393,7 +5394,7 @@ function drawShotBody(g, style, S, crit) {
     case "slug": {
       // 개틀링 탄 — 짧은 놋쇠 탄에 주황 탄두. 작고 많다.
       const L = S * 1.1, W = S * 0.4;
-      g.fillStyle = crit ? "#e9c25a" : "#d9a24a"; g.strokeStyle = out; g.lineWidth = 0.9;
+      g.fillStyle = crit ? "#e9c25a" : "#8b5a2b"; g.strokeStyle = out; g.lineWidth = 0.9;   // 탄 — 갈색(치명타만 금빛)
       g.beginPath(); g.rect(-L * 0.5, -W / 2, L * 0.6, W); g.fill(); g.stroke();
       g.fillStyle = "#ff8c3a";
       g.beginPath();
@@ -5492,7 +5493,7 @@ function drawMissile(g, s, emitSparks = true) {
   if (s.ring) return drawBlastRing(g, s);
   const p = 1 - Math.max(0, s.life / s.max);          // 0..1 진행도
   const crit = !!s.crit || s.col === "#cda43a";
-  const style = SHOT_STYLE[s.key] || "missile";
+  const style = shotStyleOf(s);
   const look = shotLook(s);
   const dx = s.x2 - s.x1, dy = s.y2 - s.y1;
   const dist = Math.hypot(dx, dy) || 1;
