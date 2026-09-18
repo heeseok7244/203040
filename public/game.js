@@ -431,8 +431,8 @@ const PASSIVES = [
   { key: "efile", name: "전자출원", icon: "⚡", line: null, stat: "rate", amount: 0.12,
     desc: "모든 냥타워 공격속도 +12%",
     detail: "서류를 전자로 넘겨 심사 회전을 빠르게 한다. 계열을 가리지 않지만, 치명타 주사위를 더 자주 굴리게 되므로 🎯 입증 덱에서 특히 값이 크다." },
-  { key: "refund", name: "수수료 환급", icon: "💰", line: null, stat: "gold2x", amount: 2,
-    desc: "이번 스테이지 획득 특허료 2배",
+  { key: "refund", name: "수수료 환급", icon: "💰", line: null, stat: "gold2x", amount: 1.5,
+    desc: "이번 스테이지 획득 특허료 1.5배",
     detail: "과오납한 수수료를 돌려받는다. <b>다음 한 스테이지 동안만</b> 처치 보상이 두 배가 되고 쌓이지 않는다. 물량이 많이 나오는 웨이브 직전에 고를수록 값이 크다 (대전 라운드에는 실리지 않는다)." },
 
   /* ── 💥 침해 계열 — 한 방을 무겁게, 그 무게를 옆으로 퍼뜨린다 ── */
@@ -7858,7 +7858,7 @@ function passiveStackBonus(def, count) {
 }
 
 function passiveStackHtml(def) {
-  if (def.stat === "gold2x") return `<div class="upstack temporary"><b>1스테이지 한정</b><span>중첩 없음 · 처치 특허료 2배</span></div>`;
+  if (def.stat === "gold2x") return `<div class="upstack temporary"><b>1스테이지 한정</b><span>중첩 없음 · 처치 특허료 1.5배</span></div>`;
   const count = game.myPassives.filter((p) => p.key === def.key).length;
   const capped = ["critC", "rapid", "pierce", "slow", "stunC"].includes(def.stat);
   return `<div class="upstack${count ? " stacked" : ""}">
@@ -7883,7 +7883,7 @@ function openPassiveModal() {
         <span class="ltag">${L ? `${L.icon} ${L.name}` : "공통"}</span>
         <span class="ic">${def.icon}</span>
         <span class="nm">${def.name}</span>
-        <span class="ef">${def.stat === "gold2x" ? "처치 특허료 2배" : def.desc}</span>
+        <span class="ef">${def.stat === "gold2x" ? "처치 특허료 1.5배" : def.desc}</span>
       </div>`;
     }).join("")}</div>${choiceBarHtml()}`;
   $("#modal").classList.add("on");
@@ -8024,7 +8024,7 @@ function renderPassiveTags() {
       : `+${Math.round(d.amount * n * 100)}%`;
     return tagHtml(`${d.icon} ${d.name}`, `${total}${n > 1 && !cond ? ` (×${n})` : ""}`);
   });
-  if (game.goldMul > 1) parts.push(tagHtml("💰 수수료 환급", "이번 스테이지 특허료 2배"));
+  if (game.goldMul > 1) parts.push(tagHtml("💰 수수료 환급", "이번 스테이지 특허료 1.5배"));
   void parts; // 개별 강화 태그는 헤더에 적지 않는다 — 계열 진행도(동그라미)만 보인다
   $("#myPassiveTags").innerHTML = lines ? `<div class="linelist">${lines}</div>` : "";
 }
