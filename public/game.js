@@ -8337,16 +8337,17 @@ function drawOppBoard(cv, snap, now) {
  * 이 계산과 원화 손질(바깥 칸 폭 고르기 · 여백 오려내기)은 tools/fit-map-art.js 가 한다 —
  * 원화(img/src/map*.png)를 넣고 돌리면 map/*.png 와 아래 pad 값을 같이 뱉는다.
  * 세 전장 모두 액자 1000×900 (가운데 패널을 꽉 채우는 10:9) 으로 맞춰 두어 전장이 바뀌어도 판 크기가 같다.
- *   캠퍼스   x 148.9 + 102.55k · y 78.2 + 90.74k   (1221×973, 냥집 원화 map1_idea_campus.png)
- *   연구단지 x 171.5 + 101.00k · y 198.7 + 94.55k  (1202×1013, 원화 map2_research_complex.png — 배경이 무늬라 잘린 장식은 안 지웠다)
- *   우주기지 x 129.4 + 110.59k · y 135.5 + 100.99k (1316×1082, 원화 map3_space_base.png — --no-erase, 모자란 양옆은 배경색으로 채웠다)
+ * 세 원화 모두 조형물이 이미 2×2 금속판 위에 맞아 있어 --no-monument 로 돌렸다 (옮기면 판 둘레가 초록으로 덮여 버린다).
+ *   캠퍼스   x 202.9 + 103.44k · y 152.2 + 93.91k  (1231×1006, 원화 map1_idea_campus.png — 위·아래 잘린 나무는 배경색으로 지웠다)
+ *   연구단지 x 188.9 + 97.22k  · y 197.4 + 94.69k  (1157×1015, 원화 map2_research_complex.png — 배경이 하늘·구름이라 잘린 장식은 안 지웠다)
+ *   우주기지 x 129.7 + 110.81k · y 135.4 + 101.02k (1319×1082, 원화 map3_space_base.png — --no-erase, 모자란 양옆은 배경색으로 채웠다)
  */
 /* 세 전장이 판을 셋으로 나눈다. 한 판이 12라운드에서 **10라운드**로 줄면서 경계도 같이 당겼다 —
  * 3/7 로 끊으면 대전 라운드(4·7·10) 직전마다 전장이 바뀌어, 「전장이 바뀌면 곧 대전」이 된다. */
 const STAGE_THEMES = [
-  { to: 3,        id: "idea_campus",      name: "아이디어 캠퍼스", img: "map/Idea_campus.png",      pad: [74.23, 124.24, 74.16, 123.97] },
-  { to: 7,        id: "research_complex", name: "연구 개발 단지",  img: "map/research_complex.png", pad: [73.39, 123.80, 74.19, 123.80] },
-  { to: Infinity, id: "space_base",       name: "우주 기술 기지",  img: "map/space_base.png",       pad: [74.20, 123.73, 74.08, 123.85] },
+  { to: 3,        id: "idea_campus",      name: "아이디어 캠퍼스", img: "map/Idea_campus.png",      pad: [73.75, 123.95, 74.09, 123.72] },
+  { to: 7,        id: "research_complex", name: "연구 개발 단지",  img: "map/research_complex.png", pad: [74.12, 123.96, 74.01, 123.80] },
+  { to: Infinity, id: "space_base",       name: "우주 기술 기지",  img: "map/space_base.png",       pad: [73.82, 124.07, 73.73, 123.79] },
 ];
 const themeForStage = (n) => STAGE_THEMES.find((t) => n <= t.to) || STAGE_THEMES[STAGE_THEMES.length - 1];
 /** 지금 보여줄 스테이지 번호 — 준비 단계에서는 곧 치를 다음 웨이브의 전장을 미리 보여준다 */
