@@ -517,7 +517,7 @@ const ENEMIES = {
   tank: { nm:"무효심판 청구인", hp:190, spd:75,  def:8, r:24, col:"#7d5a8f", rw:9,  leak:5, icon:"⚖️",
     desc:"내 권리를 통째로 없애려 든다. <br>돌파 시 등록원부 내구를 5 깎는다.",
     duel:{ w:16, hpS:2.4, dpsS:1.1, rate:0.85, range:140, sl:30, ar:0.25 } },
-  boss: { nm:"특허괴물",       hp:1150, spd:62, def:13, r:34, col:"#c4322a", rw:70, leak:8, fee:100, icon:"👹",
+  boss: { nm:"특허괴물",       hp:383, spd:62, def:13, r:34, col:"#c4322a", rw:70, leak:8, fee:100, icon:"👹",
     desc:"특허만 사서 소송으로 돈을 받아낸다. <br>돌파 시 합의금 명목으로 특허료 100을 가져간다. <br>— 잔고가 모자라면 빚으로 남는다.",
     duel:{ w:4, hpS:4.0, dpsS:2.4, rate:1.0, range:130, sp:60, spf:0.35, ar:0.25 } }
 };
@@ -544,7 +544,7 @@ const WAVES = [
   {copy:44,fast:30,tank:16},              // 6
   {},                                     // 7 — ⚔️ 1:1 대전
   {copy:50,fast:38,tank:24},              // 8
-  {copy:48,fast:46,tank:32,boss:1},       // 9 — 마지막 전투 라운드 · 특허괴물 등장
+  {copy:48,fast:46,tank:32,boss:3},       // 9 — 마지막 전투 라운드 · 특허괴물 셋 등장
   {},                                     // 10 — ⚔️ 1:1 대전 (여기서 판이 끝나고 점수를 낸다)
 ];
 
