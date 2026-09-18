@@ -889,7 +889,11 @@ const MODES = {
 /** 밸런스 상수. 시뮬레이터가 이 객체를 통째로 덮어써서 스윕할 수 있다. */
 const BAL = {
   cellSize: 80, cellGap: 4,
-  startGold: 130, startHp: 80,         // 난이도 상향 — 시작 자금·체력을 줄여 초반부터 신중하게
+  /* 시작 자금 145 — **공격냥 어떤 둘이든** 첫 라운드 전에 세울 수 있는 최소값 (가장 비싼 짝 = 국제출원냥 75 + 특허범위냥 70).
+   * 130 이던 때는 보정명령냥(65) + 국제출원냥(75) = 140 이 안 되어, 둔화로 묶고 셋을 같이 때리는 첫 조합을
+   * 라운드 1 에 쓸 수 없었다 — 보정명령냥은 혼자서는 라운드 1 도 못 막는 보좌형이라(초당 피해 6) 짝이 있어야 한다.
+   * 임용가를 내리는 대신 자금을 올린 것은 대전 체력이 임용가로 계산되기 때문이다 (DUEL.hpPerCost) */
+  startGold: 145, startHp: 80,         // 난이도 상향 — 시작 자금·체력을 줄여 초반부터 신중하게 (145 는 위 참고)
   /* ── 라운드별 침입자 체력 배율 (index 0 = 라운드 1) ──
    * 예전에는 직선(1 + 0.30 × (라운드−1), 라운드 9 에서 3.4배)이었다. 그러면 초반은 빡빡한데
    * 후반이 싱거웠다 — 냥타워 수 · 합성 레벨(Lv3 = 공격력 3.4배 + 승진 보정) · 강화 ·
@@ -8311,11 +8315,15 @@ function renderPassiveTags() {
   void parts; // 개별 강화 태그는 헤더에 적지 않는다 — 계열 진행도(동그라미)와 아래 합계만 보인다
 
   /* 이번 판에서 쌓은 강화의 **합계** — 강화 카드 · 승진(Lv3) 방어로 얻은 것을 항목별로 한 줄씩.
-   * 계열 동그라미는 「무슨 덱인가」를, 이 목록은 「지금 수치가 얼마인가」를 말한다. 0 인 항목은 적지 않는다 */
+   * 계열 동그라미는 「무슨 덱인가」를, 이 목록은 「지금 수치가 얼마인가」를 말한다. 0 인 항목은 적지 않는다.
+   * 라운드마다 줄이 늘어 칸 아래 그림을 밀어내던 것이라, 칸에는 적지 않고 「강화효과 ?」 제목에
+   * 마우스를 올렸을 때 뜨는 말풍선(#myEffPop)에만 넣는다 */
   const eff = effectSummary().map((e) =>
     `<span class="eff${e.bad ? " bad" : ""}${e.guard ? " guard" : ""}"><i>${e.icon}</i><b>${e.name}</b><em>${e.val}</em></span>`).join("");
-  $("#myPassiveTags").innerHTML = (lines ? `<div class="linelist">${lines}</div>` : "") +
-    (eff ? `<div class="efflist">${eff}</div>` : "");
+  $("#myPassiveTags").innerHTML = lines ? `<div class="linelist">${lines}</div>` : "";
+  const pop = $("#myEffPop");
+  if (pop) pop.innerHTML = eff ? `<b>지금까지 쌓인 강화</b><div class="efflist">${eff}</div>`
+                               : `<span class="efnone">아직 고른 강화가 없습니다</span>`;
 }
 
 /**

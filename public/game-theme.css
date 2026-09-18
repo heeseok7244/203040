@@ -285,12 +285,19 @@ body:has(#gameRoot:not(.hidden)) #tip i{margin-top:5px}
 @media(prefers-reduced-motion:reduce){#gameRoot .mchip{animation:none}}
 /* 「스테이지 강화」 칸의 계열 목록 — .passiveTags span 알약 꾸밈이 안쪽 span 에 번지지 않게 한다 */
 #gameRoot .passiveTags .linelist span{background:none;border:0;padding:0;font-size:12px;display:flex}
-/* 강화 합계 목록 — 계열 아래. 이름은 흐리게, 숫자는 밝게. 승진 방어(guard)는 초록 */
-#gameRoot .passiveTags .efflist{border-top-color:#4e638b;gap:2px 10px;padding-top:7px}
-#gameRoot .passiveTags .efflist span.eff b{white-space:nowrap;overflow:visible}
-#gameRoot .passiveTags .efflist span.eff{background:none;border:0;padding:1px 0;font-size:13px;color:#bdcce4}
-#gameRoot .passiveTags .efflist span.eff i{font-size:13px}
-#gameRoot .passiveTags .efflist span.eff b{font-size:12.5px;color:#9fb0cc;font-family:var(--body)}
-#gameRoot .passiveTags .efflist span.eff em{font-size:13px;color:#e3eafb;font-family:var(--body);font-weight:700}
-#gameRoot .passiveTags .efflist span.eff.guard em{color:#9fe0b4}
+/* 강화 합계 목록 — 「강화효과 ?」 말풍선 안. 이름은 흐리게, 숫자는 밝게. 승진 방어(guard)는 초록 */
+#gameRoot .efflist{border-top-color:#4e638b;gap:2px 10px;padding-top:7px;margin-top:6px}
+#gameRoot .efflist span.eff b{white-space:nowrap;overflow:visible}
+#gameRoot .efflist span.eff{background:none;border:0;padding:1px 0;font-size:13px;color:#bdcce4}
+#gameRoot .efflist span.eff i{font-size:13px}
+#gameRoot .efflist span.eff b{font-size:12.5px;color:#9fb0cc;font-family:var(--body)}
+#gameRoot .efflist span.eff em{font-size:13px;color:#e3eafb;font-family:var(--body);font-weight:700}
+#gameRoot .efflist span.eff.guard em{color:#9fe0b4}
+/* 「강화효과 ?」 제목의 물음표 단추 — 냥타워 머리의 「합성효과 ?」와 같은 꾸밈, 칸이 작아 한 치수 작게 */
+#gameRoot .efhead u{width:22px;height:22px;background:#3d527c;border:2px solid #6e86b2;color:white;font-family:var(--disp);font-size:15px;margin-left:4px}
+#gameRoot .efhead:hover u{background:#6e86b2;color:white}
+#gameRoot .efhead .efpop{left:0;right:auto;top:calc(100% + 4px);width:272px;max-width:calc(100vw - 24px);padding:10px 12px;
+  font-size:13px;line-height:1.55;text-align:left;font-weight:400;letter-spacing:0}
+#gameRoot .efhead .efpop>b{display:block;font-family:var(--disp);font-size:14px;color:#b6d3ff}
+#gameRoot .efhead .efpop .efnone{color:#9fb0cc}
 #gameRoot #myPassiveTags>span{background:none;border:0;padding:1px 2px}

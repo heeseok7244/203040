@@ -75,7 +75,10 @@
                상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다.
                (증강 선택은 걷어냈다 — 내증강 · 상대 증강 칸도 함께 뺐다) -->
           <div class="stat effects">
-            <div class="efcol"><i>강화효과</i><div class="passiveTags" id="myPassiveTags"></div></div>
+            <!-- 칸에는 계열 진행도(동그라미)만 남긴다. 지금까지 쌓인 강화 합계는 라운드마다 줄줄이 늘어나
+                 아래 그림을 밀어내므로, 「강화효과 ?」 제목에 마우스를 올렸을 때만 말풍선으로 보인다 -->
+            <div class="efcol"><i class="efhead">강화효과 <u>?</u><span class="prhint efpop" id="myEffPop"></span></i>
+              <div class="passiveTags" id="myPassiveTags"></div></div>
           </div>
         </div>
       </div>
