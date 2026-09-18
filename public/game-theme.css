@@ -285,4 +285,12 @@ body:has(#gameRoot:not(.hidden)) #tip i{margin-top:5px}
 @media(prefers-reduced-motion:reduce){#gameRoot .mchip{animation:none}}
 /* 「스테이지 강화」 칸의 계열 목록 — .passiveTags span 알약 꾸밈이 안쪽 span 에 번지지 않게 한다 */
 #gameRoot .passiveTags .linelist span{background:none;border:0;padding:0;font-size:12px;display:flex}
+/* 강화 합계 목록 — 계열 아래. 이름은 흐리게, 숫자는 밝게. 승진 방어(guard)는 초록 */
+#gameRoot .passiveTags .efflist{border-top-color:#4e638b;gap:2px 10px;padding-top:7px}
+#gameRoot .passiveTags .efflist span.eff b{white-space:nowrap;overflow:visible}
+#gameRoot .passiveTags .efflist span.eff{background:none;border:0;padding:1px 0;font-size:13px;color:#bdcce4}
+#gameRoot .passiveTags .efflist span.eff i{font-size:13px}
+#gameRoot .passiveTags .efflist span.eff b{font-size:12.5px;color:#9fb0cc;font-family:var(--body)}
+#gameRoot .passiveTags .efflist span.eff em{font-size:13px;color:#e3eafb;font-family:var(--body);font-weight:700}
+#gameRoot .passiveTags .efflist span.eff.guard em{color:#9fe0b4}
 #gameRoot #myPassiveTags>span{background:none;border:0;padding:1px 2px}
