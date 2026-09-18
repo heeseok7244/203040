@@ -1154,10 +1154,10 @@ body.dueling #tip{display:none!important}
 
 /* 판 위 안내 띠 — 「냥타워를 놓고 시작하세요」 같은 짧은 안내. 축포(.tierpop)와 같은 색조에 글꼴은 표시용 */
 .notice{position:fixed;transform:translate(-50%,-50%);z-index:400;pointer-events:none;
-  max-width:min(92vw,560px);padding:10px 22px;text-align:center;white-space:pre-wrap;
-  background:rgba(12,21,36,.94);border:2px solid var(--gold);border-radius:4px;
-  box-shadow:0 0 0 4px rgba(12,21,36,.6),0 0 28px color-mix(in srgb,var(--gold) 50%,transparent);
-  font-family:var(--disp);font-size:18px;letter-spacing:.06em;color:var(--gold);
+  max-width:min(92vw,1100px);padding:20px 44px;text-align:center;white-space:pre-wrap;
+  background:rgba(12,21,36,.94);border:4px solid var(--gold);border-radius:8px;
+  box-shadow:0 0 0 8px rgba(12,21,36,.6),0 0 56px color-mix(in srgb,var(--gold) 50%,transparent);
+  font-family:var(--disp);font-size:36px;letter-spacing:.06em;color:var(--gold);
   text-shadow:0 0 14px color-mix(in srgb,var(--gold) 60%,transparent);
   animation:tierIn .32s cubic-bezier(.2,1.5,.4,1) forwards}
 
@@ -1177,7 +1177,7 @@ body.dueling #tip{display:none!important}
   color:var(--lc);margin:4px 0 6px;text-shadow:0 0 18px color-mix(in srgb,var(--lc) 70%,transparent)}
 .tierpop em{display:block;font-style:normal;font-size:12px;color:var(--txt);max-width:420px}
 /* 모달 안에 세우는 안내 띠 — 판 위 띠(.notice)와 같은 모양, 자리만 흐름 안에 */
-.notice.inline{position:static;transform:none;display:block;width:fit-content;min-width:60%;margin:14px auto 10px;padding:11px 28px;text-align:center;
+.notice.inline{position:static;transform:none;display:block;width:fit-content;min-width:60%;margin:14px auto 10px;padding:11px 28px;text-align:center;border-width:2px;
   font-size:21px;letter-spacing:.08em;border-radius:10px;
   background:linear-gradient(90deg,rgba(205,164,58,.10),rgba(205,164,58,.28),rgba(205,164,58,.10)),rgba(12,21,36,.94);
   animation:noticeIn .32s cubic-bezier(.2,1.5,.4,1) forwards,noticeGlow 1.6s ease-in-out .32s infinite alternate}

@@ -4373,8 +4373,8 @@ function renderReadyBar() {
     // 솔로에서는 "준비"가 아니라 곧바로 개시다 — 기다릴 상대가 없다.
     // 다음이 대전 라운드면 무엇이 시작되는지 버튼에 그대로 적는다.
     b.textContent = duelNext
-      ? (!sync ? `⚔ 라운드 ${next} ${duelWord} 개시` : iReady ? "준비 취소" : `⚔ 라운드 ${next} ${duelWord} 준비`)
-      : (!sync ? `라운드 ${next} 개시` : iReady ? "준비 취소" : `라운드 ${next} 준비 완료`);
+      ? (!sync ? `⚔ 라운드 ${next} ${duelWord} 시작` : iReady ? "준비 취소" : `⚔ 라운드 ${next} ${duelWord} 준비`)
+      : (!sync ? `라운드 ${next} 시작` : iReady ? "준비 취소" : `라운드 ${next} 준비 완료`);
   } else {
     b.disabled = true;
   }
@@ -5251,6 +5251,8 @@ const SHOT_STYLE = {
   pct: "shuriken",   panel: "shuriken",    // 🌐 국제출원냥 · ⚖️ 심판합의체냥 — 수리검
   fast: "slug",      rush: "slug",         // ⚡ 우선심사냥 · ⏱️ 조기공개냥 — 개틀링 탄
   delay: "bomb",                           // ⏳ 보정명령냥 — 폭탄
+  // 대전장의 쥐 유닛(u.mob) — 훔친 치즈 조각을 던진다 (사망 연출의 치즈 부스러기와 같은 그림)
+  copy: "cheese", fast: "cheese", tank: "cheese", boss: "cheese",
 };
 
 /**
@@ -5268,6 +5270,7 @@ const SHOT_LOOK = {
   shuriken: { arc: [0.08, 12], spin: 3,   size: 14, col: "rgba(60,190,255,",  ring: "#3ac0ff", blast: 0.9 },
   slug:     { arc: [0.04, 6],  spin: 0,   size: 10, col: "rgba(255,170,80,",  ring: "#ffa04a", blast: 0.7 },
   bomb:     { arc: [0.28, 40], spin: 0.6, size: 14, col: "rgba(255,130,60,",  ring: "#ff7a3a", blast: 1.6 },
+  cheese:   { arc: [0.14, 18], spin: 1.6, size: 14, col: "rgba(244,197,60,",  ring: "#f4c53c", blast: 1 },
   /** key 가 없는 탄 — 예전 발광 미사일 그대로 */
   missile:  { arc: [0.12, 16], spin: 0,   size: 12, col: "rgba(105,182,214,", ring: "#96d2eb", blast: 1 },
 };
@@ -5283,6 +5286,38 @@ function drawShotBody(g, style, S, crit) {
   const out = crit ? "#a9791e" : "#26221c";
   g.lineJoin = "round"; g.lineCap = "round";
   switch (style) {
+    case "cheese": {
+      /* 치즈 웨지 — 납작한 세모가 아니라 두께가 있는 조각. 위쪽 면(밝은 노랑)과 옆면(짙은 노랑)을 따로 그리고,
+       * 구멍은 안쪽에 그늘을 둔 움푹한 구멍으로 판다. 만화 치즈의 기본형이라 한눈에 치즈로 읽힌다. */
+      const c = S * 0.7, th = c * 0.42;               // 반폭 · 두께
+      const line = crit ? out : "#9a6a12";
+      g.lineWidth = 1.3; g.strokeStyle = line;
+      // 옆면(앞쪽 두께) — 짙은 노랑, 위 면보다 아래로 th 만큼
+      g.fillStyle = "#e6ad2a";
+      g.beginPath();
+      g.moveTo(-c, c * 0.55); g.lineTo(c, c * 0.55); g.lineTo(c, c * 0.55 + th); g.lineTo(-c, c * 0.55 + th);
+      g.closePath(); g.fill(); g.stroke();
+      // 뾰족한 쪽 옆면 — 더 어둡게 (빛이 안 드는 면)
+      g.fillStyle = "#cf951c";
+      g.beginPath();
+      g.moveTo(-c, -c * 0.75); g.lineTo(-c, c * 0.55 + th); g.lineTo(-c * 0.62, c * 0.55 + th * 0.55); g.lineTo(-c * 0.62, -c * 0.45);
+      g.closePath(); g.fill();
+      // 위 면 — 밝은 노랑 삼각형
+      g.fillStyle = "#ffd651";
+      g.beginPath();
+      g.moveTo(-c, c * 0.55); g.lineTo(c, c * 0.55); g.lineTo(-c, -c * 0.75);
+      g.closePath(); g.fill(); g.stroke();
+      // 구멍 — 위 면에 셋, 옆면에 하나. 각 구멍은 어두운 바닥 + 위쪽에 밝은 초승달(테두리 빛)
+      const hole = (x, y, r) => {
+        g.fillStyle = "#c98f18"; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill();
+        g.fillStyle = "#e6ad2a"; g.beginPath(); g.arc(x, y + r * 0.35, r * 0.78, 0, 7); g.fill();
+      };
+      hole(-c * 0.35, c * 0.15, c * 0.2);
+      hole(c * 0.3, c * 0.32, c * 0.15);
+      hole(-c * 0.65, -c * 0.3, c * 0.11);
+      g.fillStyle = "#b8811a"; g.beginPath(); g.ellipse(c * 0.1, c * 0.55 + th * 0.5, c * 0.14, th * 0.3, 0, 0, 7); g.fill();
+      break;
+    }
     case "paper": {
       // 출원 서류 — 흰 종이, 접힌 귀, 글줄 셋, 발도장. 프로필 속 머리 위 아이콘 그대로.
       const w = S * 0.8, h = S, f = S * 0.28;
@@ -8439,7 +8474,7 @@ $("#btnGo").addEventListener("click", () => {
   if (!canPrep()) return;
   // 첫 라운드는 냥타워를 하나도 안 놓고 열면 그냥 침입자가 지나가는 판이 된다 — 놓고 오라고 안내하고 막는다
   if (game.wave === 0 && !B.cats(game).length) {
-    showNotice("냥타워를 판에 배치하고 라운드를 시작하세요.");
+    showNotice("냥타워를 맵에 배치하고 라운드를 시작하세요");
     return;
   }
   // 서버가 없거나, 맞출 필요가 없는 웨이브(첫 스테이지 이후)라면 곧바로 시작한다
