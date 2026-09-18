@@ -82,25 +82,27 @@ body:has(#gameRoot:not(.hidden)){background:#10152d;background-image:none}
    글자는 냥타워 카드(18px)와 같은 눈높이 — 예전 10px 보조 글자는 너무 작아 읽히지 않았다. */
 #gameRoot .cols>div:first-child{display:flex;flex-direction:column}
 #gameRoot .cols>div:first-child>.panel{flex:none}
-#gameRoot #sabPanel{flex:1 0 auto;display:flex;flex-direction:column;margin-bottom:0}
-#gameRoot #sabPanel>.pad{flex:1;display:flex;flex-direction:column}
-#gameRoot #sabBar{flex:1}
-#gameRoot .sabdraw{background:#9880c6;border-color:#8a75b8;color:#fff;box-shadow:0 3px 0 #141b34;padding:10px 12px;gap:12px}
+/* 방해 공작 칸은 자라지 않는다 — 남는 높이는 위의 상대 청사(미니맵)가 전부 가져간다 */
+#gameRoot #sabPanel{flex:none;display:flex;flex-direction:column;margin-bottom:0}
+#gameRoot #sabPanel>.pad{display:flex;flex-direction:column;padding-top:6px;padding-bottom:8px}
+#gameRoot #sabBar{flex:none}
+#gameRoot .sabdraw{background:#9880c6;border-color:#8a75b8;color:#fff;box-shadow:0 3px 0 #141b34;padding:7px 12px;gap:10px}
 #gameRoot .sabdraw:hover:not(:disabled){background:#a089d0;border-color:#b39ddb}
-#gameRoot .sabdraw .ic{font-size:30px}
-#gameRoot .sabdraw .meta b{color:#fff;font-size:20px}
+#gameRoot .sabdraw .ic{font-size:24px}
+#gameRoot .sabdraw .meta b{color:#fff;font-size:17px}
 #gameRoot .sabdraw .meta i,#gameRoot .sabdraw .left,#gameRoot .sabdraw .left b{color:#fff7ff;font-family:var(--body);font-size:13px}
-#gameRoot .sabdraw .cost{color:#fff5c5;font-family:var(--disp);font-size:20px}
+#gameRoot .sabdraw .cost{color:#fff5c5;font-family:var(--disp);font-size:17px}
 #gameRoot .prow2{border-radius:11px;background:#283858;margin-top:4px;padding:5px 8px}
 #gameRoot .prow2 .meta b{color:#f4f1e9;font-size:14px}
 #gameRoot .prow2 .meta i{color:#bdc8dc;font-family:var(--body);font-size:10px}
 #gameRoot .prow2 .pct{color:#e1d2ff;background:#394e79;padding:3px 7px;border-radius:12px;font-family:var(--disp);font-size:14px}
-#gameRoot .sabpool{border-top:0;padding-top:0;gap:6px;flex:1;justify-content:space-evenly}
-#gameRoot .srow{background:#283858;border-radius:10px;padding:8px 10px;gap:10px}
-#gameRoot .srow .ic{font-size:24px}
-#gameRoot .srow .meta b{color:#f4f1e9;font-family:var(--disp);font-size:17px}
-#gameRoot .srow .meta i{color:#d0daec;font-family:var(--body);font-size:13px;margin-top:2px}
-#gameRoot .srow .pct{color:#e1d2ff;background:#394e79;border-radius:12px;padding:3px 9px;font-family:var(--disp);font-size:17px}
+#gameRoot .sabpool{border-top:0;padding-top:0;gap:3px;flex:none;margin-top:6px}
+#gameRoot .srow{background:#283858;border-radius:8px;padding:3px 8px;gap:8px}
+#gameRoot .srow .ic{font-size:17px}
+#gameRoot .srow .meta{display:flex;align-items:baseline;gap:6px}
+#gameRoot .srow .meta b{color:#f4f1e9;font-family:var(--disp);font-size:14px}
+#gameRoot .srow .meta i{color:#d0daec;font-family:var(--body);font-size:11px;margin-top:0}
+#gameRoot .srow .pct{color:#e1d2ff;background:#394e79;border-radius:10px;padding:1px 7px;font-family:var(--disp);font-size:13px}
 #gameRoot .sabflash{background:#343252;border-color:#8875b0;border-radius:12px}
 #gameRoot .sabflash .meta b{color:#e7dbff}
 #gameRoot .sabflash .meta i,#gameRoot .sabflash .meta em{color:#cdbfe3}
@@ -193,17 +195,21 @@ body:has(#gameRoot:not(.hidden)){background:#10152d;background-image:none}
 #gameRoot .cols>div:nth-child(3){display:flex;flex-direction:column}
 #gameRoot .cols>div:nth-child(3)>.panel{flex:none}
 #gameRoot #oppPanel{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin-bottom:0}
-#gameRoot #oppPanel>.pad{flex:1;min-height:0;display:flex;flex-direction:column}
+#gameRoot #oppPanel>.pad{flex:1;min-height:0;display:flex;flex-direction:column;padding:6px 8px 8px}
 #gameRoot .oppgrid:not(.many){flex:1;min-height:0;display:flex;flex-direction:column}
 #gameRoot .oppgrid:not(.many) .oppcard{flex:1;min-height:0;display:flex;flex-direction:column}
 #gameRoot .oppgrid:not(.many) .oppcard canvas{
-  flex:1 1 0;min-height:140px;width:auto;height:auto;max-width:100%;aspect-ratio:1;align-self:center}
-#gameRoot .oppcard{background:#263653;border:1.5px solid #4e638d;border-radius:12px;padding:9px}
-#gameRoot .oppcard .opphead{font-family:var(--body);color:#e3eafb;font-size:14px;margin-bottom:8px;gap:10px}
-#gameRoot .oppcard .opphead b{font-family:var(--disp);font-size:20px;color:#f4f1e9}
-#gameRoot .oppcard .opphp{color:#ff9897}
-#gameRoot .oppcard .opphp::before,#gameRoot .oppcard .oppwave::before{color:#bdc7dc}
-#gameRoot .oppcard canvas{border-color:#536994;border-radius:9px;background:#22314b}
+  flex:1 1 0;min-height:140px;width:auto;height:auto;max-width:100%;aspect-ratio:1;align-self:center;margin:0}
+/* 상대 카드 — 상자 겹침을 걷어낸다: 패널 틀 하나만 남기고, 카드 테두리·배경은 없앤다. 맵이 최대한 크게 */
+#gameRoot .oppcard{background:none;border:0;border-radius:0;padding:0}
+/* 머리는 한 줄 — 「원부 내구 22/22 · 라운드 3/10」 작게 */
+#gameRoot .oppcard .opphead{display:flex;justify-content:center;align-items:baseline;gap:14px;margin-bottom:5px;font-family:var(--body)}
+#gameRoot .oppcard .ostat{display:inline-flex;align-items:baseline;gap:5px;padding:0;background:none;border:0;margin:0}
+#gameRoot .oppcard .ostat i{font-style:normal;font-family:var(--disp);font-weight:400;font-size:13px;color:#bdc7dc;letter-spacing:0;line-height:1.2}
+#gameRoot .oppcard .ostat b{font-family:var(--disp);font-size:16px;line-height:1.1;color:#f4f1e9;margin:0}
+#gameRoot .oppcard .ostat.hp b{color:#ff9897}
+#gameRoot .oppcard .opphp::before,#gameRoot .oppcard .oppwave::before{content:none}
+#gameRoot .oppcard canvas{border:0;border-radius:9px;background:#22314b}
 #gameRoot .oppcard.ally{background:#243f51;border-color:#5f9fa5}
 #gameRoot .qmark{background:#3d527c;border:2px solid #6e86b2;color:white;width:28px;height:28px;font-family:var(--disp);font-size:18px;box-shadow:none}
 #gameRoot #fxTags span{color:#ffb4a6;background:#493344;border-radius:8px}

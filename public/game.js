@@ -4677,20 +4677,27 @@ let sabStamps = [];
  * @param {string} sub  도장 아랫줄 — 무엇을 잃었는지 (특허료 −140 · 침입자 8마리 난입! …)
  * @param {number} [dur] 효과가 흐르는 시간(초). 주면 도장도 그만큼 남는다 (타워 정지)
  */
-function slamSabStamp(kind, sub, dur) {
+function slamSabStamp(kind, sub, dur, oppSlot) {
   const d = STAMP[kind];
   if (!d) return;
-  const { w, h } = fxCanvasSize();
+  /* 내 판이면 fx 캔버스, 상대 청사(oppSlot)면 그 미니맵의 **화면 픽셀** 크기를 쓴다 —
+   * 미니맵 캔버스는 devicePixelRatio 배로 크므로 그릴 때(drawOppStamps) 그만큼 다시 키운다 */
+  let w, h;
+  if (oppSlot != null) {
+    const cv = $(`#oppGrid canvas[data-slot="${oppSlot}"]`);
+    if (!cv) return;
+    w = cv.clientWidth; h = cv.clientHeight;
+  } else ({ w, h } = fxCanvasSize());
   if (!w || !h) return;
   const life = Math.max(2.8, (dur || 0) + 0.8);
   // 연달아 맞으면 한가운데에 겹쳐 찍히지 않게 조금씩 비껴 찍는다
-  const n = sabStamps.length;
+  const n = sabStamps.filter((s) => s.opp == oppSlot).length;
   const x = w / 2 + (n ? (Math.random() - 0.5) * w * 0.3 : 0);
   const y = h / 2 + (n ? (Math.random() - 0.5) * h * 0.3 : 0);
   // 잉크가 빠진 자리 — 도장마다 다르게, 찍힌 뒤에도 그대로 (매 프레임 새로 뽑으면 지글거린다)
   const worn = [];
   for (let i = 0; i < 18; i++) worn.push([Math.random(), Math.random(), 2 + Math.random() * 4]);
-  sabStamps.push({ kind, col: d.col, icon: d.icon, head: d.head, sub, x, y,
+  sabStamps.push({ kind, col: d.col, icon: d.icon, head: d.head, sub, x, y, opp: oppSlot == null ? null : oppSlot,
     ang: (Math.random() < 0.5 ? -1 : 1) * (0.12 + Math.random() * 0.14),   // ±7~15°
     life, max: life, t: 0, hit: false, worn, ink: [] });
 }
@@ -4711,7 +4718,7 @@ function stepSabStamps(dt) {
         s.ink.push({ x: s.x, y: s.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
                      r: 2 + Math.random() * 3.5, life: 0.5 + Math.random() * 0.3 });
       }
-      addShake(6, .22);
+      if (s.opp == null) addShake(6, .22);
     }
     for (let k = s.ink.length - 1; k >= 0; k--) {
       const p = s.ink[k];
@@ -4741,8 +4748,28 @@ function stampRect(g, x, y, w, h, r) {
 function drawSabStamps(g) {
   if (!sabStamps.length) return;
   const { w } = fxCanvasSize();
-  const W = Math.min(w * 0.8, 330), H = 118;   // 좁은 화면에서도 판 안에 들어오게
-  for (const s of sabStamps) {
+  drawStampList(g, sabStamps.filter((s) => s.opp == null), w, "— 상 대 공 작 —");
+}
+
+/**
+ * 내가 던진 공작 — 상대 청사 미니맵 위에 같은 도장을 찍는다 (drawOppBoard 끝에서 부른다).
+ * 미니맵 캔버스는 화면 픽셀 × devicePixelRatio 라, 화면 픽셀 기준으로 잡은 도장을 그 배율로 키워 그린다.
+ */
+function drawOppStamps(g, cv, slot) {
+  const list = sabStamps.filter((s) => s.opp != null && String(s.opp) === String(slot));
+  if (!list.length) return;
+  const k = cv.clientWidth ? cv.width / cv.clientWidth : 1;
+  g.save(); g.scale(k, k);
+  drawStampList(g, list, cv.clientWidth || cv.width, "— 내 공 작 —");
+  g.restore();
+}
+
+/** 도장 목록 하나를 그린다. w 는 판의 폭(도장 폭 상한), headline 은 도장 머리말 */
+function drawStampList(g, list, w, headline) {
+  // 도장 크기는 **판 폭의 비율**로 잡는다 — 내 판이든 상대 미니맵이든 판의 86% 폭을 차지하고, 글씨·테두리도 같은 배율로 커진다
+  const W = w * 0.86, H = W * 0.36;
+  const fs = H / 118;
+  for (const s of list) {
     // 떨어짐: 2.6배 → 1배 (뒤로 갈수록 빠르게 — 내리꽂히는 느낌). 찍힌 직후 살짝 눌렸다 튄다
     const p = Math.min(1, s.t / STAMP_DROP);
     let sc = 1 + 1.6 * (1 - p * p);
@@ -4770,32 +4797,32 @@ function drawSabStamps(g) {
     const x0 = -W / 2, y0 = -H / 2;
 
     // 찍힌 자리에 깔리는 어두운 판 — 종이 판 위에서 밝은 잉크색 글씨가 묻히지 않게 받쳐 준다
-    stampRect(g, x0, y0, W, H, 12);
+    stampRect(g, x0, y0, W, H, 12 * fs);
     g.fillStyle = "rgba(24,16,10,.72)"; g.fill();
     // 도장 테두리 — 굵은 바깥 줄 + 가는 안쪽 줄 (고무도장의 이중 테)
     g.strokeStyle = s.col; g.lineJoin = "round";
-    g.lineWidth = 5; g.stroke();
-    stampRect(g, x0 + 8, y0 + 8, W - 16, H - 16, 7);
-    g.lineWidth = 1.6; g.stroke();
+    g.lineWidth = 5 * fs; g.stroke();
+    stampRect(g, x0 + 8 * fs, y0 + 8 * fs, W - 16 * fs, H - 16 * fs, 7 * fs);
+    g.lineWidth = 1.6 * fs; g.stroke();
 
     // 글씨 — 머리말 · 공작 이름 · 무엇을 잃었는지
     g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = s.col;
-    g.font = "bold 12px 'Jua','Gowun Dodum',ui-monospace,monospace";
-    g.fillText("— 상 대 공 작 —", 0, y0 + 24);
-    g.font = "bold 24px 'Jua','Gowun Dodum',ui-monospace,monospace";
+    g.font = `bold ${Math.round(12 * fs)}px 'Jua','Gowun Dodum',ui-monospace,monospace`;
+    g.fillText(headline, 0, y0 + 24 * fs);
+    g.font = `bold ${Math.round(24 * fs)}px 'Jua','Gowun Dodum',ui-monospace,monospace`;
     g.fillText(`${s.icon} ${s.head}`, 0, y0 + H / 2 - 2);
-    g.font = "bold 17px 'Jua','Gowun Dodum',ui-monospace,monospace";
-    g.fillText(s.sub, 0, y0 + H - 26);
+    g.font = `bold ${Math.round(17 * fs)}px 'Jua','Gowun Dodum',ui-monospace,monospace`;
+    g.fillText(s.sub, 0, y0 + H - 26 * fs);
     // 가운데를 가로지르는 가는 밑줄 — 도장 글씨 아래 흔히 있는 괘선
     g.globalAlpha = alpha * 0.6;
-    g.lineWidth = 1.2;
-    g.beginPath(); g.moveTo(x0 + 26, y0 + H - 42); g.lineTo(x0 + W - 26, y0 + H - 42); g.stroke();
+    g.lineWidth = 1.2 * fs;
+    g.beginPath(); g.moveTo(x0 + 26 * fs, y0 + H - 42 * fs); g.lineTo(x0 + W - 26 * fs, y0 + H - 42 * fs); g.stroke();
 
     // 잉크가 빠진 자리 — 어두운 판 색으로 군데군데 덮어서 찍힌 도장답게 만든다
     g.globalAlpha = alpha * 0.85;
     g.fillStyle = "rgba(24,16,10,.9)";
     for (const [u, v, r] of s.worn) {
-      g.beginPath(); g.arc(x0 + u * W, y0 + v * H, r, 0, 7); g.fill();
+      g.beginPath(); g.arc(x0 + u * W, y0 + v * H, r * fs, 0, 7); g.fill();
     }
     g.restore();
   }
@@ -5968,11 +5995,14 @@ function consumeEvents() {
       case "sabotage": {
         log(`<b style="color:#c3a8f5">방해 공작 뽑기</b> ${ev.icon} <b>${ev.name}</b> (${ev.tag}) — 상대 판에 던졌습니다 ` +
             `(−${ev.cost}${ev.gain ? ` · 강탈 <b style="color:#ffd782">+${ev.gain}</b>` : ""} · 남은 ${ev.left}회)`);
-        // 심사현황 로그가 화면에서 빠졌으므로, 나갔다는 사실은 표적의 청사 위에 도장으로 남긴다
-        const opp = $(`#oppGrid canvas[data-slot="${lastSabTarget}"]`) || $("#oppGrid canvas");
-        if (opp) {
-          const ob = opp.getBoundingClientRect();
-          stamp(ob.left + ob.width / 2, ob.top + ob.height / 2, "방 해", ev.name);
+        // 상대가 내 판에 찍는 것과 같은 도장을 상대 청사 미니맵 위에 찍는다 — 「나갔다」가 같은 그림으로 보이게
+        {
+          const d = SABOTAGE[ev.key] || {};
+          const sub = d.kind === "steal"  ? `특허료 ${d.amount} 강탈`
+                    : d.kind === "swarm"  ? `침입자 ${d.amount}마리 난입!`
+                    : d.kind === "freeze" ? `냥타워 ${d.dur}초 정지!` : "";
+          const slot = lastSabTarget != null ? lastSabTarget : (enemySlots()[0]);
+          if (slot != null) slamSabStamp(d.kind, sub, d.dur, slot);
         }
         break;
       }
@@ -6848,8 +6878,10 @@ function renderDuelResult() {
   const pts = won ? RANK.duelWin : drew ? RANK.duelDraw : RANK.duelLose;
   const dmg = won || drew ? 0 : DUEL.leakBase + (r.foeAlive || 0) * DUEL.leakPer;
   const title = won ? `${duelLabel()} 승리` : drew ? "무승부" : `${duelLabel()} 패배`;
+  // 「전멸」은 승패 자체가 말해 주므로 적지 않는다 — 시간 초과 같은 다른 사유만 남긴다
+  const reason = r.reason === "전멸" ? "" : r.reason;
   box.innerHTML = `<b>${title}</b>
-    <i>${r.reason}</i>
+    ${reason ? `<i>${reason}</i>` : ""}
     <span>랭킹 점수 <b>+${pts.toLocaleString()}</b>${dmg ? ` · 등록원부 내구 −${dmg}` : ""}</span>`;
   box.classList.remove("hidden");
 }
@@ -7095,21 +7127,8 @@ function endMatch(iWon, reasonText) {
       ${bar(`⏱️ 클리어 속도 <em>${rank.waves.length}개 라운드</em>`, rank.speed, maxSpeed, "#cda43a")}
       ${bar(`🏛️ 등록원부 <em>${Math.max(0, Math.round(game.hp))}/${game.maxHp}</em>`, rank.hp, Math.max(1, game.maxHp * RANK.hpMul), "#7fbf6a")}
     </div>
-    ${rank.waves.length ? `<div class="rkwaves"><i>라운드별 클리어 (파 타임 대비)</i>
-      ${rank.waves.map((w) => `<span class="${w.pts >= RANK.speedPerWave ? "par" : ""}">
-        <b>R${w.wave}</b>${w.secs.toFixed(1)}초 <em>/ ${w.par.toFixed(0)}초</em> <u>${w.pts}</u></span>`).join("")}
-      </div>` : ""}
-
-    <div class="kv" style="max-width:280px;margin:14px auto 16px;text-align:left">
-      <span>처치</span><b>${s.killed}</b><span>돌파 허용</span><b>${s.leaked}</b>
-      <span>배치 심사관</span><b>${s.cats}명 (최고 Lv${s.maxLv || 1})</b>
-      <!-- 이종 합성을 잠근 동안에는 특수 횟수가 늘 0이라 괄호를 붙이지 않는다 -->
-      <span>합성</span><b>${s.merged}회${s.crafted ? ` (특수 ${s.crafted})` : ""}</b>
-      ${s.specials.length ? `<span>특수 냥타워</span><b>${[...new Set(s.specials)].map((k) => `${CATS[k].icon} ${CATS[k].name}`).join(" · ")}</b>` : ""}
-      ${lineSummaryHtml()}
-      <span>방해 공작</span><b>${s.sabotage.length ? s.sabotage.map((k) => `${SABOTAGE[k].icon} ${SABOTAGE[k].short}`).join(" · ") : "없음"}</b>
-      </div>
-    <div class="lb" id="lb"></div>
+    <!-- 라운드별 클리어 · 처치/합성/공작 같은 세부 통계는 걷어냈다 — 성적표는 등급·점수·네 항목·랭킹까지만 -->
+    <div class="lb" id="lb" style="margin-top:14px"></div>
     <button class="go" id="again" style="padding:10px 26px">로비로</button></div>`;
   $("#modal").classList.add("on");
   $("#again").addEventListener("click", () => location.reload());
@@ -7459,19 +7478,11 @@ function onSabotageDraw() {
   renderHud();
 }
 
-/** 뽑힌 공작을 패널 안에 큼직하게 남긴다 */
+/** 뽑힌 공작 — 패널에는 문구를 남기지 않는다 (칸이 밀려 상대 청사가 깨졌다). 로그에 한 줄, 상대 청사 위 도장으로 알린다 */
 function flashSabotage(key, to) {
   const d = SABOTAGE[key];
-  const box = $("#sabFlash");
-  if (!box) return;
-  box.innerHTML = `<span class="ic">${d.icon}</span>
-    <span class="meta"><b>${d.short} — ${d.name}</b><i>${d.tag}</i><em>${d.desc}</em></span>`;
   void to;
-  box.classList.remove("hidden");
-  // 같은 것이 연달아 나와도 새로 뽑았다는 게 보이도록 등장 애니메이션을 다시 태운다
-  box.classList.remove("pop");
-  void box.offsetWidth;
-  box.classList.add("pop");
+  log(`<b>방해 공작</b> ${d.icon} ${d.short} — ${d.name} → 상대 판에 즉시`);
 }
 
 /** 라운드가 끝나면 방금 던진 공작 칸을 비운다 — 그 라운드 안에서만 보인다 */
@@ -8090,8 +8101,10 @@ function buildOppPanel() {
   grid.className = "oppgrid";
   grid.innerHTML = otherSlots().map((s) => `
     <div class="oppcard" data-slot="${s}">
-      <div class="opphead"><b>${slotName(s)}</b><i></i>
-        <span class="opphp">-</span><span class="oppwave">0/${BAL.waveCount}</span></div>
+      <!-- P1 같은 자리 이름은 뺐다 — 1:1 이라 상대는 하나뿐이다. 내구·라운드를 내 청사 칸처럼 크게 -->
+      <div class="opphead">
+        <span class="ostat hp"><i>원부 내구</i><b class="opphp">-</b></span>
+        <span class="ostat wave"><i>라운드</i><b class="oppwave">0/${BAL.waveCount}</b></span></div>
       <canvas data-slot="${s}" width="280" height="280"></canvas>
     </div>`).join("");
 }
@@ -8129,6 +8142,7 @@ function drawOppBoard(cv, snap, now) {
   if (!snap) {
     g.fillStyle = "rgba(200,210,230,.6)"; g.font = `${Math.max(12, cv.width * 0.045)}px sans-serif`; g.textAlign = "center";
     g.fillText("정보를 기다리는 중…", cv.width / 2, cv.height / 2);
+    drawOppStamps(g, cv, cv.dataset.slot);
     return;
   }
   const s = snap;
@@ -8231,6 +8245,8 @@ function drawOppBoard(cv, snap, now) {
       g.restore();
     }
   g.restore();
+  // 내가 던진 공작 도장 — 냥타워·침입자 위에 얹힌다 (내 판의 drawSabStamps 와 같은 그림)
+  drawOppStamps(g, cv, cv.dataset.slot);
 }
 
 /* ═══════ 스테이지 전장 원화 ═══════ */
