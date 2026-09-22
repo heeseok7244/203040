@@ -445,15 +445,19 @@ const PASSIVES = [
   /* ── 💥 침해 계열 — 한 방을 무겁게, 그 무게를 옆으로 퍼뜨린다 ──
    * 광역 비율은 **직격의 일부**에서 멈춘다 (BAL.splashFKnee/splashFCap — stats.js 의 softCap 참고).
    * 예전(18%p × 3장 + 폐기명령 8%p × 2 + 5단계 50%p = 120%)에는 광역이 직격보다 세져 사거리 안
-   * 무리가 통째로 녹았고, 대전장에서는 상대 덱이 2초 만에 전멸했다. */
-  { key: "equiv", name: "균등침해", icon: "💥", line: "splash", stat: "splash", amount: { r: 40, f: 0.15 },
-    desc: "모든 냥타워가 광역 피해를 얻는다 (반경 +0.5칸 · 피해 15%p)",
-    detail: "문언에 없어도 실질이 같으면 침해다. 광역이 없던 냥타워도 명중 지점 둘레를 함께 때리게 되고, 이미 가진 냥은 반경과 비율이 더 커진다. <b>광역은 직격 피해에 비례</b>하므로 한 방이 무거운 📄 출원냥에게 가장 크게 실린다. 광역 비율은 쌓을수록 오름폭이 줄어 <b>직격의 55%</b>를 넘지 않는다." },
+   * 무리가 통째로 녹았고, 대전장에서는 상대 덱이 2초 만에 전멸했다.
+   * 그래서 15%p · 상한 55% 로 눌렀더니 이번에는 **청사 판의 웨이브가 안 죽었다** — 광역이 직격의
+   * 절반에 못 미치면 후반(라운드 8·9)의 백 마리 남짓한 무리를 쓸어 담을 것이 없다. 지금은 여기 값이
+   * **청사 판 기준(20%p · 상한 80%)** 이고, 대전장은 명세를 만들 때 DUEL.splashFMul 을 한 번 더 곱해
+   * 예전(15%p · 55%)과 같은 세기로 내려간다 — 판에서는 무리를 쓸고, 대전장에서는 직격의 일부로 남는다. */
+  { key: "equiv", name: "균등침해", icon: "💥", line: "splash", stat: "splash", amount: { r: 44, f: 0.20 },
+    desc: "모든 냥타워가 광역 피해를 얻는다 (반경 +0.55칸 · 피해 20%p)",
+    detail: "문언에 없어도 실질이 같으면 침해다. 광역이 없던 냥타워도 명중 지점 둘레를 함께 때리게 되고, 이미 가진 냥은 반경과 비율이 더 커진다. <b>광역은 직격 피해에 비례</b>하므로 한 방이 무거운 📄 출원냥에게 가장 크게 실린다. 광역 비율은 쌓을수록 오름폭이 줄어 <b>직격의 80%</b>를 넘지 않는다 (1:1 대전장에서는 그 70% 로 실린다)." },
   { key: "damages", name: "손해액 산정", icon: "🔨", line: "splash", stat: "heavy", amount: 1,
     desc: "한 방이 무거운 냥타워 공격력 +40%",
     detail: "배상액은 한 건의 무게로 정해진다. <b>기본 공속이 초당 1.35회 이하</b>인 냥타워(📄 출원냥 · 📐 특허범위냥 · 🔗 인용문헌냥 · ⚖️ 심판합의체냥)의 공격력이 40% 오른다. 고를 때마다 누적된다 (공격력 % 합이 60% 를 넘으면 오름폭이 줄어든다)." },
   { key: "destroy", name: "폐기명령", icon: "🧨", line: "splash", stat: "splashUp", amount: 0.25,
-    desc: "광역 반경 +25%p · 광역 피해 비율 +6%p",
+    desc: "광역 반경 +25%p · 광역 피해 비율 +8%p",
     detail: "침해품을 그 자리에서 폐기한다. <b>이미 광역 피해를 가진 냥타워</b>만 커진다 — 「균등침해」로 광역을 먼저 얻어 두어야 값을 한다. 반경 배율은 합연산으로 쌓인다." },
 
   /* ── 🎯 입증 계열 — 급소를 짚는다. 주사위를 자주 굴리는 냥일수록 웃는다 ── */
@@ -776,9 +780,14 @@ const DUEL = {
   rangeMul: 0.76,
   /* 광역 반경을 대전장으로 옮길 때 rangeMul 위에 한 번 더 곱하는 값. 대전장은 옆에서 본 한 줄이라
    * 거리를 x 하나로만 재고 진형의 열 간격이 78px 이하다 — 청사 판 반경을 그대로 옮기면(≈150px)
-   * 한 발이 상대 진형 세 열(아홉 명)을 통째로 때렸다. 0.65 면 풀 빌드(반경 상한 200px → 99px)도
-   * 직격 열의 양옆 한 열까지만 닿는다 (그 위에 splashMax 가 인원을 자른다). */
-  splashRMul: 0.65,
+   * 한 발이 상대 진형 세 열(아홉 명)을 통째로 때렸다. 0.55 면 풀 빌드(청사 반경 ≈190px → 79px)도
+   * 직격 열의 양옆 한 열까지만 닿는다 (그 위에 splashMax 가 인원을 자른다).
+   * (청사 판의 반경 무릎을 80 → 100px 로 올리면서 0.65 → 0.55 로 내려 대전장 반경은 예전과 같다) */
+  splashRMul: 0.55,
+  /* 광역 **비율**에 곱하는 값. 청사 판의 광역(균등침해 20%p · 상한 80%)은 백 마리 웨이브를 쓸어 담으라고
+   * 잡은 값이라 그대로 옮기면 대전장에서 다시 「한 발에 앞줄 넷이 녹는」 판이 된다. 0.7 이면 풀 빌드
+   * 74% → 52% — 광역을 25%p · 상한 55% 로 눌러 10라운드 대전이 10~30초 가던 때의 값이다. */
+  splashFMul: 0.7,
   /* 한 발의 광역이 덮는 최대 인원(직격 제외, 가까운 순). 같은 열은 거리 0 이라 반경이 조금만 넘어도
    * 세 열이 한꺼번에 맞는 계단이 생긴다 — 그 계단을 이 상한이 고른다 */
   splashMax: 4,
@@ -909,14 +918,26 @@ const BAL = {
    * (출원냥 Lv3 넷이면 초당 2000 안팎을 낸다 — 도용업자 42 × 3.4 = 143 은 한 방이다.)
    * 그래서 표로 직접 적는다. 라운드 1~3 은 예전과 거의 같고(초반은 그대로 빡빡하게), 라운드 5
    * 부터 가파르게 휜다. 4 · 7 · 10 은 대전 라운드라 값이 쓰이지 않지만 자리를 비우지 않는다
-   * (WAVES 와 같은 이유 — 라운드 번호와 배열 자리를 맞춘다). 표를 넘어가면 마지막 값으로 간다. */
-  hpScale: [1.0, 1.3, 1.7, 2.3, 3.6, 5.6, 8.5, 13, 20, 30],
+   * (WAVES 와 같은 이유 — 라운드 번호와 배열 자리를 맞춘다). 표를 넘어가면 마지막 값으로 간다.
+   *
+   * (최신) 후반을 3.6 · 5.6 · 8.5 · 13 · 20 → 3.0 · 4.2 · 6 · 8 · 11 로 내렸다. 예전 표는 **승진(Lv3)에 광역
+   * (반경 1.4칸 · 70%)이 딸려 오던 때** 잰 것이다 — 그 광역을 걷어내고 균등침해까지 눌렀더니 라운드 8·9 의
+   * 침입자 체력 총량(≈ 10만 · 23만)을 화력(초당 1000~1700)이 따라가지 못해, 헤드리스 봇이 어떤 빌드를
+   * 밀어도 라운드 8 에서 무너졌다 (광역 덱만 겨우 살아 라운드 9 에 16 을 잃었다). 지금 표는 계열 하나를
+   * 곧게 민 덱(광역 · 치명타 · 사거리 · 대리)이 라운드 9 를 0~3 손실로 막고, 이것저것 섞은 덱은 4~9,
+   * 계열이 냥과 안 맞는 덱(출원냥에 치명타)은 20 남짓 잃는 값이다. */
+  hpScale: [1.0, 1.3, 1.7, 2.3, 3.0, 4.2, 6.0, 8.0, 11, 30],
   /* 소환 간격 — 라운드마다 spawnGapStep 씩 줄어 spawnGapMin 까지 촘촘해진다. 체력만 올리면
    * 한 마리씩 나와 한 마리씩 죽는 것은 그대로라, 후반에는 **여럿이 한꺼번에** 몰려 사거리 안에
    * 쌓이도록 한다 — 그래야 다중조준·광역·둔화가 값을 하고 줄이 밀리는 긴장이 생긴다. */
   spawnGapStep: 0.03, spawnGapMin: 0.28,
   incomeBase: 10, incomePerWave: 3,    // 수입도 줄여서 후반 화력 스노우볼을 억제
   catCostMul: 1.0,           // 같은 종류를 더 배치해도 가격은 그대로 — 임용 비용은 항상 정가다
+  /* 판매 — 냥타워를 우클릭하면 **구매금액의 80%** 를 돌려받고 그 자리에서 사라진다 (준비 단계만).
+   * 구매금액은 임용가에 합성 레벨을 얹은 값(catValue: 임용가 × 3^(레벨−1))이다 — Lv2 는 셋을 태운
+   * 것이니 셋 값의 80% 를 돌려준다. 20% 는 「잘못 산 것을 무르는 값」이지 벌금이 아니다 —
+   * 100% 면 매 라운드 덱을 통째로 갈아엎는 것이 공짜가 되어 빌드를 정하는 무게가 사라진다 */
+  sellRate: 0.8,
   pierceCap: 70, slowCap: 70,
   spawnGap: 0.52, spawnGapBoss: 2.0,   // 더 촘촘하게 몰아친다
   waveCount: 10,          // 한 판은 10라운드 — 그중 4·7·10 은 1:1 대전 (DUEL_WAVES)
@@ -978,12 +999,15 @@ const BAL = {
    * 손해액 산정 3장 + 보정 3장 + 보좌면 +200% 가 나와 10라운드 대전이 5초 안에 끝났다.
    *   dmgPct  +60% 까지 그대로 · +120% → +101% · +200% → +133% · +300% → +157%
    *   critM   +0.6 까지 그대로 · +1.4(승진 + 3배 배상 2장) → +1.11 · +2.3 → +1.36
-   *   splashF 25%p 까지 그대로 · 77%p(풀 빌드) → 53%p · 상한 55%p — 광역은 언제나 직격의 일부다
-   *   splashR 1칸(80px)까지 그대로 · 상한 2.4칸 */
+   *   splashF 35%p 까지 그대로 · 106%p(풀 빌드) → 74%p · 상한 80%p — **청사 판 기준**이다.
+   *           대전장은 여기에 DUEL.splashFMul(0.7)을 곱해 풀 빌드 52% 로 실린다 (예전 상한 55% 시절의 값).
+   *           25%p · 상한 55% 로 눌렀을 때는 1:1 은 좋아졌지만 라운드 8·9 의 백 마리 웨이브가 안 죽었다 —
+   *           광역이 직격의 절반이 안 되면 무리를 쓸어 담는 빌드가 성립하지 않는다
+   *   splashR 1.25칸(100px)까지 그대로 · 상한 3칸 (풀 빌드 ≈ 2.4칸) */
   dmgPctKnee: 0.6, ratePctKnee: 0.6, critMKnee: 0.6,
-  splashFKnee: 0.25, splashFCap: 0.55,
-  splashRKnee: 80, splashRCap: 200,
-  splashUpF: 0.06,                     // 「폐기명령」 한 장당 광역 비율 +6%p (반경은 amount 만큼 합연산 배율)
+  splashFKnee: 0.35, splashFCap: 0.80,
+  splashRKnee: 100, splashRCap: 240,
+  splashUpF: 0.08,                     // 「폐기명령」 한 장당 광역 비율 +8%p (반경은 amount 만큼 합연산 배율)
   /* ── 곱연산 축 ──
    * 공격력 % 를 올리는 것(보정 · 손해액 산정 · 선행조사 · 원천특허 · 보좌 · 총동원)은 **전부 더한 뒤
    * 한 번만 곱한다.** 예전에는 하나하나 따로 곱해서, 각각은 +12~40% 라 얌전해 보여도 저격수
@@ -1001,7 +1025,7 @@ const BAL = {
   tierRangeUp: 0.20,         // 📐 권리범위 3단계 — 사거리 +20%
   tierLongDmg: 0.14,         // 📐 권리범위 5단계 — 기본 사거리 초과분 100px 당 공격력 +14%
   tierSplashR: 0.35,         // 💥 침해 5단계 — 광역 반경 +35%p (폐기명령과 합연산)
-  tierSplashF: 0.20,         // 💥 침해 5단계 — 광역 피해 비율 +20%p (softCap 전)
+  tierSplashF: 0.30,         // 💥 침해 5단계 — 광역 피해 비율 +30%p (softCap 전 · 청사 판 기준)
   tierSlowDmg: 0.30,         // ⏳ 절차 3단계 — 둔화된 침입자가 받는 피해 +30%
   tierStunC: 0.10,           // ⏳ 절차 5단계 — 모든 명중에 붙는 정지 확률
   tierStunD: 0.5,            // 그 정지의 지속시간
@@ -2278,7 +2302,8 @@ function makeRoster(game) {
       sl: s.slow || 0,
       // 광역 반경은 사거리 배율 위에 splashRMul 을 한 번 더 곱한다 — 한 줄 전장이라 그대로 옮기면 세 열이 통째로 맞는다
       sp: s.splash ? Math.round(s.splash.r * DUEL.rangeMul * DUEL.splashRMul) : 0,
-      spf: s.splash ? r3(s.splash.f) : 0,
+      // 광역 비율도 대전장 배율(splashFMul)을 곱한다 — 판의 값은 웨이브를 쓸어 담는 값이라 그대로 옮기면 세다
+      spf: s.splash ? r3(s.splash.f * DUEL.splashFMul) : 0,
       // 방어(0~1)와 방어무시(%p). 방어무시는 상대 방어를 그 비율만큼 깎는다. 승진 방어(guard.armor)가 얹힌다
       ar: r3(Math.min(0.85, (prof.armor || 0) + guard.armor)),
       // 승진냥이 덱 전체에 주는 고정 감소 — 방어무시가 못 뚫는다
@@ -3168,6 +3193,33 @@ class Game {
     this.recompute();
     this.events.push({ t: "buy", what: "cat", key, name: CATS[key].name, cost: c });
     return p;
+  }
+
+  // ── 판매 ──
+  /** 이 조각을 팔면 돌려받는 특허료 — 구매금액(catValue)의 BAL.sellRate. @param {any} p */
+  sellPrice(p) {
+    return Math.round(this.catValue(p) * BAL.sellRate);
+  }
+
+  /**
+   * 냥타워를 판다 — 판 위든 대기열이든. 준비 단계에만 되고, 돌려받는 돈은 sellPrice 다.
+   * 합성 레벨은 그대로 값에 실린다 (Lv2 = 셋 값의 80%) — 애써 합친 것이 한 마리 값으로 팔리면
+   * 우클릭 한 번이 사고가 된다.
+   * @param {any} p @returns {number} 돌려받은 특허료 (못 팔았으면 0)
+   */
+  sellCat(p) {
+    if (this.phase !== "prep" || !p || p.kind !== "cat") return 0;
+    if (!this.pieces.includes(p) && !this.tray.includes(p)) return 0;
+    const refund = this.sellPrice(p);
+    const [x, y] = [p.x, p.y];
+    this.pieces = this.pieces.filter((q) => q !== p);
+    this.tray = this.tray.filter((q) => q !== p);
+    p.x = -1; p.y = -1;
+    this.gold += refund;
+    this.recompute();
+    this.events.push({ t: "sell", key: p.key, name: CATS[p.key].name, icon: CATS[p.key].icon,
+                       lv: Math.max(1, p.lv || 1), refund, x, y, placed: x >= 0 });
+    return refund;
   }
 
   // ── 합성 ──
@@ -4403,9 +4455,33 @@ function pieceEl(p, onBoard) {
   el.appendChild(badge);
 
   el.addEventListener("pointerdown", (e) => startDrag(e, p));
+  // 우클릭 — 판매 (구매금액의 80%). 브라우저 메뉴는 늘 막는다 — 웨이브 중에도 메뉴가 뜨면 판이 가려진다
+  el.addEventListener("contextmenu", (e) => { e.preventDefault(); sellPiece(p, e); });
   el.addEventListener("pointerenter", (e) => showTip(e, p));
   el.addEventListener("pointerleave", hideTip);
   return el;
+}
+
+/**
+ * 냥타워를 판다 — 판 위 · 대기열 타일을 **우클릭**했을 때.
+ * 준비 단계에만 된다 (임용·합성·자리 옮기기와 같은 규칙). 돌려받는 돈은 구매금액의 80%
+ * (BAL.sellRate) 이고, 합성 레벨만큼 값이 실린다. 판 위에서 팔면 그 자리에 「판 매」 도장이 찍히고
+ * 돌려받은 액수가 떠오른다 — 우클릭 한 번에 냥이 사라지는 것이라, 무슨 일이 일어났는지 그 자리에서 보여야 한다.
+ * @param {any} p @param {MouseEvent} e
+ */
+function sellPiece(p, e) {
+  if (game.phase !== "prep" || game.awaitingPassive || game.awaitingAugment || dragging) return;
+  hideTip();
+  const wasOn = p.x >= 0, [px, py] = wasOn ? B.pieceCenter(p) : [0, 0];
+  const refund = game.sellCat(p);
+  if (!refund) return;
+  render();
+  if (wasOn) {
+    stamp(...boardToScreen(px, py), "판 매", `${CATS[p.key].name} +₩${refund}`);
+    addFloater(px, py - 24, `+${refund}`, "#cda43a", { big: true, life: 1.0, rise: 26 });
+  } else {
+    stamp(e.clientX, e.clientY, "판 매", `${CATS[p.key].name} +₩${refund}`);
+  }
 }
 
 /** 맵 원본의 고정 칸 (개방 여부 표시용) */
@@ -6155,6 +6231,9 @@ function consumeEvents() {
       case "buy":
         log(`<b>심사관 임용</b> ${ev.name} 배치 (−${ev.cost})`);
         break;
+      case "sell":
+        log(`<b style="color:#b9a98a">판매</b> ${ev.icon} ${ev.name}${ev.lv > 1 ? ` Lv${ev.lv}` : ""} → 특허료 <b>+${ev.refund}</b>`);
+        break;
       case "expand":
         log(`<b>${ev.name}</b> ${ev.cells}칸 개방 (−${ev.cost})`);
         break;
@@ -7201,6 +7280,7 @@ function maybeSendState(now) {
  */
 function startDrag(e, p, srcEl) {
   if (game.phase !== "prep") return;
+  if (e.button !== 0) return;     // 우클릭은 판매(contextmenu)다 — 유령을 띄우지 않는다
   e.preventDefault(); hideTip();
   const el = srcEl || /** @type {HTMLElement} */ (e.currentTarget);
   const r = el.getBoundingClientRect();
@@ -7317,7 +7397,8 @@ function showTip(e, p) {
     ${specialTipHtml(p.key, s)}
     ${LV3_GUARD[p.key] ? `<i style="color:#9fe0b4">🛡 ${lv >= BAL.promoteLv ? "승진 효과" : "Lv3 승진 시"} — 대전장에서 아군 전체 ${guardDesc(p.key)}</i>` : ""}
     ${d.special ? `<i style="color:#6fe0d0">이종 합성 전용 — ${(RECIPES.find((r) => r.key === p.key) || { need: [] }).need.map((k) => CATS[k].name).join(" + ") || "지금은 잠겨 있습니다"}</i>` : ""}
-    ${s && s.golden ? `<i style="color:#cda43a">직권보정 — 이번 웨이브 공격력 3배</i>` : ""}`;
+    ${s && s.golden ? `<i style="color:#cda43a">직권보정 — 이번 웨이브 공격력 3배</i>` : ""}
+    ${p.uid ? `<i style="color:#b9a98a">우클릭 — 판매 <b>₩${game.sellPrice(p)}</b> (구매금액의 ${Math.round(BAL.sellRate * 100)}%${game.phase !== "prep" ? " · 준비 단계에만" : ""})</i>` : ""}`;
   t.style.display = "block";
   // 말풍선 크기는 테마·내용에 따라 다르므로 그린 뒤 실제 크기로 화면 안에 넣는다
   t.style.left = Math.max(0, Math.min(e.clientX + 14, innerWidth - t.offsetWidth - 8)) + "px";
