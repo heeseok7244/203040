@@ -17,8 +17,11 @@
  <button onclick="BGM.play('defeat')">패배</button>
  <button class="stop" onclick="BGM.stop()">정지</button>
 </div>
+<h2 style="margin:20px 0 0;font-size:18px">효과음</h2>
+<div class="row" id="sfxRow"></div>
 <label>볼륨 <input type="range" min="0" max="1" step="0.05" value="0.6" oninput="BGM.setVolume(+this.value)"></label>
 <div id="now"></div>
 <script src="bgm.js"></script>
+<script>SFX.names.forEach(function(n){var b=document.createElement("button");b.textContent=n;b.style.fontSize="14px";b.style.padding="8px 14px";b.onclick=function(){SFX.play(n)};document.getElementById("sfxRow").appendChild(b)});</script>
 <script>setInterval(function(){document.getElementById('now').textContent='재생 중: '+(BGM.current||'없음')},300)</script>
 </body></html>

@@ -6,6 +6,17 @@
 //   BGM.play('victory') // 승리 팡파레 (한 번 재생 후 정지)
 //   BGM.play('defeat')  // 패배
 //   BGM.stop(); BGM.setVolume(0.5); BGM.toggleMute();
+// 효과음:
+//   SFX.play('click')  // 버튼 · UI
+//   SFX.play('place')  // 냥타워 배치     SFX.play('sell')     판매
+//   SFX.play('merge')  // 합성            SFX.play('promote')  승진 합성
+//   SFX.play('craft')  // 이종 합성       SFX.play('expand')   구역 개방
+//   SFX.play('wave')   // 웨이브 개시     SFX.play('pick')     강화·증강 선택
+//   SFX.play('kill')   // 처치(잔잔)      SFX.play('leak')     돌파당함
+//   SFX.play('fee')    // 합의금 징수     SFX.play('skill')    고유 스킬 발동
+//   SFX.play('win')    // 대전 승리       SFX.play('lose')     대전 패배
+//   SFX.play('error')  // 할 수 없는 행동 SFX.play('sabotage') 공작 던짐/맞음
+//   SFX.setVolume(0.8)
 // 브라우저 정책상 첫 사용자 클릭/키 입력 이후에 play()를 호출해야 소리가 납니다.
 (function (global) {
   const NOTE = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
@@ -228,4 +239,70 @@
   function toggleMute() { muted = !muted; if (master) master.gain.value = muted ? 0 : volume; return muted; }
 
   global.BGM = { play, stop, setVolume, toggleMute, get current() { return current; }, songs: Object.keys(SONGS) };
+
+  // ─── 효과음 ─────────────────────────────────────────────
+  // 짧은 합성음 — 오실레이터 주파수 슬라이드 + 노이즈. BGM 과 컨텍스트를 공유하되 게인은 따로 둔다
+  // (BGM.stop() 이 마스터를 갈아끼워도 효과음은 끊기지 않게).
+  let sfxGain = null, sfxVolume = 0.8, sfxMuted = false;
+  function ensureSfx() {
+    ensureCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    if (!sfxGain) { sfxGain = ctx.createGain(); sfxGain.gain.value = sfxMuted ? 0 : sfxVolume; sfxGain.connect(ctx.destination); }
+  }
+  // 한 음: wave, 시작 주파수 → 끝 주파수(slide), 길이, 세기, 시작 오프셋
+  function blip(wave, f0, f1, dur, gain, at) {
+    const t = ctx.currentTime + (at || 0);
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = wave;
+    o.frequency.setValueAtTime(f0, t);
+    if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(gain, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g).connect(sfxGain); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function burst(dur, gain, hp, at) {
+    const t = ctx.currentTime + (at || 0);
+    const s = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+    s.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = hp;
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    s.connect(f).connect(g).connect(sfxGain); s.start(t); s.stop(t + dur + 0.02);
+  }
+  const SFX_DEFS = {
+    click:    () => blip('square', 900, 700, 0.05, 0.12),
+    place:    () => { blip('triangle', 300, 600, 0.08, 0.3); burst(0.06, 0.15, 3000); },                       // 툭, 놓는 느낌
+    sell:     () => { blip('square', 800, 400, 0.12, 0.15); blip('square', 600, 300, 0.12, 0.12, 0.06); },   // 하행 두 음
+    merge:    () => { [523, 659, 784].forEach((f, i) => blip('square', f, f, 0.12, 0.18, i * 0.07)); },      // 도미솔 상행
+    promote:  () => { [523, 659, 784, 1047].forEach((f, i) => blip('square', f, f, 0.14, 0.2, i * 0.08)); blip('triangle', 1047, 1568, 0.4, 0.2, 0.32); },
+    craft:    () => { blip('sawtooth', 200, 1200, 0.3, 0.18); [880, 1109, 1319].forEach((f, i) => blip('triangle', f, f, 0.2, 0.2, 0.25 + i * 0.07)); },
+    expand:   () => { blip('triangle', 220, 440, 0.25, 0.3); burst(0.2, 0.2, 800, 0.05); },                  // 쿵 + 흙 소리
+    wave:     () => { [392, 523].forEach((f, i) => blip('square', f, f, 0.15, 0.2, i * 0.12)); blip('square', 784, 784, 0.35, 0.22, 0.24); }, // 나팔
+    pick:     () => { blip('triangle', 660, 990, 0.12, 0.25); blip('triangle', 990, 1320, 0.15, 0.2, 0.1); },
+    kill:     () => { blip('square', 700, 250, 0.08, 0.08); },
+    leak:     () => { blip('sawtooth', 400, 150, 0.3, 0.25); burst(0.15, 0.2, 500); },
+    fee:      () => { blip('square', 300, 200, 0.18, 0.22); blip('square', 250, 160, 0.22, 0.2, 0.15); },
+    skill:    () => { blip('sawtooth', 150, 900, 0.25, 0.22); burst(0.25, 0.25, 2000, 0.05); blip('triangle', 1200, 1200, 0.3, 0.15, 0.2); },
+    win:      () => { [523, 659, 784, 1047].forEach((f, i) => blip('square', f, f, 0.18, 0.2, i * 0.1)); blip('square', 1047, 1047, 0.5, 0.22, 0.4); },
+    lose:     () => { [440, 415, 392, 370].forEach((f, i) => blip('triangle', f, f, 0.25, 0.22, i * 0.2)); },
+    error:    () => { blip('square', 220, 200, 0.12, 0.18); blip('square', 220, 200, 0.12, 0.18, 0.14); },   // 삑삑
+    sabotage: () => { blip('sawtooth', 600, 120, 0.35, 0.22); burst(0.3, 0.3, 1200, 0.1); },
+  };
+  const sfxLast = {};
+  function sfxPlay(name) {
+    const def = SFX_DEFS[name];
+    if (!def) { console.warn('[SFX] unknown:', name); return; }
+    try { ensureSfx(); } catch (e) { return; }
+    // 같은 효과음이 한 프레임에 여러 번 겹치면 소리가 뭉개진다 — 40ms 안에 온 같은 소리는 하나만 낸다
+    const now = performance.now();
+    if (now - (sfxLast[name] || 0) < 40) return;
+    sfxLast[name] = now;
+    def();
+  }
+  global.SFX = {
+    play: sfxPlay,
+    setVolume(v) { sfxVolume = Math.max(0, Math.min(1, v)); if (sfxGain && !sfxMuted) sfxGain.gain.value = sfxVolume; },
+    setMuted(m) { sfxMuted = !!m; if (sfxGain) sfxGain.gain.value = sfxMuted ? 0 : sfxVolume; },
+    names: Object.keys(SFX_DEFS),
+  };
 })(window);
