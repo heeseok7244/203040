@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>묘한특허 포스터 A3</title>
+<link rel="stylesheet" href="fonts-embed.css">
+<style>
+  @page { size: 297mm 420mm; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 297mm; height: 420mm; background: #0d1030; }
+  body {
+    font-family: 'Jua', 'Gowun Dodum', sans-serif;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
+  :root {
+    --navy-0: #0d1030;
+    --navy-1: #191d4d;
+    --navy-2: #232a6b;
+    --panel:  #11143a;
+    --cream:  #fdf6e6;
+    --orange: #ff9b3d;
+    --orange-d: #e2701b;
+    --red:    #ef5350;
+    --blue:   #4fc3f7;
+    --green:  #57cc7a;
+    --purple: #a78bfa;
+  }
+
+  .poster {
+    position: relative;
+    width: 297mm; height: 420mm;
+    overflow: hidden;
+    background:
+      radial-gradient(120% 70% at 50% -8%, #3a3f9e 0%, #232a6b 38%, #171b49 68%, #0d1030 100%);
+    padding: 13mm 13mm 0;
+  }
+  /* 별·발자국 무늬 — 로비 밤하늘의 결 */
+  .stars { position: absolute; inset: 0; pointer-events: none; }
+  .stars i {
+    position: absolute; display: block; border-radius: 50%;
+    background: #fff; opacity: .55;
+  }
+  .moon {
+    position: absolute; right: 18mm; top: 17mm;
+    font-size: 13mm; color: #ffd98a; opacity: .9;
+    filter: drop-shadow(0 0 4mm rgba(255,216,138,.5));
+  }
+
+  /* ─────────── 머리 ─────────── */
+  .head { position: relative; text-align: center; padding-top: 2mm; height: 92mm; }
+  .contest {
+    display: inline-block;
+    font-family: 'Do Hyeon', sans-serif;
+    font-size: 5.1mm; letter-spacing: .6mm;
+    color: #ffe9c9;
+    background: rgba(255,155,61,.14);
+    border: .55mm solid rgba(255,155,61,.75);
+    border-radius: 99mm;
+    padding: 1.7mm 7mm 1.4mm;
+    box-shadow: 0 0 6mm rgba(255,155,61,.25);
+  }
+  .contest b { color: var(--orange); font-weight: 400; }
+
+  .title {
+    position: relative;
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 40mm; line-height: 1.02; letter-spacing: 1mm;
+    color: var(--cream);
+    margin-top: 3mm;
+    text-shadow:
+      0 1.1mm 0 #b7532a, 0 2.2mm 0 #8c3a1c,
+      0 3.4mm 0 #5c2412, 0 5mm 8mm rgba(0,0,0,.55);
+    -webkit-text-stroke: 1.5mm #2b1a4d;
+    paint-order: stroke fill;
+  }
+  .title .dot { color: var(--orange); }
+  .tagline {
+    font-family: 'Do Hyeon', sans-serif;
+    font-size: 8.4mm; color: #ffffff; margin-top: 4.5mm;
+    text-shadow: 0 .8mm 0 rgba(0,0,0,.45);
+  }
+  .tagline em { font-style: normal; color: var(--orange); }
+  .subline {
+    font-family: 'Gowun Dodum', sans-serif;
+    font-size: 4.6mm; color: #bcc3ef; margin-top: 2.2mm; letter-spacing: .2mm;
+  }
+  .genre {
+    margin-top: 4mm; display: flex; gap: 2.5mm; justify-content: center;
+  }
+  .genre span {
+    font-family: 'Do Hyeon', sans-serif; font-size: 4.3mm;
+    color: #eaf0ff; background: rgba(255,255,255,.1);
+    border: .35mm solid rgba(255,255,255,.28); border-radius: 2mm;
+    padding: 1.3mm 3.6mm .9mm;
+  }
+
+  .hero { position: absolute; bottom: -2mm; width: 34mm; }
+  .hero img { width: 100%; display: block; filter: drop-shadow(0 2mm 3mm rgba(0,0,0,.5)); }
+  .hero.left  { left: 6mm; transform: rotate(-6deg); }
+  .hero.right { right: 6mm; transform: rotate(6deg) scaleX(-1); }
+
+  /* ─────────── 네컷 ─────────── */
+  .strip { display: flex; gap: 6mm; margin-top: 1mm; }
+  .cuts {
+    flex: 1;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 5.5mm;
+  }
+  .cut {
+    background: var(--cream);
+    border-radius: 3.5mm;
+    padding: 3mm 3mm 0;
+    box-shadow: 0 2.5mm 6mm rgba(0,0,0,.42);
+    position: relative;
+    display: flex; flex-direction: column;
+  }
+  .shot {
+    position: relative;
+    height: 99mm;
+    border-radius: 2mm;
+    overflow: hidden;
+    background: #10142f;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .shot img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .no {
+    position: absolute; left: 0; bottom: 0; z-index: 2;
+    font-family: 'Black Han Sans', sans-serif; font-size: 5.2mm;
+    color: #3a2410; background: var(--orange);
+    padding: .9mm 2.8mm .5mm; border-top-right-radius: 2.5mm;
+    box-shadow: .6mm -.6mm 0 rgba(0,0,0,.2);
+  }
+  .cap { padding: 4.2mm 1mm 4.6mm; text-align: center; }
+  .cap b {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 10.6mm; line-height: 1.12; color: #22264f; font-weight: 400;
+    display: block; letter-spacing: -.2mm;
+  }
+  .cap b mark {
+    background: var(--mk); color: #fff8ec; padding: .6mm 2.2mm .2mm;
+    border-radius: 1.8mm; display: inline-block;
+    box-shadow: 0 .8mm 0 rgba(0,0,0,.18);
+  }
+  .c4 .shot { background: #0f1333; }
+  .c1 { --mk: #ef5350; }
+  .c2 { --mk: #e2701b; }
+  .c3 { --mk: #7c5cd6; }
+  .c4 { --mk: #2b8fd8; }
+  .cap span {
+    font-family: 'Gowun Dodum', sans-serif;
+    font-size: 4.3mm; color: #5a5f86; display: block; margin-top: 2.2mm;
+  }
+
+  /* 사이드 제목 — 묘한네컷 */
+  .side {
+    width: 26mm;
+    background: linear-gradient(180deg, var(--orange) 0%, #f2762a 55%, #d95b16 100%);
+    border-radius: 3.5mm;
+    box-shadow: 0 2.5mm 6mm rgba(0,0,0,.42);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 5mm 0;
+    position: relative;
+  }
+  .side .holes { display: flex; flex-direction: column; gap: 3.2mm; }
+  .side .holes i {
+    width: 3mm; height: 3mm; border-radius: 50%;
+    background: rgba(90,35,5,.45); display: block;
+  }
+  .side .vt {
+    writing-mode: vertical-rl;
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 15mm; letter-spacing: 2mm; color: #fff8ec;
+    text-shadow: 0 0 0 #000, .8mm .8mm 0 #a3400d;
+    margin: 4mm 0;
+  }
+  .side .en {
+    writing-mode: vertical-rl;
+    font-family: 'Do Hyeon', sans-serif; font-size: 4.2mm;
+    letter-spacing: 1.6mm; color: rgba(70,25,0,.72);
+  }
+  .side .paw { font-size: 7mm; margin-bottom: 1mm; }
+
+  /* ─────────── 바닥 ─────────── */
+  .foot {
+    position: absolute; left: 13mm; right: 13mm; bottom: 9mm;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 5mm;
+  }
+  .team { display: flex; align-items: center; gap: 4mm; }
+  .team .lab {
+    font-family: 'Gowun Dodum', sans-serif; font-size: 3.9mm;
+    color: #9aa2d8; letter-spacing: .4mm;
+  }
+  .team .num {
+    font-family: 'Black Han Sans', sans-serif; font-size: 15mm; line-height: 1;
+    color: var(--cream); letter-spacing: .6mm;
+    text-shadow: 0 1mm 0 #b7532a, 0 2mm 0 #7b3216, 0 3mm 5mm rgba(0,0,0,.5);
+  }
+  .team .num em { font-style: normal; color: var(--orange); }
+  .roster6 { display: flex; align-items: flex-end; gap: 1mm; }
+  .roster6 img { width: 13mm; filter: drop-shadow(0 1mm 1.6mm rgba(0,0,0,.45)); }
+  .facts {
+    text-align: right; font-family: 'Do Hyeon', sans-serif;
+    font-size: 4.2mm; color: #cfd6ff; line-height: 1.55;
+  }
+  .facts b { color: var(--orange); font-weight: 400; }
+  .facts .mode {
+    display: inline-block; margin-top: 1.4mm;
+    font-size: 4mm; color: #0f1333; background: var(--cream);
+    border-radius: 99mm; padding: 1mm 3.4mm .6mm;
+  }
+</style>
+</head>
+<body>
+<div class="poster">
+  <div class="stars" id="stars"></div>
+  <div class="moon">🌙</div>
+
+  <div class="head">
+    <div class="contest">사내 <b>e스포츠</b> 게임 개발 공모전 출품작</div>
+    <h1 class="title">묘한특허</h1>
+    <p class="tagline">먼저 등록하는 쪽이 <em>이깁니다.</em></p>
+    <p class="subline">같은 발명, 특허는 하나. 냥이들이 막아내는 동안 출원하세요.</p>
+    <div class="genre"><span>🐾 냥타워 디펜스</span><span>⚔ 실시간 1:1 대전</span><span>🎲 9×9 게임판</span></div>
+    <div class="hero left"><img src="img/hero-white.png" alt=""></div>
+    <div class="hero right"><img src="img/hero-brown2.png" alt=""></div>
+  </div>
+
+  <div class="strip">
+    <div class="cuts">
+      <div class="cut c1">
+        <div class="shot"><span class="no">01</span><img src="img/cut-board.png" alt=""></div>
+        <div class="cap"><b>등록원부를 <mark>지켜라!</mark></b><span>9×9 게임판을 타고 오르는 쥐 침입단 · 10라운드</span></div>
+      </div>
+      <div class="cut c2">
+        <div class="shot"><span class="no">02</span><img src="img/cut-roster.png" alt=""></div>
+        <div class="cap"><b>냥타워 <mark>임 용!</mark></b><span>6종 냥타워 · 같은 냥 셋을 모으면 승진(Lv3)</span></div>
+      </div>
+      <div class="cut c3">
+        <div class="shot"><span class="no">03</span><img src="img/cut-upgrade.png" alt=""></div>
+        <div class="cap"><b>강화로 <mark>빌드업!</mark></b><span>5계열 16종 강화 · 3강·5강 특수효과 개방</span></div>
+      </div>
+      <div class="cut c4">
+        <div class="shot"><span class="no">04</span><img src="img/cut-duel.png" alt=""></div>
+        <div class="cap"><b>실시간 <mark>1:1 대전!</mark></b><span>라운드 4·7·10 — 키운 덱을 그대로 맞댄다</span></div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="paw">🐾</div>
+      <div class="holes"><i></i><i></i><i></i></div>
+      <div class="vt">묘한네컷</div>
+      <div class="en">MYOHAN 4CUT</div>
+      <div class="holes"><i></i><i></i><i></i></div>
+    </aside>
+  </div>
+
+  <div class="foot">
+    <div class="team">
+      <div>
+        <div class="lab">TEAM</div>
+        <div class="num">팀 <em>203040</em></div>
+      </div>
+      <div class="roster6">
+        <img src="img/cat_main1.png" alt=""><img src="img/cat_main2.png" alt=""><img src="img/cat_main3.png" alt="">
+        <img src="img/cat_main4.png" alt=""><img src="img/cat_main5.png" alt=""><img src="img/cat_main6.png" alt="">
+      </div>
+    </div>
+    <div class="facts">
+      냥타워 <b>6종</b> · 강화 <b>16종</b> · <b>10</b>라운드 · 맵 <b>3종</b><br>
+      <span class="mode">솔로 플레이 &nbsp;·&nbsp; 1v1 대전 — 브라우저에서 바로</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* 밤하늘 별 — 크기·자리를 고정 시드로 흩뿌린다 (렌더마다 같은 그림) */
+  (function () {
+    let s = 20304012;
+    const rnd = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+    const box = document.getElementById('stars');
+    let html = '';
+    for (let i = 0; i < 70; i++) {
+      const x = rnd() * 100, y = rnd() * 46, d = 0.5 + rnd() * 1.4, o = 0.25 + rnd() * 0.5;
+      html += `<i style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;width:${d.toFixed(2)}mm;height:${d.toFixed(2)}mm;opacity:${o.toFixed(2)}"></i>`;
+    }
+    box.innerHTML = html;
+  })();
+</script>
+</body>
+</html>
