@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>묘한특허 BGM 데모</title>
+<style>
+ body{font-family:system-ui,sans-serif;background:#1b1f2a;color:#eee;display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px}
+ button{font-size:18px;padding:12px 24px;border:0;border-radius:8px;background:#f2b134;color:#222;cursor:pointer}
+ button.stop{background:#666;color:#fff}
+ .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+ #now{opacity:.7}
+</style></head><body>
+<h1>🐱 묘한특허 BGM 예시</h1>
+<p>버튼을 눌러 들어보세요 (첫 클릭 후 소리가 납니다)</p>
+<div class="row">
+ <button onclick="BGM.play('lobby')">로비</button>
+ <button onclick="BGM.play('battle')">대전</button>
+ <button onclick="BGM.play('victory')">승리</button>
+ <button onclick="BGM.play('defeat')">패배</button>
+ <button class="stop" onclick="BGM.stop()">정지</button>
+</div>
+<label>볼륨 <input type="range" min="0" max="1" step="0.05" value="0.6" oninput="BGM.setVolume(+this.value)"></label>
+<div id="now"></div>
+<script src="bgm.js"></script>
+<script>setInterval(function(){document.getElementById('now').textContent='재생 중: '+(BGM.current||'없음')},300)</script>
+</body></html>

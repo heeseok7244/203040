@@ -7526,6 +7526,7 @@ function endMatch(iWon, reasonText) {
    * wave/prep 그대로였다 — 성적표 밑에서 웨이브가 계속 돌다가 wave_end 가 강화 선택 모달로
    * 성적표를 덮어 버리고, 내구가 더 깎이면 이긴 성적표가 진 성적표로 바뀌기까지 했다. */
   game.phase = iWon ? "won" : "lost";
+  bgmPlay(iWon ? "victory" : "defeat");
   game.awaitingPassive = false; game.awaitingAugment = false;
   game.shots = [];
   const s = game.summary();
@@ -8851,6 +8852,7 @@ function preloadStageArt() {
 function beginBattle() {
   $("#lobby").classList.add("hidden");
   $("#gameRoot").classList.remove("hidden");
+  bgmPlay("battle");
   document.body.classList.toggle("solo", soloMode);
   // 뒤로가기가 먹고 갈 기록을 하나 쌓아 둔다 (아래 popstate 참고)
   history.pushState({ ingame: true }, "");
@@ -9097,6 +9099,26 @@ $("#btnJoin").addEventListener("click", () => {
 });
 
 onSpriteReady(() => { if (game) render(); });
+
+/* ═══════ 배경음악 (bgm.js) ═══════
+ * 브라우저는 사용자가 한 번 누르기 전엔 소리를 못 내므로, 로비곡은 첫 클릭·키 입력에 붙여 시작한다.
+ * 대전곡은 beginBattle, 승리·패배곡은 endMatch 에서 튼다. 끄기 상태는 이 브라우저에 기억해 둔다. */
+const BGM_MUTE_KEY = "patent-siege.bgmMuted";
+function bgmMuted() { try { return localStorage.getItem(BGM_MUTE_KEY) === "1"; } catch (_) { return false; } }
+function bgmPlay(name) { if (window.BGM && !bgmMuted()) BGM.play(name); }
+function renderBgmToggle() { const b = $("#bgmToggle"); if (b) b.textContent = bgmMuted() ? "🔇" : "🔊"; }
+renderBgmToggle();
+$("#bgmToggle")?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const next = !bgmMuted();
+  try { localStorage.setItem(BGM_MUTE_KEY, next ? "1" : "0"); } catch (_) {}
+  renderBgmToggle();
+  if (!window.BGM) return;
+  if (next) BGM.stop();
+  else bgmPlay(!game ? "lobby" : game.phase === "won" ? "victory" : game.phase === "lost" ? "defeat" : "battle");
+});
+const startLobbyBgm = () => { if (!game && window.BGM && !BGM.current) bgmPlay("lobby"); };
+["pointerdown", "keydown"].forEach((ev) => document.addEventListener(ev, startLobbyBgm, { once: true }));
 
 return {};
 })();

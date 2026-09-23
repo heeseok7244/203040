@@ -1443,3 +1443,11 @@ body.dueling #tip{display:none!important}
 /* 타일 글자를 키운 만큼 모달도 넓힌다 — 640px 에 다섯 타일이면 한 줄에 여섯 글자밖에 안 들어간다 */
 /* 계열이 넷이 된 뒤로는 780px 이면 가장 긴 설명(「둔화 강화·명중 시 정지」)까지 한 줄에 들어간다 */
 .sheet:has(.linetiles){max-width:780px}
+
+/* 배경음악 토글 — 오른쪽 위에 작게, 모달보다는 아래 */
+#bgmToggle {
+  position: fixed; top: 10px; right: 10px; z-index: 50;
+  width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
+  background: rgba(0,0,0,.45); color: #fff; font-size: 16px; cursor: pointer; line-height: 1;
+}
+#bgmToggle:hover { background: rgba(0,0,0,.7); }
