@@ -34,16 +34,50 @@
     'G5 E5 C5 E5 G5 A5 C6 G5', 'G#5 F5 D5 C5 D5 F5 G#5:1',
     'G5 D5 B4 D5 F5 A5 G5 B4', 'C5 E5 G5 C6 G5:1 -:1',
   ];
+  // 1:1 전용: A단조, 곧게 달리는 16분음표와 반음의 도미넌트 긴장.
   const DUEL = [
-    'C5 E5 G5 - A5 G5 E5 G5', 'A5 E5 C5 - E5 G5 A5 C6',
-    'A5 F5 C5 F5 A5:1 G5 F5', 'G5 D5 B4 D5 G5 A5 B5 G5',
-    'C6 G5 E5 G5 A5:1 G5 E5', 'B5 G5 E5 B4 E5 G5 B5:1',
-    'A5 F5 D5 F5 G5 D5 B4 D5', 'E5 G5 C6:1 - G5 E5 C5',
-    'F5 A5 C6 A5 D6 C6 A5 F5', 'E5 G5 B5 G5 C6 B5 G5 E5',
-    'C#5 E5 G5 A5 C#6 A5 G5 E5', 'D5 F5 A5 D6 C6 A5 F5 D5',
-    'F#5 A5 C6 A5 G5 F#5 E5 D5', 'G5 D5 B4 D5 F5 G5 A5 B5',
-    'C6 G5 E5 C5 F5 A5 G5 B4', 'C5 E5 G5 C6 -:1 G5 E5',
+    'A5:0.25 E5:0.25 A5:0.25 B5:0.25 C6 E5 B5 A5 G#5 E5',
+    'A5 E5 C5 E5 A5:0.25 B5:0.25 C6:0.25 B5:0.25 A5 -',
+    'F5 C5 F5 G5 A5:0.25 G5:0.25 F5:0.25 E5:0.25 D5 C5',
+    'E5 G#5 B5 E6 D6 B5 G#5 E5',
+    'A5:0.25 E5:0.25 A5:0.25 B5:0.25 C6 E6 D6 C6 B5 A5',
+    'C6 G5 E5 G5 B5:0.25 C6:0.25 D6:0.25 C6:0.25 B5 G5',
+    'D6 A5 F5 A5 C6 A5 F5 D5',
+    'E5 F5 E5 D5 B4 D5 E5 G#5',
+    'A5 C6 E6 C6 B5 A5 G5 E5',
+    'F5 A5 C6 A5 G5 F5 E5 C5',
+    'D5 F5 A5 D6 C6 A5 F5 D5',
+    'E5 G#5 B5 D6 E6:0.25 D6:0.25 B5:0.25 G#5:0.25 E5 -',
+    'A5:0.25 B5:0.25 C6:0.25 B5:0.25 A5 E5 C6 B5 A5 G5',
+    'F5:0.25 G5:0.25 A5:0.25 G5:0.25 F5 C5 A5 G5 F5 E5',
+    'D5 F5 A5 C6 B5 A5 G#5 F5',
+    'E5 G#5 B5 E6 D6:0.25 C6:0.25 B5:0.25 A5:0.25 G#5 -',
   ];
+  function arrangeDuel() {
+    const harmonies = {
+      a: ['A2', 'E3', 'A3', 'C4', 'E4'], f: ['F2', 'C3', 'A3', 'C4', 'F4'],
+      e: ['E2', 'B2', 'G#3', 'B3', 'D4'], c: ['C3', 'G3', 'G3', 'C4', 'E4'],
+      d: ['D3', 'A3', 'A3', 'D4', 'F4'],
+    };
+    const bass = [], pulse = [], stabs = [];
+    'a a f e a c d e a f d e a f d e'.split(' ').forEach((key, bar) => {
+      const c = harmonies[key];
+      for (let step = 0; step < 8; step++) bass.push([step % 4 === 3 ? c[1] : c[0], 0.5]);
+      // 마지막 네 마디는 반복 반주를 한 옥타브 올려 몰아친다.
+      for (let step = 0; step < 16; step++) {
+        let n = c[2 + step % 3];
+        if (bar >= 12) n = n.replace(/\d/, d => +d + 1);
+        pulse.push([n, 0.25]);
+      }
+      stabs.push([c.slice(2), 0.5], ['-', 1], [c.slice(2), 0.5], ['-', 1.5], [c.slice(2), 0.5]);
+    });
+    return { bpm: 166, beats: 64, loop: true, swing: 0, tracks: [
+      { voice: 'marimba', gain: 0.17, pan: -0.08, notes: phrase(DUEL) },
+      { voice: 'bass', gain: 0.18, pan: 0, notes: bass },
+      { voice: 'ukulele', gain: 0.052, pan: -0.35, notes: pulse },
+      { voice: 'musicbox', gain: 0.045, pan: 0.35, notes: stabs },
+    ], drums: { kick: [0, 1.5, 2, 2.75], brush: [1, 3, 3.75], wood: [0.75, 2.5], tick: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5] } };
+  }
   function arrange(bpm, melody, progression, energy) {
     const chords = progression.split(' ').map(name => CHORDS[name]);
     const bass = [], comp = [], answers = [];
@@ -66,7 +100,7 @@
   const SONGS = {
     lobby: arrange(108, LOBBY, 'C Am F G C Am Dm C F C Dm D7 C Dm G7 C', 0),
     battle: arrange(126, BATTLE, 'C Am F G C Am Dm C Dm Em A7 Dm C Fm G7 C', 1),
-    duel: arrange(142, DUEL, 'C Am F G C Em Dm C Dm Em A7 Dm D7 G7 C C', 2),
+    duel: arrangeDuel(),
     victory: { bpm: 116, beats: 12, loop: false, tracks: [
       { voice: 'musicbox', gain: 0.18, pan: -0.1, notes: phrase(['G5 C6 E6:1 D6 C6 A5 G5', 'A5 C6 F6:1 E6 D6 G5 B5', 'C6:3 -:1']) },
       { voice: 'ukulele', gain: 0.07, pan: 0.25, notes: [[['E4', 'G4', 'C5'], 4], [['F4', 'A4', 'D5'], 2], [['F4', 'B4', 'D5'], 2], [['E4', 'G4', 'A4', 'C5'], 4]] },
@@ -103,7 +137,7 @@
     ukulele: { partials: [[1, 1, 1], [2, 0.32, 0.55], [3, 0.12, 0.3]], length: 0.4, attack: 0.008 },
     bass: { partials: [[1, 1, 1], [2, 0.24, 0.6]], length: 0.36, attack: 0.012 },
   };
-  function emit(event, at) {
+  function emit(event, at, destination = bus, voices = active) {
     const drum = event.drum;
     const voice = VOICES[event.voice];
     const partials = voice ? voice.partials : [[1, 1, 1]];
@@ -134,9 +168,9 @@
       envelope.gain.setValueAtTime(0, at);
       envelope.gain.linearRampToValueAtTime(gain, at + (voice ? voice.attack : 0.003));
       envelope.gain.exponentialRampToValueAtTime(0.0001, at + length);
-      source.connect(filter).connect(envelope).connect(pan).connect(bus);
-      active.add(source);
-      source.onended = () => { active.delete(source); source.disconnect(); filter.disconnect(); envelope.disconnect(); pan.disconnect(); };
+      source.connect(filter).connect(envelope).connect(pan).connect(destination);
+      voices.add(source);
+      source.onended = () => { voices.delete(source); source.disconnect(); filter.disconnect(); envelope.disconnect(); pan.disconnect(); };
       source.start(at); source.stop(at + length + 0.03);
     }
   }
@@ -210,5 +244,64 @@
     if (master) master.gain.setTargetAtTime(muted ? 0 : volume, ctx.currentTime, 0.02);
   }
   function toggleMute() { muted = !muted; setVolume(volume); return muted; }
+  // 효과음은 별도 출력으로 보내서 BGM 전환에 잘리지 않는다.
+  let sfxBus, sfxVolume = 0.8, sfxMuted = false;
+  const sfxVoices = new Set(), sfxLast = new Map();
+  const effect = (voice, pitches, gap, length, gain) => ({ voice, pitches: pitches.split(' '), gap, length, gain });
+  const EFFECTS = {
+    click: effect('ukulele', 'D5', 0, 0.045, 0.11),
+    place: effect('marimba', 'C4 G4', 0.045, 0.13, 0.24),
+    sell: effect('musicbox', 'E6 C6', 0.07, 0.18, 0.16),
+    merge: effect('marimba', 'G4 C5 E5 A5', 0.065, 0.2, 0.21),
+    promote: effect('musicbox', 'C5 E5 A5 C6 E6', 0.075, 0.34, 0.19),
+    craft: effect('musicbox', 'G4 D5 A5 E6 D6', 0.055, 0.32, 0.18),
+    expand: effect('marimba', 'C3 G3 C4 G4', 0.065, 0.2, 0.25),
+    wave: effect('marimba', 'G4 G4 C5 E5', 0.11, 0.2, 0.24),
+    pick: effect('musicbox', 'G5 D6', 0.075, 0.2, 0.17),
+    kill: effect('ukulele', 'G5', 0, 0.055, 0.075),
+    leak: effect('marimba', 'D4 G#3 D3', 0.095, 0.21, 0.26),
+    fee: effect('musicbox', 'A5 E6 A6', 0.06, 0.16, 0.13),
+    skill: effect('marimba', 'A4 E5 A5 C6 E6', 0.04, 0.26, 0.21),
+    win: effect('musicbox', 'G5 C6 E6 D6 C6', 0.1, 0.35, 0.18),
+    lose: effect('marimba', 'E5 C5 A4 C5', 0.14, 0.25, 0.19),
+    error: effect('ukulele', 'D4 D4', 0.11, 0.075, 0.19),
+    sabotage: effect('marimba', 'B5 F5 C#5 G4', 0.07, 0.18, 0.22),
+  };
+  function sfxPlay(name) {
+    const def = EFFECTS[name];
+    if (!def || sfxMuted || sfxVolume === 0) return;
+    try { init(); } catch (_) { return; }
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    const now = ctx.currentTime;
+    // 처치음 폭주를 억제하고 예약된 배음까지 포함해 최대 동시 발음을 제한한다.
+    if (now - (sfxLast.get(name) ?? -Infinity) < (name === 'kill' ? 0.09 : 0.045)) return;
+    if (sfxVoices.size + def.pitches.length * VOICES[def.voice].partials.length > 96) return;
+    sfxLast.set(name, now);
+    if (!sfxBus) {
+      sfxBus = ctx.createGain(); sfxBus.gain.value = sfxVolume;
+      const limiter = ctx.createDynamicsCompressor();
+      sfxBus.connect(limiter).connect(ctx.destination);
+    }
+    def.pitches.forEach((note, i) => emit({ note, voice: def.voice, gain: def.gain, length: def.length,
+      pan: def.pitches.length > 2 ? (i / (def.pitches.length - 1) - 0.5) * 0.35 : 0 }, now + 0.005 + i * def.gap, sfxBus, sfxVoices));
+  }
+  function stopSfx() {
+    if (!ctx) return;
+    for (const source of sfxVoices) { try { source.stop(ctx.currentTime + 0.02); } catch (_) {} }
+    sfxVoices.clear(); sfxLast.clear();
+  }
+  global.SFX2 = {
+    play: sfxPlay, stop: stopSfx, names: Object.keys(EFFECTS),
+    setVolume(value) {
+      if (!Number.isFinite(value)) return;
+      sfxVolume = Math.max(0, Math.min(1, value));
+      if (sfxBus) sfxBus.gain.setTargetAtTime(sfxMuted ? 0 : sfxVolume, ctx.currentTime, 0.01);
+    },
+    setMuted(value) {
+      sfxMuted = !!value;
+      if (sfxBus) sfxBus.gain.setTargetAtTime(sfxMuted ? 0 : sfxVolume, ctx.currentTime, 0.01);
+      if (sfxMuted) stopSfx();
+    },
+  };
   global.BGM2 = { play, stop, setVolume, toggleMute, get current() { return current; }, songs: Object.keys(SONGS) };
 })(window);

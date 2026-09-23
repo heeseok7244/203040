@@ -20,7 +20,7 @@
 <div class="tracks">
   <button data-song="lobby">로비 · 햇살 위의 발자국<small>108 BPM · 오르골과 낮잠 사이</small></button>
   <button data-song="battle">방어 · 우당탕 솜방망이<small>126 BPM · 마림바가 뛰노는 오후</small></button>
-  <button data-song="duel">1:1 · 실뭉치 쟁탈전<small>142 BPM · 장난꾸러기들의 추격전</small></button>
+  <button data-song="duel">1:1 · 솜방망이 대격돌<small>166 BPM · 숨 가쁜 단조 추격전</small></button>
   <button data-song="victory">승리 · 간식 시간이야<small>116 BPM · 반짝이는 축하 인사</small></button>
   <button data-song="defeat">패배 · 괜찮아, 한 번 더<small>86 BPM · 다정한 토닥임</small></button>
 </div>
@@ -30,16 +30,29 @@
   <label>볼륨 <input id="volume" aria-label="음악 볼륨" type="range" min="0" max="1" step="0.05" value="0.6"></label>
 </div>
 <div id="now" role="status" aria-live="polite">재생 대기 중</div>
+<h2>효과음 2 · 솜방망이와 작은 종</h2>
+<div class="tracks" id="sfxButtons"></div>
+<label>효과음 볼륨 <input id="sfxVolume" type="range" min="0" max="1" step="0.05" value="0.8"></label>
+<p>음소거는 음악과 효과음에 함께 적용됩니다.</p>
 <a href="bgm-demo.html">버전 1 미리 듣기</a> · <a href="index.html">게임으로 돌아가기</a>
 </main>
 <script src="bgm2.js"></script>
 <script>
   const buttons = [...document.querySelectorAll('[data-song]')];
+  const labels = { click: '클릭', place: '배치', sell: '판매', merge: '합성', promote: '승진', craft: '특수 합성', expand: '구역 개방', wave: '웨이브 시작', pick: '선택', kill: '처치', leak: '돌파 경고', fee: '합의금', skill: '스킬', win: '대전 승리', lose: '대전 패배', error: '행동 불가', sabotage: '공작' };
+  SFX2.names.forEach(name => {
+    const button = document.createElement('button');
+    button.textContent = labels[name];
+    button.onclick = () => SFX2.play(name);
+    document.getElementById('sfxButtons').appendChild(button);
+  });
+  document.getElementById('sfxVolume').oninput = e => SFX2.setVolume(Number(e.target.value));
   buttons.forEach(b => b.addEventListener('click', () => { BGM2.play(b.dataset.song); render(); }));
-  document.getElementById('stop').onclick = () => { BGM2.stop(); render(); };
+  document.getElementById('stop').onclick = () => { BGM2.stop(); SFX2.stop(); render(); };
   document.getElementById('volume').oninput = e => BGM2.setVolume(Number(e.target.value));
   document.getElementById('mute').onclick = e => {
     const muted = BGM2.toggleMute();
+    SFX2.setMuted(muted);
     e.target.textContent = muted ? '음소거 해제' : '음소거';
     e.target.setAttribute('aria-pressed', String(muted));
   };

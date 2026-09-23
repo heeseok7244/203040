@@ -9133,7 +9133,12 @@ function bgmScene() { return !game ? "lobby" : game.phase === "won" ? "victory" 
 function bgmStopAll() { window.BGM?.stop(); window.BGM2?.stop(); }
 function bgmPlay(name) { if (!bgmMuted()) bgmPlayer()?.play(name); }
 /** 효과음 — 음소거 버튼 하나로 배경음악과 함께 꺼진다 */
-function sfx(name) { if (window.SFX && !bgmMuted()) SFX.play(name); }
+function sfx(name) { if (!bgmMuted()) (bgmVersion === "2" ? window.SFX2 : window.SFX)?.play(name); }
+function syncSfxVersion() {
+  window.SFX?.setMuted(bgmMuted() || bgmVersion !== "1");
+  window.SFX2?.setMuted(bgmMuted() || bgmVersion !== "2");
+}
+syncSfxVersion();
 // 버튼은 어디서 눌리든 딸깍 — 모달의 선택지처럼 버튼이 아닌 것들은 각자의 자리에서 sfx() 를 부른다
 document.addEventListener("click", (e) => {
   const b = e.target && e.target.closest ? e.target.closest("button") : null;
@@ -9159,6 +9164,7 @@ bgmVersionButtons.forEach(button => {
     bgmVersion = button.dataset.bgmVersion === "2" ? "2" : "1";
     try { localStorage.setItem(BGM_VERSION_KEY, bgmVersion); } catch (_) {}
     renderBgmVersion();
+    syncSfxVersion();
     bgmStopAll();
     bgmPlay(bgmScene());
   });
@@ -9167,6 +9173,7 @@ $("#bgmToggle")?.addEventListener("click", (e) => {
   e.stopPropagation();
   const next = !bgmMuted();
   bgmIsMuted = next;
+  syncSfxVersion();
   try { localStorage.setItem(BGM_MUTE_KEY, next ? "1" : "0"); } catch (_) {}
   renderBgmToggle();
   if (next) bgmStopAll();
