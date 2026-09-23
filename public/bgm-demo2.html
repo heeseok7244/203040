@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>묘한특허 · BGM 2 미리 듣기</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#192330;color:#f3eee3;font:16px/1.6 system-ui,sans-serif;padding:48px 20px}
+  main{max-width:760px;margin:auto}h1{font-size:clamp(26px,5vw,40px);margin:8px 0}p{color:#bcc8d3}
+  .tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:28px 0}
+  button{font:inherit;cursor:pointer;border:1px solid #526174;border-radius:12px;padding:16px;background:#28384b;color:inherit;text-align:left}
+  button:hover,button[aria-pressed=true]{background:#415875;border-color:#f2c570}button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #f2c570;outline-offset:3px}
+  small{display:block;color:#bfccd9;margin-top:6px}.controls{display:flex;align-items:center;gap:20px;flex-wrap:wrap}a{color:#f2c570}#now{min-height:2em;margin:24px 0}
+</style>
+</head>
+<body><main>
+<small>묘한특허 · 오리지널 사운드트랙 02</small>
+<h1>냥이들의 야근 행진</h1>
+<p>통통 튀는 현악기풍 신스, 반짝이는 아르페지오, 도장 찍듯 규칙적인 리듬.<br>버튼을 누르면 음악이 시작됩니다. 로비·방어·대전곡은 반복 재생됩니다.</p>
+<div class="tracks">
+  <button data-song="lobby">로비 · 햇살 드는 청사<small>104 BPM · 느긋한 업무 준비</small></button>
+  <button data-song="battle">방어 · 서류 대소동<small>132 BPM · 경쾌한 냥타워 행진</small></button>
+  <button data-song="duel">1:1 · 최종 변론<small>156 BPM · 긴박한 공방</small></button>
+  <button data-song="victory">승리 · 승인 도장<small>126 BPM · 밝은 장조 팡파르</small></button>
+  <button data-song="defeat">패배 · 내일 다시 출근<small>76 BPM · 짧고 차분한 마무리</small></button>
+</div>
+<div class="controls">
+  <button id="stop">정지</button>
+  <button id="mute" aria-pressed="false">음소거</button>
+  <label>볼륨 <input id="volume" aria-label="음악 볼륨" type="range" min="0" max="1" step="0.05" value="0.6"></label>
+</div>
+<div id="now" role="status" aria-live="polite">재생 대기 중</div>
+<a href="bgm-demo.html">버전 1 미리 듣기</a> · <a href="index.html">게임으로 돌아가기</a>
+</main>
+<script src="bgm2.js"></script>
+<script>
+  const buttons = [...document.querySelectorAll('[data-song]')];
+  buttons.forEach(b => b.addEventListener('click', () => { BGM2.play(b.dataset.song); render(); }));
+  document.getElementById('stop').onclick = () => { BGM2.stop(); render(); };
+  document.getElementById('volume').oninput = e => BGM2.setVolume(Number(e.target.value));
+  document.getElementById('mute').onclick = e => {
+    const muted = BGM2.toggleMute();
+    e.target.textContent = muted ? '음소거 해제' : '음소거';
+    e.target.setAttribute('aria-pressed', String(muted));
+  };
+  function render() {
+    buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.song === BGM2.current)));
+    const selected = buttons.find(b => b.dataset.song === BGM2.current);
+    const label = selected ? '재생 중: ' + selected.firstChild.textContent : '재생 대기 중';
+    const now = document.getElementById('now');
+    if (now.textContent !== label) now.textContent = label;
+  }
+  setInterval(render, 200);
+</script>
+</body></html>

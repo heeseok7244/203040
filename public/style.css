@@ -1451,3 +1451,10 @@ body.dueling #tip{display:none!important}
   background: rgba(0,0,0,.45); color: #fff; font-size: 16px; cursor: pointer; line-height: 1;
 }
 #bgmToggle:hover { background: rgba(0,0,0,.7); }
+#bgmVersion {
+  position: fixed; top: 10px; right: 54px; z-index: 50;
+  max-width: 160px; height: 36px; padding: 0 8px; border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.25); background: #29313b;
+  color: #fff; font: 12px system-ui, sans-serif; cursor: pointer;
+}
+#bgmVersion:focus-visible { outline: 2px solid #f2b134; outline-offset: 2px; }

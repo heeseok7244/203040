@@ -9121,8 +9121,17 @@ onSpriteReady(() => { if (game) render(); });
  * 브라우저는 사용자가 한 번 누르기 전엔 소리를 못 내므로, 로비곡은 첫 클릭·키 입력에 붙여 시작한다.
  * 대전곡은 beginBattle, 승리·패배곡은 endMatch 에서 튼다. 끄기 상태는 이 브라우저에 기억해 둔다. */
 const BGM_MUTE_KEY = "patent-siege.bgmMuted";
-function bgmMuted() { try { return localStorage.getItem(BGM_MUTE_KEY) === "1"; } catch (_) { return false; } }
-function bgmPlay(name) { if (window.BGM && !bgmMuted()) BGM.play(name); }
+const BGM_VERSION_KEY = "patent-siege.bgmVersion";
+let bgmIsMuted = false, bgmVersion = "1";
+try {
+  bgmIsMuted = localStorage.getItem(BGM_MUTE_KEY) === "1";
+  bgmVersion = localStorage.getItem(BGM_VERSION_KEY) === "2" ? "2" : "1";
+} catch (_) {}
+function bgmMuted() { return bgmIsMuted; }
+function bgmPlayer() { return bgmVersion === "2" ? window.BGM2 : window.BGM; }
+function bgmScene() { return !game ? "lobby" : game.phase === "won" ? "victory" : game.phase === "lost" ? "defeat" : duel ? "duel" : "battle"; }
+function bgmStopAll() { window.BGM?.stop(); window.BGM2?.stop(); }
+function bgmPlay(name) { if (!bgmMuted()) bgmPlayer()?.play(name); }
 /** 효과음 — 음소거 버튼 하나로 배경음악과 함께 꺼진다 */
 function sfx(name) { if (window.SFX && !bgmMuted()) SFX.play(name); }
 // 버튼은 어디서 눌리든 딸깍 — 모달의 선택지처럼 버튼이 아닌 것들은 각자의 자리에서 sfx() 를 부른다
@@ -9130,18 +9139,33 @@ document.addEventListener("click", (e) => {
   const b = e.target && e.target.closest ? e.target.closest("button") : null;
   if (b && b.id !== "bgmToggle" && !b.disabled) sfx("click");
 }, true);
-function renderBgmToggle() { const b = $("#bgmToggle"); if (b) b.textContent = bgmMuted() ? "🔇" : "🔊"; }
+function renderBgmToggle() {
+  const b = $("#bgmToggle");
+  if (b) {
+    b.textContent = bgmMuted() ? "🔇" : "🔊";
+    b.setAttribute("aria-label", bgmMuted() ? "배경음악과 효과음 켜기" : "배경음악과 효과음 끄기");
+    b.setAttribute("aria-pressed", String(bgmMuted()));
+  }
+}
 renderBgmToggle();
+const bgmVersionSelect = $("#bgmVersion");
+if (bgmVersionSelect) bgmVersionSelect.value = bgmVersion;
+bgmVersionSelect?.addEventListener("change", () => {
+  bgmVersion = bgmVersionSelect.value === "2" ? "2" : "1";
+  try { localStorage.setItem(BGM_VERSION_KEY, bgmVersion); } catch (_) {}
+  bgmStopAll();
+  bgmPlay(bgmScene());
+});
 $("#bgmToggle")?.addEventListener("click", (e) => {
   e.stopPropagation();
   const next = !bgmMuted();
+  bgmIsMuted = next;
   try { localStorage.setItem(BGM_MUTE_KEY, next ? "1" : "0"); } catch (_) {}
   renderBgmToggle();
-  if (!window.BGM) return;
-  if (next) BGM.stop();
-  else bgmPlay(!game ? "lobby" : game.phase === "won" ? "victory" : game.phase === "lost" ? "defeat" : duel ? "duel" : "battle");
+  if (next) bgmStopAll();
+  else bgmPlay(bgmScene());
 });
-const startLobbyBgm = () => { if (!game && window.BGM && !BGM.current) bgmPlay("lobby"); };
+const startLobbyBgm = () => { if (!game && !bgmPlayer()?.current) bgmPlay("lobby"); };
 ["pointerdown", "keydown"].forEach((ev) => document.addEventListener(ev, startLobbyBgm, { once: true }));
 
 return {};
