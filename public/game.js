@@ -4455,23 +4455,89 @@ function pieceEl(p, onBoard) {
   el.appendChild(badge);
 
   el.addEventListener("pointerdown", (e) => startDrag(e, p));
-  // 우클릭 — 판매 (구매금액의 80%). 브라우저 메뉴는 늘 막는다 — 웨이브 중에도 메뉴가 뜨면 판이 가려진다
-  el.addEventListener("contextmenu", (e) => { e.preventDefault(); sellPiece(p, e); });
+  // 우클릭 — 판매 확인 (구매금액의 80%). 브라우저 메뉴는 늘 막는다 — 웨이브 중에도 메뉴가 뜨면 판이 가려진다
+  el.addEventListener("contextmenu", (e) => { e.preventDefault(); askSell(p, e); });
   el.addEventListener("pointerenter", (e) => showTip(e, p));
   el.addEventListener("pointerleave", hideTip);
   return el;
 }
 
+/* ── 판매 확인 ──
+ * 우클릭 한 번에 냥이 사라지면 그건 기능이 아니라 사고다. 애써 Lv3 까지 합친 것을 손이 미끄러져
+ * 날리는 일이 없도록, 파는 것과 돌려받는 액수를 커서 옆에서 먼저 묻는다. */
+/** 지금 열려 있는 판매 확인 — {p, x, y} (없으면 null) */
+let sellAsk = null;
+
 /**
- * 냥타워를 판다 — 판 위 · 대기열 타일을 **우클릭**했을 때.
- * 준비 단계에만 된다 (임용·합성·자리 옮기기와 같은 규칙). 돌려받는 돈은 구매금액의 80%
- * (BAL.sellRate) 이고, 합성 레벨만큼 값이 실린다. 판 위에서 팔면 그 자리에 「판 매」 도장이 찍히고
- * 돌려받은 액수가 떠오른다 — 우클릭 한 번에 냥이 사라지는 것이라, 무슨 일이 일어났는지 그 자리에서 보여야 한다.
+ * 「출원냥」 뒤에는 을, 「국제출원냥 Lv2」 뒤에는 를 — 받침에 맞는 목적격 조사를 고른다.
+ * 냥 이름은 대부분 받침으로 끝나지만 합성 레벨이 붙으면 끝이 숫자가 되므로 숫자 읽기까지 본다.
+ * @param {string} word @returns {"을"|"를"}
+ */
+function eulReul(word) {
+  const ch = word.trim().slice(-1);
+  if (/[0-9]/.test(ch)) return "1368".includes(ch) ? "을" : "를";   // 일·삼·육·팔만 받침이 있다
+  const code = ch.charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return "를";     // 한글도 숫자도 아니면 무난한 쪽으로
+  return code % 28 ? "을" : "를";
+}
+
+/** 판매 확인 팝오버를 닫는다. 웨이브 개시 · 드래그 · 바깥 클릭 · Esc 어느 쪽으로든 닫힌다. */
+function closeSellAsk() {
+  if (!sellAsk) return;
+  sellAsk = null;
+  $("#sellAsk").hidden = true;
+}
+
+/**
+ * 묻던 판매가 더는 성립하지 않으면 스스로 닫는다 — 매 프레임 확인한다.
+ * 웨이브가 개시되거나(준비 단계가 끝나거나) 강화·증강 창이 뜨면 팔 수 없고, 묻는 사이에
+ * 그 냥이 합성으로 사라졌을 수도 있다. 답이 없는 물음이 판 위에 남아 있으면 안 된다.
+ */
+function syncSellAsk() {
+  if (!sellAsk) return;
+  const p = sellAsk.p;
+  if (game.phase !== "prep" || game.awaitingPassive || game.awaitingAugment ||
+      (!game.pieces.includes(p) && !game.tray.includes(p))) closeSellAsk();
+}
+
+/**
+ * 냥타워를 팔지 묻는다 — 판 위 · 대기열 타일을 **우클릭**했을 때.
+ * 준비 단계에만 된다 (임용·합성·자리 옮기기와 같은 규칙). 실제로 파는 것은 「예」를 눌렀을 때의
+ * sellPiece 다.
  * @param {any} p @param {MouseEvent} e
  */
-function sellPiece(p, e) {
+function askSell(p, e) {
   if (game.phase !== "prep" || game.awaitingPassive || game.awaitingAugment || dragging) return;
+  if (!game.pieces.includes(p) && !game.tray.includes(p)) return;
   hideTip();
+  const d = CATS[p.key], lv = Math.max(1, p.lv || 1);
+  const shown = `${d.name}${lv > 1 ? ` Lv${lv}` : ""}`;
+  // 도장·숫자가 뜰 자리는 물어본 자리로 기억해 둔다 — 대기열에서 팔면 판 좌표가 없다
+  sellAsk = { p, x: e.clientX, y: e.clientY };
+  const box = $("#sellAsk");
+  box.innerHTML = `<div class="q">${d.icon} <b>${shown}</b>${eulReul(shown)} 파시겠습니까?</div>
+    <div class="amt">특허료 <b>+₩${game.sellPrice(p).toLocaleString()}</b> 회수 (구매금액의 ${Math.round(BAL.sellRate * 100)}%)</div>
+    <div class="row"><button class="go" id="sellYes">예</button><button id="sellNo">아니오</button></div>`;
+  box.hidden = false;
+  // 팝오버 크기는 이름 길이에 따라 다르므로 그린 뒤 실제 크기로 화면 안에 넣는다 (말풍선과 같은 방식)
+  box.style.left = Math.max(0, Math.min(e.clientX + 12, innerWidth - box.offsetWidth - 8)) + "px";
+  box.style.top = Math.max(0, Math.min(e.clientY + 12, innerHeight - box.offsetHeight - 8)) + "px";
+  $("#sellYes").addEventListener("click", sellPiece);
+  $("#sellNo").addEventListener("click", closeSellAsk);
+  // Enter 로 바로 팔고 Esc 로 물린다. preventScroll — 초점을 주느라 판이 밀려 올라가면 안 된다
+  $("#sellYes").focus({ preventScroll: true });
+}
+
+/**
+ * 판매 확인에서 「예」를 받았을 때 실제로 판다. 돌려받는 돈은 구매금액의 80%
+ * (BAL.sellRate) 이고, 합성 레벨만큼 값이 실린다. 판 위에서 팔면 그 자리에 「판 매」 도장이 찍히고
+ * 돌려받은 액수가 떠오른다 — 무슨 일이 일어났는지 그 자리에서 보여야 한다.
+ */
+function sellPiece() {
+  if (!sellAsk) return;
+  const { p, x, y } = sellAsk;
+  closeSellAsk();
+  if (game.phase !== "prep" || game.awaitingPassive || game.awaitingAugment || dragging) return;
   const wasOn = p.x >= 0, [px, py] = wasOn ? B.pieceCenter(p) : [0, 0];
   const refund = game.sellCat(p);
   if (!refund) return;
@@ -4480,7 +4546,7 @@ function sellPiece(p, e) {
     stamp(...boardToScreen(px, py), "판 매", `${CATS[p.key].name} +₩${refund}`);
     addFloater(px, py - 24, `+${refund}`, "#cda43a", { big: true, life: 1.0, rise: 26 });
   } else {
-    stamp(e.clientX, e.clientY, "판 매", `${CATS[p.key].name} +₩${refund}`);
+    stamp(x, y, "판 매", `${CATS[p.key].name} +₩${refund}`);
   }
 }
 
@@ -7251,7 +7317,7 @@ function loop() {
 
   // 각 단계를 따로 감싼다 — 한 군데가 터져도 나머지 화면은 계속 살아 있어야 한다
   safe("이벤트 처리", () => consumeEvents());
-  safe("준비 표시", () => { syncPrepState(); renderReadyBar(); renderFxTags(); });
+  safe("준비 표시", () => { syncPrepState(); renderReadyBar(); renderFxTags(); syncSellAsk(); });
   draw(now);
   safe("상대 청사", () => drawOpponent(now));
   safe("상태 전송", () => maybeSendState(now));
@@ -7281,7 +7347,7 @@ function maybeSendState(now) {
 function startDrag(e, p, srcEl) {
   if (game.phase !== "prep") return;
   if (e.button !== 0) return;     // 우클릭은 판매(contextmenu)다 — 유령을 띄우지 않는다
-  e.preventDefault(); hideTip();
+  e.preventDefault(); hideTip(); closeSellAsk();   // 끌기 시작하면 묻던 판매는 없던 일이 된다
   const el = srcEl || /** @type {HTMLElement} */ (e.currentTarget);
   const r = el.getBoundingClientRect();
   const ghost = /** @type {HTMLElement} */ (el.cloneNode(true));
@@ -8968,11 +9034,19 @@ if (matchMedia("(hover: hover)").matches) {
 }
 // 판이나 다른 패널을 누르면 알아서 접힌다 — 닫으려고 물음표를 다시 찾아갈 일은 없어야 한다
 document.addEventListener("pointerdown", (e) => {
+  // 판매 확인도 바깥을 누르면 접힌다 — 「아니오」를 찾아가지 않아도 물릴 수 있어야 한다.
+  // 팝오버를 띄운 그 우클릭이 자기를 도로 닫지 않도록, 팝오버 안쪽은 물론 냥 타일도 빼 둔다.
+  if (sellAsk && !(/** @type {HTMLElement} */ (e.target).closest("#sellAsk, .piece"))) closeSellAsk();
   if ($("#beastPop").classList.contains("hidden")) return;
   if (/** @type {HTMLElement} */ (e.target).closest("#beastPop, #btnBestiary")) return;
   toggleBestiary(false);
 });
-addEventListener("keydown", (e) => { if (e.key === "Escape") toggleBestiary(false); });
+addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  // Esc 는 판매 확인을 먼저 물린다 — 열려 있는 것부터 하나씩 닫힌다
+  if (sellAsk) { closeSellAsk(); return; }
+  toggleBestiary(false);
+});
 
 /* ═══════ 로비 ═══════ */
 connectWS();
