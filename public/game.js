@@ -6498,6 +6498,7 @@ function startDuelRound() {
   $("#duelStage").classList.remove("hidden");
   $("#duelResult").classList.add("hidden");
   document.body.classList.add("dueling");
+  bgmPlay("duel");   // 대전장이 열리면 (솔로·1:1 모두) 긴장감 있는 곡으로
   $("#duelTitle").textContent = `⚔ ${duelLabel()}`;
   clearDuelDecks();
   render();
@@ -6765,6 +6766,7 @@ function closeDuelRound() {
   pendingDuelRosters = { wave: 0, by: {} };
   $("#duelStage").classList.add("hidden");
   document.body.classList.remove("dueling");
+  if (!pendingOver) bgmPlay("battle");   // 대전장을 접으면 평소 곡으로 (판이 끝나면 endMatch 가 승패곡을 튼다)
   $("#duelResult").classList.add("hidden");
   render();
   // 마지막 대전이었다면 여기가 판의 끝이다 — 붙잡아 둔 종료를 이제 띄운다
@@ -9115,7 +9117,7 @@ $("#bgmToggle")?.addEventListener("click", (e) => {
   renderBgmToggle();
   if (!window.BGM) return;
   if (next) BGM.stop();
-  else bgmPlay(!game ? "lobby" : game.phase === "won" ? "victory" : game.phase === "lost" ? "defeat" : "battle");
+  else bgmPlay(!game ? "lobby" : game.phase === "won" ? "victory" : game.phase === "lost" ? "defeat" : duel ? "duel" : "battle");
 });
 const startLobbyBgm = () => { if (!game && window.BGM && !BGM.current) bgmPlay("lobby"); };
 ["pointerdown", "keydown"].forEach((ev) => document.addEventListener(ev, startLobbyBgm, { once: true }));
