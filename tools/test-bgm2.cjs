@@ -1,13 +1,13 @@
-﻿const assert = require('node:assert/strict');
+const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 let clock = 0, nextId = 0;
 const timers = new Map(), sources = [];
 const param = () => ({ value: 0, setValueAtTime(v,t) { assert.ok(Number.isFinite(v) && Number.isFinite(t)); }, linearRampToValueAtTime(v,t) { assert.ok(Number.isFinite(v) && Number.isFinite(t)); }, exponentialRampToValueAtTime(v,t) { assert.ok(v > 0 && Number.isFinite(t)); }, setTargetAtTime() {}, cancelScheduledValues() {} });
-const node = () => ({ gain:param(), frequency:param(), connect(n){return n;},disconnect(){},start(t){assert.ok(t >= clock);sources.push(this);},stop(t){this.end=t;} });
+const node = () => ({ gain:param(), frequency:param(), pan:param(), connect(n){return n;},disconnect(){},start(t){assert.ok(t >= clock);sources.push(this);},stop(t){this.end=t;} });
 class AudioContext {
   get currentTime(){return clock;} sampleRate=44100; state='running'; destination={};
-  createGain(){return node();} createDynamicsCompressor(){return node();} createOscillator(){return node();} createBufferSource(){return node();} createBiquadFilter(){return node();}
+  createStereoPanner(){return node();} createGain(){return node();} createDynamicsCompressor(){return node();} createOscillator(){return node();} createBufferSource(){return node();} createBiquadFilter(){return node();}
   createBuffer(c,n){return {getChannelData:()=>new Float32Array(n)};}
 }
 const context = {window:{AudioContext},setInterval(fn){timers.set(++nextId,fn);return nextId;},clearInterval(id){timers.delete(id);},setTimeout(fn){fn();}};
