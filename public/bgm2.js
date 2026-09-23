@@ -112,12 +112,14 @@
       { voice: 'bass', gain: 0.17, notes: [['F2', 4], ['C3', 4]] },
     ], drums: {} },
   };
-  let ctx, master, noiseBuffer, bus, timer, current = null, volume = 0.6, muted = false;
+  let ctx, master, noiseBuffer, bus, timer, current = null, volume = 0.6, muted = false, pendingStart = null;
   let events = [], cursor = 0, origin = 0, cycle = 0, duration = 0;
   const active = new Set();
   function init() {
     if (ctx) return;
     ctx = new (global.AudioContext || global.webkitAudioContext)();
+    // 사용자 입력·탭 복귀 등 어떤 경로로든 컨텍스트가 돌기 시작하면 기다리던 곡을 튼다
+    ctx.addEventListener?.('statechange', () => { if (ctx.state === 'running' && pendingStart) pendingStart(); });
     master = ctx.createGain();
     master.gain.value = muted ? 0 : volume;
     const compressor = ctx.createDynamicsCompressor();
@@ -175,7 +177,7 @@
     }
   }
   function stop() {
-    clearInterval(timer); timer = null; current = null;
+    clearInterval(timer); timer = null; current = null; pendingStart = null;
     if (!ctx || !bus) return;
     const old = bus;
     old.gain.cancelScheduledValues(ctx.currentTime);
@@ -191,9 +193,11 @@
     stop(); current = name;
     // 첫 입력 직후엔 컨텍스트가 아직 멈춰 있어 currentTime 이 0 에 머문다. 재개가 끝난 뒤에
     // 예약을 시작해야 첫 곡이 조용히 지나가 버리지 않는다 (재개 중 다른 곡으로 바뀌면 그만둔다).
+    pendingStart = null;
     if (ctx.state === 'suspended') {
       const wanted = name;
-      ctx.resume().catch(() => {}).then(() => { if (current === wanted && !timer) begin(); });
+      pendingStart = () => { if (current === wanted && !timer) { pendingStart = null; begin(); } };
+      ctx.resume().catch(() => {}).then(() => pendingStart && pendingStart());
     } else begin();
     function begin() {
     bus = ctx.createGain(); bus.connect(master);

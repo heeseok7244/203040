@@ -46,31 +46,35 @@ const two={current:null,running:false,unlocked:0,play(n){this.current=n;},stop()
 const saved=new Map();
 const fxTwo={muted:false,play(n){this.last=n;},setMuted(m){this.muted=m;}};
 const docListeners=new Map();
-const gameContext={window:{BGM2:two,SFX2:fxTwo},$:()=>null,game:null,duel:null,
+const gameContext={window:{BGM2:two,SFX2:fxTwo},$:()=>null,game:null,duel:null,setInterval:context.setInterval,clearInterval:context.clearInterval,
   localStorage:{getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)},
   document:{addEventListener(n,fn){docListeners.set(n+':'+fn.name,fn);},removeEventListener(n,fn){docListeners.delete(n+':'+fn.name);},querySelectorAll(){return toggles;}}};
 vm.createContext(gameContext);
 const game=fs.readFileSync('public/game.js','utf8');
-vm.runInContext(game.slice(game.indexOf('const BGM_MUTE_KEY'),game.lastIndexOf('return {};')),gameContext);
+vm.runInContext(game.slice(game.indexOf('// 끄기 상태는 저장하지 않는다'),game.lastIndexOf('return {};')),gameContext);
 assert.ok(toggles.every(t=>t.textContent==='🔊'));
-vm.runInContext("bgmPlay('lobby')",gameContext);assert.equal(two.current,'lobby');
+// load: tries at once (unlock + lobby song) and keeps polling while the context is not running
+assert.equal(two.unlocked,1);assert.equal(two.current,'lobby');assert.equal(timers.size,1,'lobby poll armed');
 vm.runInContext("sfx('place')",gameContext);assert.equal(fxTwo.last,'place');assert.equal(fxTwo.muted,false);
 const evt={stopPropagation(){}};
 toggles[0].listeners.click(evt);assert.equal(two.current,null);assert.ok(fxTwo.muted);assert.ok(toggles.every(t=>t.textContent==='🔇'));
-vm.runInContext("sfx('sell')",gameContext);assert.equal(fxTwo.last,'place');assert.equal(saved.get('patent-siege.bgmMuted'),'1');
-gameContext.localStorage.setItem=()=>{throw Error('blocked');};
+vm.runInContext("sfx('sell')",gameContext);assert.equal(fxTwo.last,'place');assert.equal(saved.size,0,'mute is not persisted');
 gameContext.game={phase:'battle'};gameContext.duel={};
 toggles[1].listeners.click(evt);assert.equal(two.current,'duel');assert.equal(fxTwo.muted,false);assert.ok(toggles.every(t=>t.textContent==='🔊'));
 // lobby start: keeps listening while the context is suspended, stops once it runs
 gameContext.game=null;gameContext.duel=null;two.current=null;
 const lobbyStarts=[...docListeners.values()].filter(fn=>fn.name==='startLobbyBgm');assert.ok(lobbyStarts.length>=3,'lobby start on several inputs');
-lobbyStarts[0]();assert.equal(two.unlocked,1);assert.equal(two.current,'lobby');assert.ok([...docListeners.values()].some(fn=>fn.name==='startLobbyBgm'),'still armed while suspended');
+lobbyStarts[0]();assert.equal(two.unlocked,2);assert.equal(two.current,'lobby');assert.ok([...docListeners.values()].some(fn=>fn.name==='startLobbyBgm'),'still armed while suspended');
+for(const fn of [...timers.values()])fn();assert.equal(two.unlocked,3,'poll keeps knocking');assert.equal(timers.size,1);
 two.running=true;lobbyStarts[0]();assert.equal(two.current,'lobby');assert.ok(![...docListeners.values()].some(fn=>fn.name==='startLobbyBgm'),'disarmed once running');
+for(const fn of [...timers.values()])fn();assert.equal(timers.size,0,'poll stops once running');
 // suspended context: play() must defer scheduling until resume() settles
 timers.clear();let resolved;
-const susCtx={window:{AudioContext:class extends AudioContext{state='suspended';resume(){return new Promise(r=>{resolved=()=>{this.state='running';r();};});}}},setInterval:context.setInterval,clearInterval:context.clearInterval,setTimeout(fn){fn();}};
+const susCtx={window:{AudioContext:class extends AudioContext{constructor(){super();susCtx.window.__ctx=this;this.handlers=[];}state='suspended';addEventListener(n,fn){this.handlers.push(fn);}fire(){this.handlers.forEach(fn=>fn());}resume(){return new Promise(r=>{resolved=()=>{this.state='running';r();};});}}},setInterval:context.setInterval,clearInterval:context.clearInterval,setTimeout(fn){fn();}};
 vm.createContext(susCtx);vm.runInContext(fs.readFileSync('public/bgm2.js','utf8'),susCtx);
 const sus=susCtx.window.BGM2;sus.play('lobby');assert.equal(sus.current,'lobby');assert.equal(timers.size,0,'no scheduling while suspended');assert.equal(sus.running,false);
+// statechange (e.g. browser granting autoplay later) starts the pending song exactly once
+const susInst=susCtx.window.__ctx;susInst.state='running';susInst.fire();assert.equal(timers.size,1,'statechange starts pending song');susInst.fire();assert.equal(timers.size,1,'only once');
 resolved();
-setTimeout(()=>{assert.equal(timers.size,1,'scheduling starts after resume');assert.equal(sus.running,true);
-  console.log('PASS: 17 effects, throttling, independent SFX output, five scores, loop/ending timing, delayed scheduling, stop, mute, shared toggles, blocked storage, lobby retry, deferred start after resume');});
+setTimeout(()=>{assert.equal(timers.size,1,'resume after statechange does not double-start');assert.equal(sus.running,true);
+  console.log('PASS: 17 effects, throttling, independent SFX output, five scores, loop/ending timing, delayed scheduling, stop, mute, shared toggles, blocked storage, lobby retry + poll, autoplay on load, non-persistent mute, deferred start after resume/statechange');});
