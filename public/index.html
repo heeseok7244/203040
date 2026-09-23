@@ -243,6 +243,16 @@
 <!-- 판매 확인 — 우클릭 한 번에 냥이 사라지면 사고가 된다. 커서 옆에 예/아니오를 띄운다 (JS 의 askSell 이 채운다) -->
 <div id="sellAsk" hidden></div>
 
+<!-- 음악 바 — 로비·게임·대전 화면에서 공통으로 사용한다. -->
+<div id="bgmControls" role="group" aria-label="배경음악 설정">
+<span class="bgmLabel">배경음악</span>
+<button type="button" data-bgm-version="1" aria-pressed="true" title="버전 1 · 특허청 라운지 재즈">BGM 1</button>
+<button type="button" data-bgm-version="2" aria-pressed="false" title="버전 2 · 햇살과 고양이">BGM 2</button>
+<button id="bgmToggle" title="배경음악 켜기/끄기" aria-label="배경음악">🔊</button>
+</div>
+
+<script src="bgm.js"></script>
+<script src="bgm2.js"></script>
 <script src="duel-cat-art.js"></script>
 <script src="game.js"></script>
 </body>

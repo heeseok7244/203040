@@ -4730,7 +4730,8 @@ function doStartWave() {
   iReady = false; oppReady = false; oppInPrep = false; prepEndsAt = 0;
   // 라운드 4·7·10 은 침입자가 아니라 상대와 붙는다
   if (game.nextIsDuel) { startDuelRound(); return; }
-  if (!game.startWave()) { log("동선이 막혀 있습니다."); return; }
+  if (!game.startWave()) { sfx("error"); log("동선이 막혀 있습니다."); return; }
+  sfx("wave");
   render();
 }
 
@@ -6270,10 +6271,12 @@ function consumeEvents() {
   for (const ev of game.drainEvents()) {
     switch (ev.t) {
       case "kill":
+        sfx("kill");
         addFloater(ev.x, ev.y, "+" + ev.reward, "#cda43a");
         spawnCorpse(ev.k, ev.x, ev.y, ev.face);
         break;
       case "leak":
+        sfx("leak");
         addFloater(ev.x, ev.y, "돌파!", "#e0574d");
         break;
       case "crit": {
@@ -6287,6 +6290,7 @@ function consumeEvents() {
         break;
       }
       case "fee":
+        sfx("fee");
         addFloater(ev.x, ev.y, `−${ev.amount}`, "#e0574d", { life: 1.0 });
         addShake(4, .2);
         log(ev.gold < 0
@@ -6295,12 +6299,15 @@ function consumeEvents() {
         renderHud();
         break;
       case "buy":
+        sfx("place");
         log(`<b>심사관 임용</b> ${ev.name} 배치 (−${ev.cost})`);
         break;
       case "sell":
+        sfx("sell");
         log(`<b style="color:#b9a98a">판매</b> ${ev.icon} ${ev.name}${ev.lv > 1 ? ` Lv${ev.lv}` : ""} → 특허료 <b>+${ev.refund}</b>`);
         break;
       case "expand":
+        sfx("expand");
         log(`<b>${ev.name}</b> ${ev.cells}칸 개방 (−${ev.cost})`);
         break;
       /*
@@ -6322,6 +6329,7 @@ function consumeEvents() {
         else if (game.awaitingPassive) openPassiveModal();
         break;
       case "merge": {
+        sfx(ev.promoted ? "promote" : "merge");
         log(ev.promoted
           ? `<b style="color:#cda43a">합성 · 승진</b> ${ev.icon} ${ev.name} <b>Lv${ev.lv}</b> — 선글라스, 공격력·치명타가 오르고 대전장에서 더 셉니다`
           : `<b style="color:#cda43a">합성</b> ${ev.icon} ${ev.name} ${ev.used}명 → <b>Lv${ev.lv}</b>`);
@@ -6334,6 +6342,7 @@ function consumeEvents() {
         break;
       }
       case "craft": {
+        sfx("craft");
         const mats = ev.used.map((k) => `${CATS[k].icon} ${CATS[k].name}`).join(" + ");
         log(`<b style="color:#6fe0d0">이종 합성</b> ${mats} → <b>${ev.icon} ${ev.name}</b> — ${ev.desc}`);
         if (ev.placed) {
@@ -6357,6 +6366,7 @@ function consumeEvents() {
         skillRings.push({ x: ev.x, y: ev.y, r: ev.r, col: sk.col, life: .6, max: .6 });
         addFloater(ev.x, ev.y - 30, sk.name, sk.col, { big: true, life: 1.1, rise: 30 });
         cutIn(ev.key, ev.lv, ev.n);
+        sfx("skill");
         addShake(5, .2);
         break;
       }
@@ -6373,16 +6383,19 @@ function consumeEvents() {
           : ev.outcome === "draw"
             ? `<b>대전 무승부</b> — 랭킹 점수 <b>+${ev.points.toLocaleString()}</b>`
             : `<b class="warn">대전 패배</b> — 등록원부 내구 <b>−${ev.dmg}</b> (점수 가산 없음)`);
+        sfx(ev.outcome === "win" ? "win" : ev.outcome === "lose" ? "lose" : "pick");
         if (ev.outcome === "lose") addShake(8, .35);
         renderHud();
         break;
       case "augment":
+        sfx("pick");
         log(`<b style="color:#cda43a">증강 ${ev.icon} ${ev.name}</b> — ${ev.desc}`);
         break;
       case "clone":
         log(`<b>분할출원</b> ${ev.name} 하나가 ${ev.placed ? "판에 추가되었습니다" : "대기열에 놓였습니다"}`);
         break;
       case "sabotage": {
+        sfx("sabotage");
         log(`<b style="color:#c3a8f5">방해 공작 뽑기</b> ${ev.icon} <b>${ev.name}</b> (${ev.tag}) — 상대 판에 던졌습니다 ` +
             `(−${ev.cost}${ev.gain ? ` · 강탈 <b style="color:#ffd782">+${ev.gain}</b>` : ""} · 남은 ${ev.left}회)`);
         // 상대가 내 판에 찍는 것과 같은 도장을 상대 청사 미니맵 위에 찍는다 — 「나갔다」가 같은 그림으로 보이게
@@ -6401,6 +6414,7 @@ function consumeEvents() {
        * (slamSabStamp) — 공작 이름과 무엇을 잃었는지가 도장 한 장에 적혀 있다. 숫자를 읽지 않아도
        * 「지금 당했다」가 눈에 들어오도록 한 장치다. 화면 흔들림은 도장이 찍히는 순간 거기서 난다. */
       case "sabotaged": {
+        sfx("sabotage");
         log(`<b class="warn">상대 공작</b> ${ev.icon} ${ev.name} — ${ev.desc}`);
         const sub = ev.kind === "steal"  ? `특허료 −${ev.amount}`
                   : ev.kind === "swarm"  ? (ev.now ? `침입자 ${ev.amount}마리 난입!` : `다음 웨이브 +${ev.amount}마리`)
@@ -6498,6 +6512,7 @@ function startDuelRound() {
   $("#duelStage").classList.remove("hidden");
   $("#duelResult").classList.add("hidden");
   document.body.classList.add("dueling");
+  bgmPlay("duel");   // 대전장이 열리면 (솔로·1:1 모두) 긴장감 있는 곡으로
   $("#duelTitle").textContent = `⚔ ${duelLabel()}`;
   clearDuelDecks();
   render();
@@ -6765,6 +6780,7 @@ function closeDuelRound() {
   pendingDuelRosters = { wave: 0, by: {} };
   $("#duelStage").classList.add("hidden");
   document.body.classList.remove("dueling");
+  if (!pendingOver) bgmPlay("battle");   // 대전장을 접으면 평소 곡으로 (판이 끝나면 endMatch 가 승패곡을 튼다)
   $("#duelResult").classList.add("hidden");
   render();
   // 마지막 대전이었다면 여기가 판의 끝이다 — 붙잡아 둔 종료를 이제 띄운다
@@ -7526,6 +7542,7 @@ function endMatch(iWon, reasonText) {
    * wave/prep 그대로였다 — 성적표 밑에서 웨이브가 계속 돌다가 wave_end 가 강화 선택 모달로
    * 성적표를 덮어 버리고, 내구가 더 깎이면 이긴 성적표가 진 성적표로 바뀌기까지 했다. */
   game.phase = iWon ? "won" : "lost";
+  bgmPlay(iWon ? "victory" : "defeat");
   game.awaitingPassive = false; game.awaitingAugment = false;
   game.shots = [];
   const s = game.summary();
@@ -8328,6 +8345,7 @@ function openPassiveModal() {
   const choose = (key) => {
     const def = PASSIVE_BY_KEY[key];
     if (!def || !game.awaitingPassive) return;
+    sfx("pick");
     game.applyPassive(def);
     log(`<b>${def.icon} ${def.name}</b> 선택 — ${def.desc}`);
     // 계열 단계가 열렸으면 축포를 쏜다 — 「빌드를 완성했다」가 한 번은 크게 터져야 한다
@@ -8851,6 +8869,7 @@ function preloadStageArt() {
 function beginBattle() {
   $("#lobby").classList.add("hidden");
   $("#gameRoot").classList.remove("hidden");
+  bgmPlay("battle");
   document.body.classList.toggle("solo", soloMode);
   // 뒤로가기가 먹고 갈 기록을 하나 쌓아 둔다 (아래 popstate 참고)
   history.pushState({ ingame: true }, "");
@@ -9097,6 +9116,71 @@ $("#btnJoin").addEventListener("click", () => {
 });
 
 onSpriteReady(() => { if (game) render(); });
+
+/* ═══════ 배경음악 (bgm.js) ═══════
+ * 브라우저는 사용자가 한 번 누르기 전엔 소리를 못 내므로, 로비곡은 첫 클릭·키 입력에 붙여 시작한다.
+ * 대전곡은 beginBattle, 승리·패배곡은 endMatch 에서 튼다. 끄기 상태는 이 브라우저에 기억해 둔다. */
+const BGM_MUTE_KEY = "patent-siege.bgmMuted";
+const BGM_VERSION_KEY = "patent-siege.bgmVersion";
+let bgmIsMuted = false, bgmVersion = "1";
+try {
+  bgmIsMuted = localStorage.getItem(BGM_MUTE_KEY) === "1";
+  bgmVersion = localStorage.getItem(BGM_VERSION_KEY) === "2" ? "2" : "1";
+} catch (_) {}
+function bgmMuted() { return bgmIsMuted; }
+function bgmPlayer() { return bgmVersion === "2" ? window.BGM2 : window.BGM; }
+function bgmScene() { return !game ? "lobby" : game.phase === "won" ? "victory" : game.phase === "lost" ? "defeat" : duel ? "duel" : "battle"; }
+function bgmStopAll() { window.BGM?.stop(); window.BGM2?.stop(); }
+function bgmPlay(name) { if (!bgmMuted()) bgmPlayer()?.play(name); }
+/** 효과음 — 음소거 버튼 하나로 배경음악과 함께 꺼진다 */
+function sfx(name) { if (!bgmMuted()) (bgmVersion === "2" ? window.SFX2 : window.SFX)?.play(name); }
+function syncSfxVersion() {
+  window.SFX?.setMuted(bgmMuted() || bgmVersion !== "1");
+  window.SFX2?.setMuted(bgmMuted() || bgmVersion !== "2");
+}
+syncSfxVersion();
+// 버튼은 어디서 눌리든 딸깍 — 모달의 선택지처럼 버튼이 아닌 것들은 각자의 자리에서 sfx() 를 부른다
+document.addEventListener("click", (e) => {
+  const b = e.target && e.target.closest ? e.target.closest("button") : null;
+  if (b && b.id !== "bgmToggle" && !b.disabled) sfx("click");
+}, true);
+function renderBgmToggle() {
+  const b = $("#bgmToggle");
+  if (b) {
+    b.textContent = bgmMuted() ? "🔇" : "🔊";
+    b.setAttribute("aria-label", bgmMuted() ? "배경음악과 효과음 켜기" : "배경음악과 효과음 끄기");
+    b.setAttribute("aria-pressed", String(bgmMuted()));
+  }
+}
+renderBgmToggle();
+const bgmVersionButtons = document.querySelectorAll("[data-bgm-version]");
+function renderBgmVersion() {
+  bgmVersionButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.bgmVersion === bgmVersion)));
+}
+renderBgmVersion();
+bgmVersionButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    if (button.dataset.bgmVersion === bgmVersion) return;
+    bgmVersion = button.dataset.bgmVersion === "2" ? "2" : "1";
+    try { localStorage.setItem(BGM_VERSION_KEY, bgmVersion); } catch (_) {}
+    renderBgmVersion();
+    syncSfxVersion();
+    bgmStopAll();
+    bgmPlay(bgmScene());
+  });
+});
+$("#bgmToggle")?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const next = !bgmMuted();
+  bgmIsMuted = next;
+  syncSfxVersion();
+  try { localStorage.setItem(BGM_MUTE_KEY, next ? "1" : "0"); } catch (_) {}
+  renderBgmToggle();
+  if (next) bgmStopAll();
+  else bgmPlay(bgmScene());
+});
+const startLobbyBgm = () => { if (!game && !bgmPlayer()?.current) bgmPlay("lobby"); };
+["pointerdown", "keydown"].forEach((ev) => document.addEventListener(ev, startLobbyBgm, { once: true }));
 
 return {};
 })();

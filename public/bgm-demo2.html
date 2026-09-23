@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>묘한특허 · BGM 2 미리 듣기</title>
+<style>
+  *{box-sizing:border-box}body{margin:0;background:#192330;color:#f3eee3;font:16px/1.6 system-ui,sans-serif;padding:48px 20px}
+  main{max-width:760px;margin:auto}h1{font-size:clamp(26px,5vw,40px);margin:8px 0}p{color:#bcc8d3}
+  .tracks{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin:28px 0}
+  button{font:inherit;cursor:pointer;border:1px solid #526174;border-radius:12px;padding:16px;background:#28384b;color:inherit;text-align:left}
+  button:hover,button[aria-pressed=true]{background:#415875;border-color:#f2c570}button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #f2c570;outline-offset:3px}
+  small{display:block;color:#bfccd9;margin-top:6px}.controls{display:flex;align-items:center;gap:20px;flex-wrap:wrap}a{color:#f2c570}#now{min-height:2em;margin:24px 0}
+</style>
+</head>
+<body><main>
+<small>묘한특허 · 오리지널 사운드트랙 02</small>
+<h1>햇살 한 스푼, 고양이 두 마리</h1>
+<p>반짝이는 오르골, 나무 마림바, 우쿨렐레풍 반주와 살랑이는 셔플 리듬.<br>버튼을 누르면 음악이 시작됩니다. 로비·방어·대전곡은 반복 재생됩니다.</p>
+<div class="tracks">
+  <button data-song="lobby">로비 · 햇살 위의 발자국<small>108 BPM · 오르골과 낮잠 사이</small></button>
+  <button data-song="battle">방어 · 우당탕 솜방망이<small>126 BPM · 마림바가 뛰노는 오후</small></button>
+  <button data-song="duel">1:1 · 솜방망이 대격돌<small>166 BPM · 숨 가쁜 단조 추격전</small></button>
+  <button data-song="victory">승리 · 간식 시간이야<small>116 BPM · 반짝이는 축하 인사</small></button>
+  <button data-song="defeat">패배 · 괜찮아, 한 번 더<small>86 BPM · 다정한 토닥임</small></button>
+</div>
+<div class="controls">
+  <button id="stop">정지</button>
+  <button id="mute" aria-pressed="false">음소거</button>
+  <label>볼륨 <input id="volume" aria-label="음악 볼륨" type="range" min="0" max="1" step="0.05" value="0.6"></label>
+</div>
+<div id="now" role="status" aria-live="polite">재생 대기 중</div>
+<h2>효과음 2 · 솜방망이와 작은 종</h2>
+<div class="tracks" id="sfxButtons"></div>
+<label>효과음 볼륨 <input id="sfxVolume" type="range" min="0" max="1" step="0.05" value="0.8"></label>
+<p>음소거는 음악과 효과음에 함께 적용됩니다.</p>
+<a href="bgm-demo.html">버전 1 미리 듣기</a> · <a href="index.html">게임으로 돌아가기</a>
+</main>
+<script src="bgm2.js"></script>
+<script>
+  const buttons = [...document.querySelectorAll('[data-song]')];
+  const labels = { click: '클릭', place: '배치', sell: '판매', merge: '합성', promote: '승진', craft: '특수 합성', expand: '구역 개방', wave: '웨이브 시작', pick: '선택', kill: '처치', leak: '돌파 경고', fee: '합의금', skill: '스킬', win: '대전 승리', lose: '대전 패배', error: '행동 불가', sabotage: '공작' };
+  SFX2.names.forEach(name => {
+    const button = document.createElement('button');
+    button.textContent = labels[name];
+    button.onclick = () => SFX2.play(name);
+    document.getElementById('sfxButtons').appendChild(button);
+  });
+  document.getElementById('sfxVolume').oninput = e => SFX2.setVolume(Number(e.target.value));
+  buttons.forEach(b => b.addEventListener('click', () => { BGM2.play(b.dataset.song); render(); }));
+  document.getElementById('stop').onclick = () => { BGM2.stop(); SFX2.stop(); render(); };
+  document.getElementById('volume').oninput = e => BGM2.setVolume(Number(e.target.value));
+  document.getElementById('mute').onclick = e => {
+    const muted = BGM2.toggleMute();
+    SFX2.setMuted(muted);
+    e.target.textContent = muted ? '음소거 해제' : '음소거';
+    e.target.setAttribute('aria-pressed', String(muted));
+  };
+  function render() {
+    buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.song === BGM2.current)));
+    const selected = buttons.find(b => b.dataset.song === BGM2.current);
+    const label = selected ? '재생 중: ' + selected.firstChild.textContent : '재생 대기 중';
+    const now = document.getElementById('now');
+    if (now.textContent !== label) now.textContent = label;
+  }
+  setInterval(render, 200);
+</script>
+</body></html>
