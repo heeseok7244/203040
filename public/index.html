@@ -26,6 +26,9 @@
   <p class="tagline">먼저 등록하는 쪽이 이깁니다.</p>
   <p class="subline">같은 발명, 특허는 하나. 냥이들이 막아내는 동안 출원하세요.</p>
 
+  <!-- 로비에서도 소리를 끌 수 있게 오른쪽 위에 하나 더 둔다 (게임 화면 것과 상태를 같이 쓴다) -->
+  <button class="bgmToggle lobbyBgm" type="button" title="소리 켜기/끄기" aria-label="소리">🔊</button>
+
   <div class="entry">
     <button id="btnSolo" class="go">솔로 플레이</button>
    <!-- <div class="codehint">혼자서 10라운드를 치르고 랭킹 점수를 받습니다 — 상대를 기다리지 않습니다</div> --> 
@@ -113,8 +116,10 @@
   <div>
     <div class="panel">
       <!-- 머리에 전장 이름(아이디어 캠퍼스 등)을 쓰지 않는다 — 원화가 이미 말해 주는 것이라
-           글자로 되풀이할 필요가 없었다. 왼쪽은 비워 두고 오른쪽에 「침입자 정보 ?」만 둔다 -->
-      <h2><span></span>
+           글자로 되풀이할 필요가 없었다. 왼쪽 맨 앞에 소리 토글, 오른쪽에 「침입자 정보 ?」를 둔다 -->
+      <h2>
+        <!-- 소리 켜기/끄기 — 「침입자 정보」와 같은 줄 맨 앞. 배경음악과 효과음이 함께 꺼진다 -->
+        <button class="bgmToggle" type="button" title="소리 켜기/끄기" aria-label="소리">🔊</button>
         <span class="h2right">
           <em id="phaseLbl">침입자 정보</em>
           <!-- 침입자 도감은 늘 펼쳐 둘 만큼 자주 보는 것이 아니라, 물음표로 접어 두고
@@ -243,15 +248,7 @@
 <!-- 판매 확인 — 우클릭 한 번에 냥이 사라지면 사고가 된다. 커서 옆에 예/아니오를 띄운다 (JS 의 askSell 이 채운다) -->
 <div id="sellAsk" hidden></div>
 
-<!-- 음악 바 — 로비·게임·대전 화면에서 공통으로 사용한다. -->
-<div id="bgmControls" role="group" aria-label="배경음악 설정">
-<span class="bgmLabel">배경음악</span>
-<button type="button" data-bgm-version="1" aria-pressed="true" title="버전 1 · 특허청 라운지 재즈">BGM 1</button>
-<button type="button" data-bgm-version="2" aria-pressed="false" title="버전 2 · 햇살과 고양이">BGM 2</button>
-<button id="bgmToggle" title="배경음악 켜기/끄기" aria-label="배경음악">🔊</button>
-</div>
-
-<script src="bgm.js"></script>
+<!-- 배경음악은 버전 2(햇살과 고양이)로 정했다. bgm.js(버전 1)는 파일만 남겨 두고 bgm-demo.html 에서만 쓴다. -->
 <script src="bgm2.js"></script>
 <script src="duel-cat-art.js"></script>
 <script src="game.js"></script>
