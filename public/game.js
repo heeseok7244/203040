@@ -9158,8 +9158,17 @@ bgmToggles.forEach(b => b.addEventListener("click", (e) => {
   if (next) bgmStopAll();
   else bgmPlay(bgmScene());
 }));
-const startLobbyBgm = () => { if (!game && !bgmPlayer()?.current) bgmPlay("lobby"); };
-["pointerdown", "keydown"].forEach((ev) => document.addEventListener(ev, startLobbyBgm, { once: true }));
+// 첫 입력 한 번으로 끝내지 않는다 — 브라우저가 그 입력을 「사용자 동작」으로 안 쳐 주면(터치의 pointerdown 등)
+// 컨텍스트가 멈춘 채 남아 로비가 조용해진다. 소리가 실제로 돌기 시작할 때까지 입력마다 다시 깨운다.
+const startLobbyBgm = () => {
+  const p = bgmPlayer();
+  if (!p) return;
+  p.unlock?.();
+  if (!game && !p.current) bgmPlay("lobby");
+  if (p.running) LOBBY_BGM_EVENTS.forEach((ev) => document.removeEventListener(ev, startLobbyBgm, true));
+};
+const LOBBY_BGM_EVENTS = ["pointerdown", "pointerup", "touchend", "click", "keydown"];
+LOBBY_BGM_EVENTS.forEach((ev) => document.addEventListener(ev, startLobbyBgm, true));
 
 return {};
 })();

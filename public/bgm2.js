@@ -188,8 +188,14 @@
     const song = SONGS[name];
     if (!song) return;
     init();
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     stop(); current = name;
+    // 첫 입력 직후엔 컨텍스트가 아직 멈춰 있어 currentTime 이 0 에 머문다. 재개가 끝난 뒤에
+    // 예약을 시작해야 첫 곡이 조용히 지나가 버리지 않는다 (재개 중 다른 곡으로 바뀌면 그만둔다).
+    if (ctx.state === 'suspended') {
+      const wanted = name;
+      ctx.resume().catch(() => {}).then(() => { if (current === wanted && !timer) begin(); });
+    } else begin();
+    function begin() {
     bus = ctx.createGain(); bus.connect(master);
     const beat = 60 / song.bpm;
     duration = song.beats * beat; events = [];
@@ -237,7 +243,10 @@
       }
     }
     timer = setInterval(schedule, 25); schedule();
+    }
   }
+  /** 첫 사용자 입력에서 부른다 — 컨텍스트를 만들고 재개해 둔다 */
+  function unlock() { try { init(); } catch (_) { return; } if (ctx.state === 'suspended') ctx.resume().catch(() => {}); }
   function setVolume(value) {
     if (!Number.isFinite(value)) return;
     volume = Math.max(0, Math.min(1, value));
@@ -303,5 +312,6 @@
       if (sfxMuted) stopSfx();
     },
   };
-  global.BGM2 = { play, stop, setVolume, toggleMute, get current() { return current; }, songs: Object.keys(SONGS) };
+  global.BGM2 = { play, stop, setVolume, toggleMute, unlock, get current() { return current; },
+    get running() { return !!ctx && ctx.state === 'running'; }, songs: Object.keys(SONGS) };
 })(window);

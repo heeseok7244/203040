@@ -38,25 +38,39 @@ effects.stop();effects.setMuted(true);let before=sources.length;effects.play('cl
 effects.setMuted(false);effects.setVolume(0);effects.play('place');assert.equal(sources.length,before);effects.setVolume(0.8);
 effects.play('craft');const effectSources=sources.slice(before),ends=effectSources.map(n=>n.end);bgm.stop();assert.deepEqual(effectSources.map(n=>n.end),ends,'music stop preserves effects');
 effects.setMuted(true);assert.ok(effectSources.every(n=>n.end===clock+0.02));
-// Exercise the actual game integration with both players and unavailable storage.
-const elements = new Map();
-function element(){return {value:'',textContent:'',listeners:{},setAttribute(){},addEventListener(n,fn){this.listeners[n]=fn;}};}
-for(const id of ['#bgmToggle'])elements.set(id,element());
-const versionButtons = ['1','2'].map(version => Object.assign(element(), {dataset:{bgmVersion:version}}));
-const player=()=>({current:null,play(n){this.current=n;},stop(){this.current=null;}});
-const one=player(),two=player(),saved=new Map();
-const fxOne={muted:false,play(n){this.last=n;},setMuted(m){this.muted=m;}},fxTwo={...fxOne};
-const gameContext={window:{BGM:one,BGM2:two,SFX:fxOne,SFX2:fxTwo},$:s=>elements.get(s),game:null,duel:null,localStorage:{getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)},document:{addEventListener(){},querySelectorAll(){return versionButtons;}}};
+// Exercise the actual game integration: one BGM (version 2), two toggles sharing state, unavailable storage,
+// and the lobby start that retries until the audio context is really running.
+function element(){return {value:'',textContent:'',listeners:{},attrs:{},setAttribute(k,v){this.attrs[k]=v;},classList:{contains(){return true;}},addEventListener(n,fn){this.listeners[n]=fn;}};}
+const toggles=[element(),element()];
+const two={current:null,running:false,unlocked:0,play(n){this.current=n;},stop(){this.current=null;},unlock(){this.unlocked++;}};
+const saved=new Map();
+const fxTwo={muted:false,play(n){this.last=n;},setMuted(m){this.muted=m;}};
+const docListeners=new Map();
+const gameContext={window:{BGM2:two,SFX2:fxTwo},$:()=>null,game:null,duel:null,
+  localStorage:{getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)},
+  document:{addEventListener(n,fn){docListeners.set(n+':'+fn.name,fn);},removeEventListener(n,fn){docListeners.delete(n+':'+fn.name);},querySelectorAll(){return toggles;}}};
 vm.createContext(gameContext);
 const game=fs.readFileSync('public/game.js','utf8');
 vm.runInContext(game.slice(game.indexOf('const BGM_MUTE_KEY'),game.lastIndexOf('return {};')),gameContext);
-const mute=elements.get('#bgmToggle');
-vm.runInContext("bgmPlay('lobby')",gameContext);assert.equal(one.current,'lobby');
-versionButtons[1].listeners.click();assert.equal(one.current,null);assert.equal(two.current,'lobby');vm.runInContext("sfx('place')",gameContext);assert.equal(fxTwo.last,'place');assert.equal(fxOne.last,undefined);assert.equal(fxOne.muted,true);
-mute.listeners.click({stopPropagation(){}});assert.equal(two.current,null);assert.ok(fxOne.muted&&fxTwo.muted);vm.runInContext("sfx('sell')",gameContext);assert.equal(fxTwo.last,'place');
-versionButtons[0].listeners.click();assert.equal(one.current,null);
+assert.ok(toggles.every(t=>t.textContent==='🔊'));
+vm.runInContext("bgmPlay('lobby')",gameContext);assert.equal(two.current,'lobby');
+vm.runInContext("sfx('place')",gameContext);assert.equal(fxTwo.last,'place');assert.equal(fxTwo.muted,false);
+const evt={stopPropagation(){}};
+toggles[0].listeners.click(evt);assert.equal(two.current,null);assert.ok(fxTwo.muted);assert.ok(toggles.every(t=>t.textContent==='🔇'));
+vm.runInContext("sfx('sell')",gameContext);assert.equal(fxTwo.last,'place');assert.equal(saved.get('patent-siege.bgmMuted'),'1');
 gameContext.localStorage.setItem=()=>{throw Error('blocked');};
 gameContext.game={phase:'battle'};gameContext.duel={};
-mute.listeners.click({stopPropagation(){}});assert.equal(one.current,'duel');vm.runInContext("sfx('click')",gameContext);assert.equal(fxOne.last,'click');assert.equal(fxOne.muted,false);
-gameContext.game.phase='won';versionButtons[1].listeners.click();assert.equal(two.current,'victory');assert.equal(one.current,null);
-console.log('PASS: 17 effects, throttling, independent SFX output, version routing, five scores, loop/ending timing, delayed scheduling, stop, mute, scene/version switching, blocked storage');
+toggles[1].listeners.click(evt);assert.equal(two.current,'duel');assert.equal(fxTwo.muted,false);assert.ok(toggles.every(t=>t.textContent==='🔊'));
+// lobby start: keeps listening while the context is suspended, stops once it runs
+gameContext.game=null;gameContext.duel=null;two.current=null;
+const lobbyStarts=[...docListeners.values()].filter(fn=>fn.name==='startLobbyBgm');assert.ok(lobbyStarts.length>=3,'lobby start on several inputs');
+lobbyStarts[0]();assert.equal(two.unlocked,1);assert.equal(two.current,'lobby');assert.ok([...docListeners.values()].some(fn=>fn.name==='startLobbyBgm'),'still armed while suspended');
+two.running=true;lobbyStarts[0]();assert.equal(two.current,'lobby');assert.ok(![...docListeners.values()].some(fn=>fn.name==='startLobbyBgm'),'disarmed once running');
+// suspended context: play() must defer scheduling until resume() settles
+timers.clear();let resolved;
+const susCtx={window:{AudioContext:class extends AudioContext{state='suspended';resume(){return new Promise(r=>{resolved=()=>{this.state='running';r();};});}}},setInterval:context.setInterval,clearInterval:context.clearInterval,setTimeout(fn){fn();}};
+vm.createContext(susCtx);vm.runInContext(fs.readFileSync('public/bgm2.js','utf8'),susCtx);
+const sus=susCtx.window.BGM2;sus.play('lobby');assert.equal(sus.current,'lobby');assert.equal(timers.size,0,'no scheduling while suspended');assert.equal(sus.running,false);
+resolved();
+setTimeout(()=>{assert.equal(timers.size,1,'scheduling starts after resume');assert.equal(sus.running,true);
+  console.log('PASS: 17 effects, throttling, independent SFX output, five scores, loop/ending timing, delayed scheduling, stop, mute, shared toggles, blocked storage, lobby retry, deferred start after resume');});
