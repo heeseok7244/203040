@@ -1444,17 +1444,23 @@ body.dueling #tip{display:none!important}
 /* 계열이 넷이 된 뒤로는 780px 이면 가장 긴 설명(「둔화 강화·명중 시 정지」)까지 한 줄에 들어간다 */
 .sheet:has(.linetiles){max-width:780px}
 
-/* 배경음악 토글 — 오른쪽 위에 작게, 모달보다는 아래 */
-#bgmToggle {
-  position: fixed; top: 10px; right: 10px; z-index: 50;
-  width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25);
-  background: rgba(0,0,0,.45); color: #fff; font-size: 16px; cursor: pointer; line-height: 1;
+/* 대전장(120)과 모달(150) 위에서도 음악 설정을 사용할 수 있다. */
+#bgmControls {
+  position: fixed; top: 8px; right: 8px; z-index: 160;
+  display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+  border: 1px solid #8ba2ba; border-radius: 12px; background: #152238;
+  box-shadow: 0 3px 12px #0006; color: #fff;
 }
-#bgmToggle:hover { background: rgba(0,0,0,.7); }
-#bgmVersion {
-  position: fixed; top: 10px; right: 54px; z-index: 50;
-  max-width: 160px; height: 36px; padding: 0 8px; border-radius: 18px;
-  border: 1px solid rgba(255,255,255,.25); background: #29313b;
-  color: #fff; font: 12px system-ui, sans-serif; cursor: pointer;
+#bgmControls .bgmLabel { font-size: 12px; padding: 0 4px; }
+#bgmControls button {
+  min-width: 58px; height: 36px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid #6e86b2; background: #293b59;
+  color: #fff; font: 700 13px system-ui, sans-serif; cursor: pointer; letter-spacing: 0;
 }
-#bgmVersion:focus-visible { outline: 2px solid #f2b134; outline-offset: 2px; }
+#bgmControls [data-bgm-version][aria-pressed="true"] { background: #ffd782; color: #152238; border-color: #ffd782; }
+#bgmControls button:hover { border-color: #ffd782; }
+#bgmControls #bgmToggle { min-width: 36px; padding: 0; font-size: 17px; }
+#bgmControls button:focus-visible { outline: 2px solid #f2b134; outline-offset: 2px; }
+body { padding-top: 64px; }
+#gameRoot.wrap { height: calc(100vh - 64px); height: calc(100dvh - 64px); }
+@media (max-width: 360px) { #bgmControls .bgmLabel { display: none; } }

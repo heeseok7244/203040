@@ -29,20 +29,21 @@ bgm.setVolume(0);assert.equal(bgm.toggleMute(),true);assert.equal(bgm.toggleMute
 // Exercise the actual game integration with both players and unavailable storage.
 const elements = new Map();
 function element(){return {value:'',textContent:'',listeners:{},setAttribute(){},addEventListener(n,fn){this.listeners[n]=fn;}};}
-for(const id of ['#bgmToggle','#bgmVersion'])elements.set(id,element());
+for(const id of ['#bgmToggle'])elements.set(id,element());
+const versionButtons = ['1','2'].map(version => Object.assign(element(), {dataset:{bgmVersion:version}}));
 const player=()=>({current:null,play(n){this.current=n;},stop(){this.current=null;}});
 const one=player(),two=player(),saved=new Map();
-const gameContext={window:{BGM:one,BGM2:two},$:s=>elements.get(s),game:null,duel:null,localStorage:{getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)},document:{addEventListener(){}}};
+const gameContext={window:{BGM:one,BGM2:two},$:s=>elements.get(s),game:null,duel:null,localStorage:{getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)},document:{addEventListener(){},querySelectorAll(){return versionButtons;}}};
 vm.createContext(gameContext);
 const game=fs.readFileSync('public/game.js','utf8');
 vm.runInContext(game.slice(game.indexOf('const BGM_MUTE_KEY'),game.lastIndexOf('return {};')),gameContext);
-const select=elements.get('#bgmVersion'),mute=elements.get('#bgmToggle');
+const mute=elements.get('#bgmToggle');
 vm.runInContext("bgmPlay('lobby')",gameContext);assert.equal(one.current,'lobby');
-select.value='2';select.listeners.change();assert.equal(one.current,null);assert.equal(two.current,'lobby');
+versionButtons[1].listeners.click();assert.equal(one.current,null);assert.equal(two.current,'lobby');
 mute.listeners.click({stopPropagation(){}});assert.equal(two.current,null);
-select.value='1';select.listeners.change();assert.equal(one.current,null);
+versionButtons[0].listeners.click();assert.equal(one.current,null);
 gameContext.localStorage.setItem=()=>{throw Error('blocked');};
 gameContext.game={phase:'battle'};gameContext.duel={};
 mute.listeners.click({stopPropagation(){}});assert.equal(one.current,'duel');
-gameContext.game.phase='won';select.value='2';select.listeners.change();assert.equal(two.current,'victory');assert.equal(one.current,null);
+gameContext.game.phase='won';versionButtons[1].listeners.click();assert.equal(two.current,'victory');assert.equal(one.current,null);
 console.log('PASS: five scores, loop/ending timing, delayed scheduling, stop, mute, scene/version switching, blocked storage');

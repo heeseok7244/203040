@@ -243,12 +243,13 @@
 <!-- 판매 확인 — 우클릭 한 번에 냥이 사라지면 사고가 된다. 커서 옆에 예/아니오를 띄운다 (JS 의 askSell 이 채운다) -->
 <div id="sellAsk" hidden></div>
 
-<!-- 배경음악 토글 — 로비·대전 어디서나 보인다. 상태는 game.js 끝의 BGM 연결부가 관리한다 -->
+<!-- 음악 바 — 로비·게임·대전 화면에서 공통으로 사용한다. -->
+<div id="bgmControls" role="group" aria-label="배경음악 설정">
+<span class="bgmLabel">배경음악</span>
+<button type="button" data-bgm-version="1" aria-pressed="true" title="버전 1 · 칩튠">BGM 1</button>
+<button type="button" data-bgm-version="2" aria-pressed="false" title="버전 2 · 냥이 행진">BGM 2</button>
 <button id="bgmToggle" title="배경음악 켜기/끄기" aria-label="배경음악">🔊</button>
-<select id="bgmVersion" aria-label="배경음악 버전" title="배경음악 버전 선택">
-  <option value="1">BGM 1 · 칩튠</option>
-  <option value="2">BGM 2 · 냥이 행진</option>
-</select>
+</div>
 
 <script src="bgm.js"></script>
 <script src="bgm2.js"></script>

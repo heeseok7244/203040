@@ -9148,13 +9148,20 @@ function renderBgmToggle() {
   }
 }
 renderBgmToggle();
-const bgmVersionSelect = $("#bgmVersion");
-if (bgmVersionSelect) bgmVersionSelect.value = bgmVersion;
-bgmVersionSelect?.addEventListener("change", () => {
-  bgmVersion = bgmVersionSelect.value === "2" ? "2" : "1";
-  try { localStorage.setItem(BGM_VERSION_KEY, bgmVersion); } catch (_) {}
-  bgmStopAll();
-  bgmPlay(bgmScene());
+const bgmVersionButtons = document.querySelectorAll("[data-bgm-version]");
+function renderBgmVersion() {
+  bgmVersionButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.bgmVersion === bgmVersion)));
+}
+renderBgmVersion();
+bgmVersionButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    if (button.dataset.bgmVersion === bgmVersion) return;
+    bgmVersion = button.dataset.bgmVersion === "2" ? "2" : "1";
+    try { localStorage.setItem(BGM_VERSION_KEY, bgmVersion); } catch (_) {}
+    renderBgmVersion();
+    bgmStopAll();
+    bgmPlay(bgmScene());
+  });
 });
 $("#bgmToggle")?.addEventListener("click", (e) => {
   e.stopPropagation();
