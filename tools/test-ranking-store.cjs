@@ -46,6 +46,12 @@ test('remote storage survives store recreation and never overwrites the full key
         for (const [value, date] of values) if (date <= args[1]) values.delete(value);
         return { result: 0 };
       }
+      if (command === 'ZREMRANGEBYRANK') {
+        const sorted = [...values.keys()].sort((a, b) => values.get(a) - values.get(b) || Buffer.compare(Buffer.from(a), Buffer.from(b)));
+        const end = args[1] < 0 ? sorted.length + args[1] : args[1];
+        for (let i = args[0]; i <= end; i++) values.delete(sorted[i]);
+        return { result: Math.max(0, end + 1) };
+      }
       if (command === 'EXPIRE') { assert.equal(args[0], RETENTION_MS / 1000); return { result: 1 }; }
       assert.equal(command, 'ZRANGE');
       return { result: [...values.keys()] };
@@ -60,6 +66,19 @@ test('remote storage survives store recreation and never overwrites the full key
   await assert.rejects(store.add(entry(99)));
   fail = false;
   assert.equal((await store.list()).lists.solo.length, 1);
+  time += 1000;
+  await store.add(entry(2, 'duel'));
+  time += 1000;
+  await store.add(entry(1));
+  const capped = createRankingStore({ ...options, env: { ...env, RANK_MAX_RECORDS: '2' } });
+  const trimmed = await capped.list();
+  assert.equal(values.size, 2);
+  assert.deepEqual(trimmed.lists.solo.map(r => r.score), [1]);
+  assert.deepEqual(trimmed.lists.duel.map(r => r.score), [2]);
+  time += 1000;
+  await capped.add(entry(3));
+  assert.equal(values.size, 2);
+  assert.equal((await capped.list()).lists.duel.length, 0);
   time += RETENTION_MS;
   assert.equal((await store.list()).lists.solo.length, 0);
 });
@@ -113,4 +132,32 @@ test('HTTP API persists across server process restart and reports missing Render
   assert.equal((await fetch(base + '/api/rankings')).status, 503);
   assert.equal((await fetch(base + '/healthz')).status, 200);
   await stop(child);
+});
+
+test('local cap removes oldest scores across modes, persists, and applies on read', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'rank-cap-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const file = path.join(dir, 'rankings.json');
+  let time = Date.parse('2026-09-01T00:00:00Z');
+  const options = { env: { RANK_FILE: file, RANK_MAX_RECORDS: '2' }, now: () => time };
+  const store = createRankingStore(options);
+  await store.add(entry(999));
+  time += 1000;
+  await store.add(entry(5, 'duel'));
+  assert.equal(JSON.parse(await fs.readFile(file)).length, 2);
+  time += 1000;
+  await store.add(entry(1));
+  const result = await createRankingStore(options).list();
+  assert.deepEqual(result.lists.solo.map(r => r.score), [1]);
+  assert.deepEqual(result.lists.duel.map(r => r.score), [5]);
+  assert.equal(JSON.parse(await fs.readFile(file)).length, 2);
+  const reduced = createRankingStore({ ...options, env: { ...options.env, RANK_MAX_RECORDS: '1' } });
+  assert.equal((await reduced.list()).lists.duel.length, 0);
+  assert.equal(JSON.parse(await fs.readFile(file)).length, 1);
+});
+
+test('invalid record limits are rejected', () => {
+  for (const value of ['0', '-1', '1.5', 'oops', '10001', 'Infinity']) {
+    assert.throws(() => createRankingStore({ env: { RANK_MAX_RECORDS: value } }), /RANK_MAX_RECORDS/);
+  }
 });

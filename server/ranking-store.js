@@ -29,6 +29,10 @@ function createRankingStore({ env = process.env, fetchImpl = fetch, now = Date.n
   const token = env.UPSTASH_REDIS_REST_TOKEN;
   const key = env.RANK_REDIS_KEY || 'patent-siege:rankings:v1';
   const file = env.RANK_FILE || path.join(__dirname, '..', 'data', 'rankings.json');
+  const maxRecords = Number(env.RANK_MAX_RECORDS || 10000);
+  if (!Number.isSafeInteger(maxRecords) || maxRecords < 1 || maxRecords > 10000) {
+    throw new Error('RANK_MAX_RECORDS must be an integer from 1 to 10000');
+  }
   let queue = Promise.resolve();
 
   async function remote(entry, time) {
@@ -37,6 +41,8 @@ function createRankingStore({ env = process.env, fetchImpl = fetch, now = Date.n
     const commands = [];
     if (entry) commands.push(['ZADD', key, time, JSON.stringify(entry)]);
     commands.push(['ZREMRANGEBYSCORE', key, '-inf', time - RETENTION_MS]);
+    // Sorted-set scores are registration timestamps, not game scores.
+    commands.push(['ZREMRANGEBYRANK', key, 0, -maxRecords - 1]);
     if (entry) commands.push(['EXPIRE', key, RETENTION_MS / 1000]);
     commands.push(['ZRANGE', key, 0, -1]);
     const response = await fetchImpl(url.replace(/\/$/, '') + '/multi-exec', {
@@ -60,7 +66,10 @@ function createRankingStore({ env = process.env, fetchImpl = fetch, now = Date.n
     catch (error) { if (error.code !== 'ENOENT') throw error; rows = []; }
     rows = activeRows(rows, time);
     if (entry) rows = activeRows([...rows, entry], time);
-    // Keep every result for 30 days: lower scores may enter the top after older scores expire.
+    // Trim by age across both modes before calculating the score leaderboard.
+    rows.sort((a, b) => Date.parse(b.at) - Date.parse(a.at) ||
+      Buffer.compare(Buffer.from(JSON.stringify(b)), Buffer.from(JSON.stringify(a))));
+    rows = activeRows(rows.slice(0, maxRecords), time);
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file + '.tmp', JSON.stringify(rows, null, 1));
     await fs.rename(file + '.tmp', file);
