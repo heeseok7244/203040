@@ -7606,7 +7606,7 @@ function mountLeaderboard(rank, cleared) {
   if (!box) return;
   const myMode = LB_TABS.includes(mode) ? mode : "solo";
   box.innerHTML = `
-    <div class="lbhead"><b>🏆 랭킹</b><i>TOP 20</i>
+    <div class="lbhead"><b>🏆 랭킹</b><i>최근 30일 · TOP 20</i>
       <span class="lbtabs" id="lbTabs">${LB_TABS.map((k) =>
         `<button type="button" class="lbtab${k === myMode ? " on" : ""}" data-k="${k}">${MODES[k].name}</button>`).join("")}</span>
     </div>
