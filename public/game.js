@@ -900,9 +900,6 @@ const MODES = {
     desc: "혼자 10라운드를 치르고 랭킹 점수를 받습니다. 대전 라운드에는 쥐 침입단이 나옵니다." },
   duel: { key: "duel", name: "1v1 대전", short: "1v1", size: 2,
     desc: "둘이 같은 판·같은 웨이브를 치르고, 라운드 4·7·10 에 덱을 맞댑니다." },
-  /* 승천 모드 — /ascend 에서만 쓴다 (메인 로비에는 나오지 않는다). 랭킹 표가 따로 갈린다 */
-  ascend: { key: "ascend", name: "승천 모드", short: "승천", size: 1,
-    desc: "끝없는 라운드 — 5라운드마다 보스 레이드, 11라운드부터 침입자가 매 라운드 방해효과를 던집니다." },
 };
 
 /** 밸런스 상수. 시뮬레이터가 이 객체를 통째로 덮어써서 스윕할 수 있다. */
@@ -1067,194 +1064,6 @@ const LV3_GUARD_LABEL = {
   hp: "체력", armor: "방어력", dr: "받는 피해", splashDr: "받는 광역 피해", critDr: "받는 치명타 피해",
 };
 
-/* ══════════════════════════════════════════════════════════════════════
- * 승천 모드(ASC) — /ascend 주소로만 열리는 끝없는 판. 메인 화면(index.html)은 이 값을 하나도 보지 않는다.
- *
- * ── 규칙 ──
- *  · 라운드에 끝이 없다. 등록원부가 무너질 때까지 간다.
- *  · **5라운드마다 보스 레이드** — 쥐 군단이 아니라 기믹을 가진 보스 하나가 나온다 (RAID_BOSSES).
- *    10라운드가 지나면 다음 레이드 보스와 그 약점을 준비 단계에서 미리 알려 준다.
- *  · 10라운드까지는 매 라운드 강화를 고른다. 그 뒤로는 **짝수 라운드에만** 강화를 고르고,
- *    홀수 라운드에는 냥타워 한 종류의 공격력·공격속도·방어력·피해감소를 올리는 **스탯업**을 고른다.
- *  · 11라운드부터 침입자가 가파르게 세지고(체력·방어·속도), 매 라운드 무작위 **방해효과**를 던진다.
- *    20라운드부터는 곡선이 한 번 더 꺾이고 방해효과가 둘, 30라운드부터는 셋이 된다.
- *  · 빌드 계열은 5강에서 멈추지 않고 **7강 · 10강**까지 열린다 (LINES 의 t3·t4).
- * ══════════════════════════════════════════════════════════════════════ */
-const ASC = {
-  /* 1~9 라운드 구성 — 메인 판의 전투 라운드 구성을 그대로 당겨 쓴다 (레이드가 5 에 끼므로 자리만 옮겼다) */
-  waves: {
-    1: { copy: 26 },
-    2: { copy: 34, fast: 12 },
-    3: { copy: 38, fast: 20 },
-    4: { copy: 36, fast: 24, tank: 10 },
-    6: { copy: 44, fast: 30, tank: 16 },
-    7: { copy: 50, fast: 38, tank: 24 },
-    8: { copy: 48, fast: 46, tank: 32, boss: 3 },
-    9: { copy: 50, fast: 50, tank: 36, boss: 4 },
-  },
-  hpEarly: { 1: 1.0, 2: 1.3, 3: 1.7, 4: 2.5, 6: 3.6, 7: 5.0, 8: 7.0, 9: 9.0 },
-  /* 10라운드 이후 — 체력은 라운드마다 hpGrow 배, 20라운드부터는 hpGrowHard 배로 꺾인다.
-   * 헤드리스 봇(계열 하나를 곧게 민 덱 · 판 꽉 채움 · 레이드는 이긴 것으로)이 17~19 라운드부터 내구를 잃기
-   * 시작하고 21~23 라운드에서 무너지는 값이다 — 레이드를 지면 그보다 일찍 무너진다 */
-  hpAt10: 11, hpGrow: 1.37, hpGrowHard: 1.42, hardFrom: 20,
-  defPerRound: 0.7, defPerRoundHard: 1.4,      // 라운드마다 모든 침입자 방어 +n (20부터 더 가파르게)
-  spdPerRound: 0.012, spdCap: 1.45,            // 이동속도 배율 (10라운드 초과분)
-  maxMobs: 240,                                // 한 웨이브 최대 마리 수 (프레임을 지키는 선)
-  raidEvery: 5,
-  passiveUntil: 10,                            // 이 라운드까지는 매 라운드 강화 — 그 뒤로는 짝수만
-  revealFrom: 10,                              // 이 라운드를 넘기면 다음 레이드의 보스·약점을 알려 준다
-  curseFrom: 11,                               // 방해효과가 시작되는 라운드
-  curseCount: (w) => (w >= 30 ? 3 : w >= 20 ? 2 : 1),
-  /* 레이드 보상 · 손실 */
-  raidWinHeal: 15, raidWinMaxHp: 5, raidWinGold: (w) => 120 + w * 8, raidLoseHp: 30,
-  raidTime: 90,                                // 이 시간 안에 못 잡으면 레이드 실패
-  /* 계열 단계 — 3·5강에 더해 7강 · 10강 */
-  tierAt: [3, 5, 7, 10],
-  tierSplashFCap: 1.0, tierSplashF3: 0.20,     // 💥 7강 — 광역 비율 상한 80% → 100% · +20%p
-  tierSplashDmg4: 0.35, tierSplashR4: 0.30,    // 💥 10강 — 광역 냥 공격력 +35% · 광역 반경 +30%p
-  tierCritM3: 0.8,                             // 🎯 7강 — 치명타 배율 +0.8 (softCap 밖)
-  tierCritC4: 0.15, tierCritMul4: 1.5,         // 🎯 10강 — 치명타 확률 +15%p · 치명타 배율 ×1.5
-  tierSlowDmg3: 0.30, tierSlow3: 15,           // ⏳ 7강 — 둔화된 적 받는 피해 +30% 더 · 둔화 +15%p
-  tierStunC4: 0.10, tierStunD4: 0.3, slowCap4: 95, // ⏳ 10강 — 정지 확률 +10%p · 정지 +0.3초 · 둔화 상한 95%
-  tierTargets3: 1,                             // 💼 7강 — 동시조준 +1 더
-  tierAuraMul4: 1.4, tierRate4: 0.20,          // 💼 10강 — 보좌 배율 ×1.4 더 · 모든 냥 공속 +20%
-  /* 점수 */
-  rank: {
-    climbBase: 300, climbPer: 30,              // 클리어한 라운드 w 마다 climbBase + w × climbPer
-    raidBase: 500, raidPer: 60,                // 레이드 승리마다
-    speedPerWave: 200,
-    // 덱 점수 — 덱 지수가 판이 꽉 찬 뒤로도 곱으로 불어나(수만~수십만) 메인 판처럼 곱하면 점수를 다 먹는다. 로그로 눌러 담는다
-    deckLog: 2000,
-    grades: [
-      { at: 32000, g: "S", col: "#ffd782", say: "하늘 끝까지 올라갔습니다. 특허청이 당신 것입니다." },
-      { at: 25000, g: "A", col: "#7fbf6a", say: "구름 위에 섰습니다. 보스들이 당신을 기억합니다." },
-      { at: 18000, g: "B", col: "#69b6d6", say: "20라운드의 벽 앞까지 왔습니다." },
-      { at: 10000, g: "C", col: "#c9b26a", say: "승천의 첫 계단을 밟았습니다." },
-      { at: 0,     g: "D", col: "#e0574d", say: "레이드 보스의 약점부터 살펴봅시다." },
-    ],
-  },
-};
-
-/* 계열 7강 · 10강 — 메인 판은 LINE_TIER_AT(3·5)만 보므로 t3·t4 를 읽을 일이 없다 */
-Object.assign(LINES.splash, {
-  t3: { name: "손해배상 확정", short: "광역 상한 해제·피해 증가", desc: "광역 피해 비율 상한이 80% → 100% 로 풀리고 광역 피해 비율 +20%p" },
-  t4: { name: "침해품 전량 폐기", short: "광역 냥 공격력·반경 증가", desc: "광역을 가진 냥타워 공격력 +35% · 광역 반경 +30%p" },
-});
-Object.assign(LINES.crit, {
-  t3: { name: "악의적 침해", short: "치명타 배율 대폭 증가", desc: "치명타 배율 +0.8 (오름폭 줄이기 없이 그대로)" },
-  t4: { name: "징벌적 3배 배상", short: "치명타 확률·배율 폭증", desc: "치명타 확률 +15%p · 치명타 배율 ×1.5" },
-});
-Object.assign(LINES.control, {
-  t3: { name: "절차 무한 반복", short: "둔화 강화·둔화 적 피해 증가", desc: "둔화 +15%p · 둔화된 침입자가 받는 피해 +30%p 더 (합계 +60%)" },
-  t4: { name: "심사 무기한 보류", short: "정지 확률·시간 증가", desc: "모든 명중의 정지 확률 +10%p · 정지 +0.3초 · 둔화 상한 95%" },
-});
-Object.assign(LINES.aide, {
-  t3: { name: "합동 사무소", short: "동시조준 추가 증가", desc: "모든 냥타워의 동시조준 +1 더" },
-  t4: { name: "대형 로펌", short: "보좌 폭증·전체 공속 증가", desc: "변리사냥 보좌 배율이 1.4배 더 커지고 모든 냥타워 공속 +20%" },
-});
-
-/**
- * 승천 모드의 방해효과(ASC_CURSES) — 11라운드부터 침입자가 매 라운드 무작위로 던진다.
- * 준비 단계에서 다음 라운드에 무엇이 걸릴지 미리 보인다 (판 아래 붉은 딱지).
- *   kind  어떻게 걸리는가 — 코어(AscGame)가 이 키로 갈라 적용한다
- *   stamp 맞은 순간 판 한가운데 찍히는 도장 색
- * @type {{key:string,name:string,icon:string,short:string,desc:string,col:string,weight:number}[]}
- */
-const ASC_CURSES = [
-  { key: "haste",  name: "신속 심사 청구", icon: "🏃", col: "#ff9a5c", weight: 12, short: "침입자 이동속도 +30%",
-    desc: "침입자가 30% 빨리 달린다 — 사거리 안에 머무는 시간이 줄어든다." },
-  { key: "fog",    name: "열람 제한",      icon: "🌫️", col: "#9aa5b1", weight: 10, short: "냥타워 사거리 −20%",
-    desc: "서류 열람을 막아 냥타워 사거리가 20% 줄어든다." },
-  { key: "bulk",   name: "보강 서류 제출", icon: "📚", col: "#c4322a", weight: 12, short: "침입자 체력 +35%",
-    desc: "보강 서류로 무장해 침입자 체력이 35% 늘어난다." },
-  { key: "shield", name: "무효 항변",      icon: "🧱", col: "#7d5a8f", weight: 10, short: "침입자 방어 +8",
-    desc: "항변서를 두껍게 내 침입자 방어가 8 오른다 — 가벼운 연타가 막힌다." },
-  { key: "freeze", name: "심사 중지 명령", icon: "⛔", col: "#9fd8ff", weight: 10, short: "냥타워 3.5초 정지 ×2",
-    desc: "웨이브 8초 · 22초에 냥타워 전부가 3.5초씩 멈춘다." },
-  { key: "swarm",  name: "이의신청 대량제출", icon: "📨", col: "#e0574d", weight: 12, short: "침입자 +25%",
-    desc: "침입자가 25% 더 쏟아져 들어온다." },
-  { key: "steal",  name: "특허료 가압류",  icon: "💸", col: "#ffd782", weight: 10, short: "웨이브 개시 시 특허료 −25%",
-    desc: "웨이브가 열리는 순간 잔고의 25%(최소 60)를 빼앗는다." },
-  { key: "regen",  name: "재심 청구",      icon: "🩹", col: "#7fbf6a", weight: 8,  short: "침입자 초당 2% 재생",
-    desc: "침입자가 초당 최대 체력의 2% 를 되찾는다 — 화력을 나눠 쓰면 아무도 안 죽는다." },
-  { key: "toll",   name: "손해배상 청구",  icon: "⚖️", col: "#cda43a", weight: 8,  short: "돌파 피해 2배",
-    desc: "돌파당했을 때 깎이는 등록원부 내구가 두 배가 된다." },
-];
-const ASC_CURSE_BY_KEY = Object.fromEntries(ASC_CURSES.map((c) => [c.key, c]));
-
-/**
- * 승천 모드 스탯업(ASC_STATUPS) — 11라운드부터 강화 대신 고르는 라운드(홀수)에 나온다.
- * **냥타워 한 종류**를 골라 그 종류 전부의 능력치 하나를 올린다. 합성해도 종류에 붙어 있어 사라지지 않는다.
- * 방어력·피해감소는 냥이 맞는 곳(레이드 · 대전장)에서만 산다.
- *   amount  한 번 고를 때마다 더해지는 값 · cap 그 종류에 쌓이는 상한
- */
-const ASC_STATUPS = [
-  { key: "dmg",  name: "공격력",   icon: "⚔️", amount: 0.18, cap: 3.0,  fmt: (v) => `+${Math.round(v * 100)}%`,
-    desc: "그 종류의 공격력 +18% (다른 강화와 따로 곱해진다)" },
-  { key: "rate", name: "공격속도", icon: "⚡", amount: 0.12, cap: 2.0,  fmt: (v) => `+${Math.round(v * 100)}%`,
-    desc: "그 종류의 공격속도 +12% (다른 강화와 따로 곱해진다)" },
-  { key: "ar",   name: "방어력",   icon: "🛡️", amount: 0.08, cap: 0.5,  fmt: (v) => `+${Math.round(v * 100)}%p`,
-    desc: "레이드·대전장에서 그 종류의 방어력 +8%p (방어무시에 뚫린다)" },
-  { key: "dr",   name: "피해감소", icon: "🧱", amount: 0.06, cap: 0.45, fmt: (v) => `−${Math.round(v * 100)}%`,
-    desc: "레이드·대전장에서 그 종류가 받는 피해 −6% (방어무시에 안 뚫린다)" },
-];
-const ASC_STATUP_BY_KEY = Object.fromEntries(ASC_STATUPS.map((s) => [s.key, s]));
-
-/**
- * 레이드 보스(RAID_BOSSES) — 승천 모드의 5라운드마다 쥐 군단 대신 하나가 나온다.
- * 보스마다 **기믹 하나**가 있고, 그 기믹을 깨는 **약점**이 있다. 약점을 맞춘 덱은 수월하게,
- * 못 맞춘 덱은 시간 안에 잡지 못한다. 10라운드가 지나면 다음 보스와 약점을 미리 알려 준다.
- *
- *   art   대전장에 그리는 침입자 원화 (ENEMIES 의 키) · sz 크기 배율 · tint 기운 색
- *   hpM / dpsM  내 덱을 재서 잡은 체력·화력 총량에 곱하는 배율 (기믹마다 다르다)
- *   tg/sp/spf/range/rate  보스의 공격 — 동시 표적 · 광역 반경·비율 · 사거리 · 공속
- *   ar    방어 (0~1)
- * 기믹 수치는 duel.js 의 DuelSim(raid 처리)이 본다.
- */
-const RAID_BOSSES = {
-  hydra: {
-    key: "hydra", name: "특허괴물 군단장", icon: "👹", art: "boss", sz: 1.5, tint: "#c4322a",
-    gimmick: "8초마다 졸개 셋을 부른다. 졸개가 하나라도 살아 있으면 본체가 받는 피해 −85%.",
-    weak: "다중공격에 취약 — 🌐 국제출원냥 · 💥 광역 피해로 졸개부터 쓸어야 본체가 맞는다",
-    weakTag: "다중공격 · 광역",
-    hpM: 0.62, dpsM: 0.75, tg: 2, sp: 0, spf: 0, range: 140, rate: 1.0, ar: 0.2,
-    summonEvery: 8, summonN: 3, minionMax: 9, minionHp: 0.022, minionDps: 0.05, shieldDr: 0.85,
-  },
-  iron: {
-    key: "iron", name: "철갑 무효심판관", icon: "🛡️", art: "tank", sz: 2.0, tint: "#7d8fa8",
-    gimmick: "방어력 88% 의 철갑. 방어무시가 없는 공격은 거의 들어가지 않는다.",
-    weak: "장갑이 두껍다 — 📐 특허범위냥(저격소총)이나 방어무시가 필요할 것 같다 (🎯 3강 · 💥 3강도 장갑을 뚫는다)",
-    weakTag: "방어무시 · 저격",
-    hpM: 0.55, dpsM: 0.85, tg: 1, sp: 60, spf: 0.4, range: 150, rate: 0.8, ar: 0.88,
-  },
-  phantom: {
-    key: "phantom", name: "잔상 벤치마커", icon: "💨", art: "fast", sz: 2.6, tint: "#c9b26a",
-    gimmick: "둔화·정지에 걸려 있지 않으면 공격의 70% 를 잔상으로 피한다. 뒷줄을 노리는 빠른 연타.",
-    weak: "잔상으로 피한다 — ⏳ 보정명령냥의 둔화·정지로 발을 묶어야 맞는다",
-    weakTag: "둔화 · 정지",
-    hpM: 0.60, dpsM: 0.95, tg: 1, sp: 0, spf: 0, range: 300, rate: 3.2, ar: 0.1, evade: 0.70, backline: true,
-  },
-  regen: {
-    key: "regen", name: "불사 재심청구인", icon: "🩹", art: "copy", sz: 2.5, tint: "#7fbf6a",
-    gimmick: "초당 최대 체력의 1.4% 를 재생한다. 치명타를 맞으면 2.5초 동안 상처가 나 재생이 멈춘다.",
-    weak: "끝없이 재생한다 — 🎯 치명타가 상처를 내 재생을 끊는다 (⚡ 우선심사냥 · 치명타 강화)",
-    weakTag: "치명타",
-    hpM: 0.80, dpsM: 0.8, tg: 2, sp: 0, spf: 0, range: 140, rate: 1.4, ar: 0.15, regen: 0.014, woundT: 2.5,
-  },
-  berserk: {
-    key: "berserk", name: "광폭 소송왕", icon: "🔥", art: "boss", sz: 1.6, tint: "#ff7a3d",
-    gimmick: "8초마다 「집단 소송」으로 아군 전체를 때리고, 10초마다 공격력이 12% 오른다.",
-    weak: "전원 광역 공격 — 💼 변리사냥 회복 · ⚡ 탱커 · 방어력/피해감소 스탯업으로 버텨야 한다",
-    weakTag: "회복 · 방어",
-    hpM: 0.95, dpsM: 0.55, tg: 1, sp: 0, spf: 0, range: 140, rate: 0.9, ar: 0.2,
-    slamEvery: 8, slamMul: 4.0, enrageEvery: 10, enrage: 0.12,
-  },
-};
-/** 레이드 세기 — 라운드가 오를수록 보스가 내 덱보다 얼마나 더 센가 (20라운드부터 꺾인다) */
-function raidMul(wave) {
-  return 0.6 + 0.04 * wave + (wave >= 15 ? 0.03 * Math.pow(wave - 14, 1.5) : 0);
-}
-
 /** 이 라운드 침입자의 체력 배율 (BAL.hpScale 표, 넘어가면 마지막 값) */
 function enemyHpScale(wave) {
   const t = BAL.hpScale;
@@ -1265,8 +1074,7 @@ function spawnGapAt(wave) {
   return Math.max(BAL.spawnGapMin, BAL.spawnGap - BAL.spawnGapStep * (wave - 1));
 }
 
-return { ASC, ASC_CURSES, ASC_CURSE_BY_KEY, ASC_STATUPS, ASC_STATUP_BY_KEY, RAID_BOSSES, raidMul,
-         AUGMENTS, AUGMENT_WAVES, BAL, CATS, CAT_SKILLS, CAT_WEIGHT_TOTAL, catDrawChance,
+return { AUGMENTS, AUGMENT_WAVES, BAL, CATS, CAT_SKILLS, CAT_WEIGHT_TOTAL, catDrawChance,
          DRAW_KEYS, DUEL, DUEL_WAVES, ENEMIES, LINES, LINE_TIER_AT, LV3_GUARD, LV3_GUARD_CAP, LV3_GUARD_LABEL,
          MODES, PASSIVES, PASSIVE_BY_KEY,
          RANK, RECIPES, SABOTAGE, SKILL_CD_LV, SKILL_MUL_LV, WAVES, enemyHpScale, spawnGapAt };
@@ -1762,7 +1570,7 @@ return { adjCells, adjCellsLR, adjRelics, blockedGrid, canPlace, cats, cellCente
 })();
 __mods["core/stats.js"] = (function(){
 // @ts-check
-const {CATS, BAL, CAT_SKILLS, SKILL_CD_LV, SKILL_MUL_LV, LV3_GUARD, LV3_GUARD_CAP, ASC} = __req("core/data.js");
+const {CATS, BAL, CAT_SKILLS, SKILL_CD_LV, SKILL_MUL_LV, LV3_GUARD, LV3_GUARD_CAP} = __req("core/data.js");
 const {cats, adjCellsLR} = __req("core/board.js");
 
 /**
@@ -1959,17 +1767,13 @@ function computeStats(b) {
     critC += B("critC"); critMAdd += B("critM");
     critM += softCap(critMAdd, BAL.critMKnee);      // 배율 +0.6 까지는 그대로, 그 위는 로그로
     const critCap = tier("crit") >= 1 ? BAL.critCapHi : BAL.critCap;
-    // 🎯 7강 · 10강 (승천 모드에서만 열린다) — 배율은 softCap 밖에서 그대로 얹는다
-    if (tier("crit") >= 3) critM += ASC.tierCritM3;
-    if (tier("crit") >= 4) { critC += ASC.tierCritC4; critM *= ASC.tierCritMul4; }
 
     // ⏳ 절차 지연 — 둔화가 없던 냥타워도 둔화를 얻는다. ⏳ 5단계에 닿으면 상한이 90% 로 오른다
-    const slowCap = tier("control") >= 4 ? ASC.slowCap4 : tier("control") >= 2 ? BAL.slowCapHi : BAL.slowCap;
-    const slow = Math.min(slowCap, (base.slow || 0) + B("slow") + (tier("control") >= 3 ? ASC.tierSlow3 : 0));
+    const slowCap = tier("control") >= 2 ? BAL.slowCapHi : BAL.slowCap;
+    const slow = Math.min(slowCap, (base.slow || 0) + B("slow"));
 
-    // 🌐 공동출원 · 💼 3단계 「공동대리」 — 한 번에 조준하는 수가 늘어난다 (💼 7강이면 하나 더)
-    const targets = (base.targets || 1) + B("targets") + (tier("aide") >= 1 ? 1 : 0) +
-                    (tier("aide") >= 3 ? ASC.tierTargets3 : 0);
+    // 🌐 공동출원 · 💼 3단계 「공동대리」 — 한 번에 조준하는 수가 늘어난다
+    const targets = (base.targets || 1) + B("targets") + (tier("aide") >= 1 ? 1 : 0);
 
     // 💼 대리인 증원 · 💼 5단계 「특허법인 설립」 — 보좌 배율. 변리사냥이 없으면 아무 일도 없다
     if (isAide && B("aura")) {
@@ -1979,12 +1783,6 @@ function computeStats(b) {
     if (isAide && tier("aide") >= 2) {
       if (auraDmg) auraDmg = 1 + (auraDmg - 1) * BAL.tierAuraMul;
       if (auraRate) auraRate = 1 + (auraRate - 1) * BAL.tierAuraMul;
-    }
-    // 💼 10강 「대형 로펌」 — 보좌 배율이 한 번 더 커지고 모든 냥 공속이 오른다
-    if (tier("aide") >= 4) {
-      if (isAide && auraDmg) auraDmg = 1 + (auraDmg - 1) * ASC.tierAuraMul4;
-      if (isAide && auraRate) auraRate = 1 + (auraRate - 1) * ASC.tierAuraMul4;
-      ratePct += ASC.tierRate4;
     }
 
     /* 광역 피해 — 💥 균등침해로만 얻는다. 승진(Lv3)에는 더 이상 광역이 딸려 오지 않는다 —
@@ -1997,19 +1795,16 @@ function computeStats(b) {
       let rPct = 0;
       if (B("splashUpR")) { rPct += B("splashUpR"); splashF += B("splashUpF"); }
       if (tier("splash") >= 2) { rPct += BAL.tierSplashR; splashF += BAL.tierSplashF; }   // 💥 5단계
-      if (tier("splash") >= 3) splashF += ASC.tierSplashF3;                                 // 💥 7강
-      if (tier("splash") >= 4) { rPct += ASC.tierSplashR4; dmgPct += ASC.tierSplashDmg4; }  // 💥 10강
       splashR = softCap(splashR * (1 + rPct), BAL.splashRKnee, BAL.splashRCap);
-      splashF = softCap(splashF, BAL.splashFKnee, tier("splash") >= 3 ? ASC.tierSplashFCap : BAL.splashFCap);
+      splashF = softCap(splashF, BAL.splashFKnee, BAL.splashFCap);
     }
 
     /* 정지 — ⏱️ 보정기간 연장과 ⏳ 5단계는 **정지가 없던 냥에게도** 확률을 준다.
      * 원래 정지를 가진 조기공개냥은 자기 지속시간(0.6초)을 그대로 지킨다. */
     let stunC = (base.stunC || 0) * Math.pow(1.2, lv - 1);
     let stunD = base.stunD || 0;
-    const addStun = B("stunC") + (tier("control") >= 2 ? BAL.tierStunC : 0) + (tier("control") >= 4 ? ASC.tierStunC4 : 0);
+    const addStun = B("stunC") + (tier("control") >= 2 ? BAL.tierStunC : 0);
     if (addStun > 0) { stunC += addStun; if (!stunD) stunD = BAL.stunDur; }
-    if (tier("control") >= 4 && stunD) stunD += ASC.tierStunD4;
 
     /* 고유 스킬 — 합성으로만 나오는 특수 냥타워 다섯만 갖는다.
      * 쿨이 차면 저절로 터지고, 그때 화면 아래에 캐릭터 컷인이 뜬다. */
@@ -2043,7 +1838,7 @@ function computeStats(b) {
       splashPierce: tier("splash") >= 1,          // 💥 3단계 — 광역이 방어를 완전히 무시한다
       critPierce: tier("crit") >= 1,              // 🎯 3단계 — 치명타가 방어를 무시한다
       critCd: tier("crit") >= 2 ? BAL.tierCritCd : 0,   // 🎯 5단계 — 치명타가 재장전을 당긴다
-      slowDmg: (tier("control") >= 1 ? BAL.tierSlowDmg : 0) + (tier("control") >= 3 ? ASC.tierSlowDmg3 : 0), // ⏳ 3단계(·7강) — 둔화된 적에게 더 아프게
+      slowDmg: tier("control") >= 1 ? BAL.tierSlowDmg : 0, // ⏳ 3단계 — 둔화된 적에게 더 아프게
       skill,
       /* ── 특수 냥타워의 규칙 ── (이종 합성으로만 얻는다. 없으면 전부 0/null 이라 분기가 통째로 꺼진다)
        * chain   명중이 근처 적으로 튄다 {n:튀는 수, r:반경(px), f:피해 비율}. 레벨이 오르면 한 번 더 튄다
@@ -2087,13 +1882,6 @@ function computeStats(b) {
      * 로그로 줄어든다. 감점(−)은 그대로 둔다 (pctMul 의 0.2 바닥이 막는다). */
     c.st.dmg *= pctMul(softCap(c.st.dmgPct + c.st.buffDmg, BAL.dmgPctKnee));
     c.st.rate *= pctMul(softCap(c.st.ratePct + c.st.buffRate, BAL.ratePctKnee));
-    /* 승천 모드 스탯업 — 종류마다 따로 쌓인 공격력·공속. softCap 을 거치지 않고 그대로 곱한다
-     * (고른 만큼 정직하게 오르는 것이 스탯업의 값이다). 메인 판에는 catUp 이 없다 */
-    const up = b.catUp && b.catUp[c.key];
-    if (up) {
-      if (c.st.atk && up.dmg) c.st.dmg *= 1 + up.dmg;
-      if (c.st.atk && up.rate) c.st.rate *= 1 + up.rate;
-    }
     // 연쇄가 또 연쇄를 부르면 한 발이 판 전체를 쓸어버린다 — 튄 피해에 쓸 사본을 미리 만들어 둔다
     // (매 발 객체를 새로 만들면 초당 수백 개가 쌓인다). 최종 수치가 확정된 뒤에 떠야 한다
     if (c.st.chain) c.st.chainSrc = Object.assign({}, c.st, { chain: null, splash: null });
@@ -2131,8 +1919,7 @@ function damage(g, e, amt, src, crit, isSplash) {
   // (이번 명중이 거는 둔화는 아래에서 걸리므로, 여기서 보는 것은 「직전까지의 상태」다)
   if (src.slowDmg && e.slowT > 0) amt *= 1 + src.slowDmg;
 
-  // e.def 는 승천 모드가 라운드마다 올려 둔 방어다 (없으면 종류의 기본 방어)
-  const def = (e.def != null ? e.def : ENEMIES[e.t].def) * (1 - pierce / 100);
+  const def = ENEMIES[e.t].def * (1 - pierce / 100);
   e.hp -= Math.max(1, amt - def);
 
   if (src.slow) { e.slowT = 1.6; e.slowPct = Math.min(BAL.slowCap, src.slow) / 100; }
@@ -2356,8 +2143,6 @@ function step(g, dt, now) {
     if (e.slowT > 0) e.slowT -= dt;
     if (e.hitT > 0) e.hitT -= dt;
     if (e.hp <= 0) { damage(g, e, 0, {}); continue; }
-    // 승천 모드 「재심 청구」 — 침입자가 조금씩 체력을 되찾는다 (메인 판에는 enemyRegen 이 없다)
-    if (g.enemyRegen && e.hp < e.max) e.hp = Math.min(e.max, e.hp + e.max * g.enemyRegen * dt);
 
     // 가처분에 묶인 동안에는 이동만 멈춘다 — 사격 대상은 그대로이므로 그 자리에서 계속 맞는다
     if (e.freezeT > 0) { e.freezeT -= dt; continue; }
@@ -2368,7 +2153,7 @@ function step(g, dt, now) {
     if (e.dist >= lane.segs.total) {
       e.dead = true;
       const d = ENEMIES[e.t];
-      g.hp -= d.leak * (g.leakMul || 1);   // leakMul — 승천 모드 「손해배상 청구」
+      g.hp -= d.leak;
       g.leaked++;
       g.events.push({ t: "leak", x: e.x, y: e.y, enemy: e.t, hp: g.hp });
       if (d.fee) {
@@ -2391,12 +2176,10 @@ function step(g, dt, now) {
     const q = g.spawnQueue.shift();
     const d = ENEMIES[q.t];
     // waveFx.hp 는 침입자 체력을 통째로 부풀리는 자리다 (지금 그걸 거는 공작은 없어 늘 1이다)
-    // hpScaleAt · enemyDefAdd 는 승천 모드(AscGame)만 갖는다 — 끝없는 라운드의 체력 곡선과 방어
-    const scale = (g.hpScaleAt ? g.hpScaleAt(g.wave) : enemyHpScale(g.wave)) * g.waveFx.hp;
+    const scale = enemyHpScale(g.wave) * g.waveFx.hp;
     const lane = g.lanes[q.lane] || g.lanes[0];
     g.enemies.push({
       t: q.t, lane: q.lane ?? 0, hp: d.hp * scale, max: d.hp * scale, dist: 0,
-      def: g.enemyDefAdd ? d.def + g.enemyDefAdd : undefined,
       x: lane.pathPx[0][0], y: lane.pathPx[0][1],
       slowT: 0, slowPct: 0, freezeT: 0, hitT: 0, hitCrit: false, hitAng: 0,
     });
@@ -2446,7 +2229,7 @@ __mods["core/duel.js"] = (function(){
  * 시간간격은 여전히 고정(DUEL.dt)이다 — 프레임이 끊겨도 싸움의 속도가 달라지지 않도록.
  */
 const {Rng} = __req("core/rng.js");
-const {CATS, ENEMIES, BAL, DUEL, ASC, RAID_BOSSES, raidMul} = __req("core/data.js");
+const {CATS, ENEMIES, BAL, DUEL} = __req("core/data.js");
 const {cats} = __req("core/board.js");
 const {teamGuard} = __req("core/stats.js");
 
@@ -2494,8 +2277,6 @@ function makeRoster(game) {
   return cats(game).filter((c) => c.st).map((c) => {
     const d = CATS[c.key], s = c.st, lv = s.lv || 1;
     const prof = d.duel || {};
-    // 승천 모드 스탯업 — 종류마다 쌓은 방어력·피해감소 (메인 판에는 catUp 이 없어 0 이다)
-    const up = (game.catUp && game.catUp[c.key]) || {};
     const hp = Math.round((DUEL.hpBase + d.cost * DUEL.hpPerCost) *
       Math.pow(DUEL.hpLv, lv - 1) * (s.promoted ? DUEL.hpPromo : 1) * (prof.hp || 1) * (1 + guard.hp));
     const r3 = (v) => +(+v).toFixed(3);
@@ -2524,9 +2305,9 @@ function makeRoster(game) {
       // 광역 비율도 대전장 배율(splashFMul)을 곱한다 — 판의 값은 웨이브를 쓸어 담는 값이라 그대로 옮기면 세다
       spf: s.splash ? r3(s.splash.f * DUEL.splashFMul) : 0,
       // 방어(0~1)와 방어무시(%p). 방어무시는 상대 방어를 그 비율만큼 깎는다. 승진 방어(guard.armor)가 얹힌다
-      ar: r3(Math.min(0.85, (prof.armor || 0) + guard.armor + (up.ar || 0))),
-      // 승진냥이 덱 전체에 주는 고정 감소 — 방어무시가 못 뚫는다 (스탯업 피해감소는 곱으로 겹친다)
-      dr: r3(1 - (1 - guard.dr) * (1 - (up.dr || 0))), sdr: r3(guard.splashDr), cdr: r3(guard.critDr),
+      ar: r3(Math.min(0.85, (prof.armor || 0) + guard.armor)),
+      // 승진냥이 덱 전체에 주는 고정 감소 — 방어무시가 못 뚫는다
+      dr: r3(guard.dr), sdr: r3(guard.splashDr), cdr: r3(guard.critDr),
       ms: prof.spd || 1,                       // 걸음 배율 (종류별 대전 성격)
       pi: Math.round(s.pierce || 0),
       // 💥 3단계 — 광역이 방어를 완전히 무시 · 🎯 3단계 — 치명타가 방어를 무시
@@ -2659,45 +2440,6 @@ function mobRoster(mine, wave, seed, forceBoss) {
 }
 
 /**
- * 승천 모드의 레이드 보스 하나 (+ 기믹에 쓰는 값). 쥐 침입단처럼 **내 덱을 재서** 세기를 정하고,
- * 거기에 라운드 배율(raidMul)과 보스마다의 배율(hpM · dpsM)을 곱한다.
- *   체력 = 내 초당 화력 × 50초 × hpM × 배율 — 기믹을 깨면 대략 그만큼 걸린다
- *   화력 = 내 총 체력 ÷ 55초 × dpsM × 배율 — 아무 대비 없이 맞으면 대략 그만큼 버틴다
- * @param {any[]} mine 내 명세 @param {number} wave @param {string} key RAID_BOSSES 의 키
- */
-function raidRoster(mine, wave, key) {
-  const R = RAID_BOSSES[key] || RAID_BOSSES.hydra;
-  const mul = raidMul(wave);
-  /* 보스 체력은 **한 표적에 들어가는 화력**(동시조준·광역을 뺀 값)으로 잰다 — 보스는 하나라
-   * 동시조준이 헛돌기 때문이다. 대신 졸개를 부르는 군단장 앞에서는 동시조준·광역이 고스란히 값을 한다 */
-  let hpSum = 0, dpsSum = 0;
-  for (const u of mine) {
-    hpSum += u.hp * (1 + (u.ar || 0)) / Math.max(0.3, 1 - (u.dr || 0));
-    if (u.atk) dpsSum += u.dmg * u.rate * (1 + (u.cc || 0) * ((u.cm || 1) - 1));
-  }
-  if (hpSum <= 0) hpSum = 520 * (1 + 0.3 * wave);
-  if (dpsSum <= 0) dpsSum = 40 * (1 + 0.3 * wave);
-  const r3 = (v) => +(+v).toFixed(3);
-  const hp = Math.max(400, Math.round(dpsSum * 50 * R.hpM * mul));
-  const dps = hpSum / 55 * R.dpsM * mul;
-  const n = Math.max(1, mine.length);
-  return [{
-    k: R.art, mob: true, rb: R.key, sz: R.sz, lv: 1, pr: false, hp,
-    cost: Math.round(40 + hp * 0.2),
-    dmg: r3(Math.max(1, dps / (R.rate * R.tg))), rate: r3(R.rate), range: R.range, tg: R.tg,
-    cc: 0.1, cm: 1.5, sl: 0, sp: R.sp || 0, spf: R.spf || 0,
-    ar: R.ar || 0, pi: 0, spp: false, cp: false, hl: 0, dr: 0, sdr: 0, cdr: 0,
-    ch: null, stC: 0, stD: 0, ex: 0, atk: true,
-    back: !!R.backline,
-    // 「집단 소송」 한 번에 내 냥 하나가 맞는 피해 — 내 냥 평균 체력의 12% (배율이 곱해진다)
-    slam: R.slamEvery ? r3(hpSum / n * 0.12 * mul) : 0,
-    // 졸개 하나의 몫 (군단장만)
-    mhp: R.minionHp ? Math.max(20, Math.round(hp * R.minionHp)) : 0,
-    mdmg: R.minionDps ? r3(Math.max(1, dps * R.minionDps / 1.6)) : 0,
-  }];
-}
-
-/**
  * 명세를 **덱 표시줄**용으로 묶는다. 같은 종류·같은 레벨은 한 칸으로 합쳐지고 그 수가 적힌다.
  * 싸움에는 쓰이지 않는다 — 유닛은 명세 그대로 전부 판에 서고, 이건 「무엇을 데려왔는지」를
  * 양쪽 다 한눈에 보라고 화면 아래에 늘어놓는 용도다.
@@ -2707,7 +2449,7 @@ function deckGroups(roster) {
   const by = {};
   roster.forEach((u, i) => {
     const id = `${u.k}:${u.lv || 1}`;
-    if (!by[id]) by[id] = { id, k: u.k, lv: u.lv || 1, mob: !!u.mob, rb: u.rb || null, cost: u.cost, n: 0, order: i };
+    if (!by[id]) by[id] = { id, k: u.k, lv: u.lv || 1, mob: !!u.mob, cost: u.cost, n: 0, order: i };
     by[id].n++;
   });
   return Object.values(by).sort((a, b) => b.cost - a.cost || a.order - b.order);
@@ -2760,9 +2502,6 @@ class DuelSim {
 
     // ── 전군 배치 ── 오토배틀러라 여기서 한 번에 다 세우고, 그 뒤로는 손댈 것이 없다
     for (const s of this.sides) this.form(rosters[s], s);
-    /* 승천 모드의 레이드 — 보스(rb)가 서 있으면 시간 제한이 짧고, 시간이 다 되면 보스가 이긴다 */
-    this.raid = this.units.some((u) => u.rb);
-    this.limit = this.raid ? ASC.raidTime : DUEL.timeLimit;
 
     /* 시작 병력 — 「남은 병력 비율」의 분모다. 덱이 크든 작든 같은 잣대로 재려면
      * 절대량이 아니라 **자기 시작 병력 대비 얼마가 남았는가**로 봐야 한다. */
@@ -2821,14 +2560,7 @@ class DuelSim {
       // 진영 기준점(cz = depthPx/2)을 가운데로 줄이 흩어지므로 a·b 의 z 는 0~depthPx 안에 든다
       const x = frontX - camp.fx * back + camp.px * along;
       const z = frontZ - camp.fz * back + camp.pz * along;
-      this.addUnit(u, side, x, z, col);
-    });
-  }
-
-  /** 유닛 하나를 판에 세운다 — 진형(form)과 레이드 보스의 졸개 소환이 같이 쓴다 */
-  addUnit(u, side, x, z, col) {
-    const camp = campOf(side);
-    this.units.push({
+      this.units.push({
         id: this._id++, side, own: u.own == null ? -1 : u.own,
         k: u.k, lv: u.lv || 1, pr: !!u.pr, mob: !!u.mob,
         x, z, dir: camp.fx || (camp.fz > 0 ? 1 : -1),
@@ -2850,11 +2582,8 @@ class DuelSim {
         // 뒷줄일수록 첫 발이 아주 조금 늦다 — 한 틱에 전군이 동시에 쏘면 화면이 번쩍이기만 한다
         cd: col * 0.05, slowT: 0, slowPct: 0, hitT: 0, atkT: 0, healT: 0, freezeT: 0,
         dead: false, walking: false,
-        // 승천 모드 레이드 — rb 보스 기믹 키 · sz 그리는 크기 · back 뒷줄부터 노림 · slam 집단 소송 피해 ·
-        // minion 군단장의 졸개 · mhp/mdmg 졸개의 몫 · woundT 상처(재생 멈춤) 남은 시간
-        rb: u.rb || null, sz: u.sz || 1, back: !!u.back, slam: u.slam || 0, minion: !!u.minion,
-        mhp: u.mhp || 0, mdmg: u.mdmg || 0, woundT: 0,
       });
+    });
   }
 
   /** 깊이 0~1 (화면이 원근을 그릴 때 쓴다) */
@@ -2893,12 +2622,7 @@ class DuelSim {
     const live = this.sides.filter((s) => !this.elim.includes(s));
     if (!live.length) { this.finish(null, "전멸"); return; }
     if (live.length === 1) { this.finish(live[0], "전멸"); return; }
-    if (this.t >= (this.limit || DUEL.timeLimit)) {
-      // 레이드는 시간 안에 보스를 못 잡으면 진다 — 남은 병력 비율로 가리지 않는다
-      const boss = this.raid && this.units.find((u) => u.rb);
-      if (boss) this.finish(boss.side, "시간 종료 · 레이드 실패");
-      else this.judge("시간 종료");
-    }
+    if (this.t >= DUEL.timeLimit) this.judge("시간 종료");
   }
 
   /** 남은 병력 비율 → 남은 체력 순으로 우열을 가린다 */
@@ -2978,22 +2702,6 @@ class DuelSim {
    */
   hurt(u, amt, crit, fromX, exec) {
     if (u.dead) return;
-    if (u.rb) {
-      const R = RAID_BOSSES[u.rb];
-      // 잔상 벤치마커 — 둔화·정지에 걸려 있지 않으면 잔상으로 피한다
-      if (R.evade && amt > 0 && !(u.slowT > 0 || u.freezeT > 0) && this.rng.next() < R.evade) {
-        if (!(u.missT > 0)) { u.missT = 0.35; this.events.push({ t: "miss", x: u.x, side: u.side, dep: this.depOf(u) }); }
-        return;
-      }
-      // 특허괴물 군단장 — 졸개가 살아 있는 동안 본체는 거의 맞지 않는다
-      if (R.shieldDr && this.units.some((f) => f.minion && !f.dead && f.side === u.side)) amt *= 1 - R.shieldDr;
-      // 불사 재심청구인 — 치명타가 상처를 내 재생을 멈춘다
-      if (R.woundT && crit) {
-        if (!(u.woundT > 0)) this.events.push({ t: "wound", x: u.x, side: u.side, dep: this.depOf(u) });
-        u.woundT = R.woundT;
-      }
-      exec = 0;   // 보스는 즉사하지 않는다
-    }
     u.hp -= amt;
     u.hitT = crit ? 0.2 : 0.12;
     if (exec && u.hp > 0 && u.hp <= u.max * exec) {
@@ -3014,53 +2722,6 @@ class DuelSim {
   ampSlow(u, f) { return (u.sd && f.slowT > 0) ? 1 + u.sd : 1; }
 
   /**
-   * 레이드 보스의 기믹 한 틱 (승천 모드). 피해는 hits 에 모으고 졸개는 spawns 에 모은다 —
-   * 결정 → 적용 두 마디 규칙을 그대로 지킨다. 재생만은 자기 자신에게만 걸려 바로 넣는다.
-   * @param {any} u 보스 @param {any[]} hits @param {any[]} spawns
-   */
-  raidStep(u, hits, spawns) {
-    const R = RAID_BOSSES[u.rb];
-    if (!R) return;
-    // 특허괴물 군단장 — 졸개 소환 (첫 소환은 2.8초 뒤)
-    if (R.summonEvery) {
-      u.sumT = (u.sumT == null ? R.summonEvery * 0.4 : u.sumT) - DT;
-      if (u.sumT <= 0) {
-        u.sumT = R.summonEvery;
-        const alive = this.units.filter((f) => f.minion && !f.dead && f.side === u.side).length;
-        const n = Math.min(R.summonN, R.minionMax - alive);
-        const dir = dirOf(u.side);
-        for (let i = 0; i < n; i++) {
-          const x = u.x + dir * (46 + 30 * i + this.rng.next() * 20);
-          const z = DUEL.depthPx * (0.2 + 0.6 * this.rng.next());
-          spawns.push([{ k: "copy", mob: true, minion: true, hp: u.mhp, dmg: u.mdmg, rate: 1.6, range: 100, tg: 1,
-                         cc: 0.1, cm: 1.5, atk: true, own: -1 }, u.side, x, z]);
-        }
-        if (n > 0) this.events.push({ t: "raid", what: "summon", n, x: u.x, side: u.side, dep: this.depOf(u) });
-      }
-    }
-    // 불사 재심청구인 — 상처가 없으면 재생한다
-    if (R.regen && !(u.woundT > 0) && u.hp < u.max) u.hp = Math.min(u.max, u.hp + u.max * R.regen * DT);
-    // 광폭 소송왕 — 집단 소송(전원 피해)과 광폭화
-    if (R.slamEvery) {
-      u.slamT = (u.slamT == null ? R.slamEvery * 0.6 : u.slamT) - DT;
-      if (u.slamT <= 0) {
-        u.slamT = R.slamEvery;
-        for (const f of this.units) {
-          if (f.dead || f.side === u.side) continue;
-          hits.push([f, this.afterArmor(u, f, u.slam), false, u.x, 0]);
-        }
-        this.events.push({ t: "raid", what: "slam", x: u.x, side: u.side, dep: this.depOf(u) });
-      }
-      u.enT = (u.enT == null ? R.enrageEvery : u.enT) - DT;
-      if (u.enT <= 0) {
-        u.enT = R.enrageEvery;
-        u.dmg *= 1 + R.enrage; u.slam *= 1 + R.enrage;
-        this.events.push({ t: "raid", what: "enrage", x: u.x, side: u.side, dep: this.depOf(u) });
-      }
-    }
-  }
-
-  /**
    * 고정 시간간격 한 걸음.
    *
    * 한 틱은 **결정 → 적용** 두 마디로 나뉜다. 훑는 순서대로 피해를 곧바로 넣으면
@@ -3075,7 +2736,6 @@ class DuelSim {
     /** @type {any[]} [유닛, 둔화율, 지속(초)] */ const slows = [];
     /** @type {any[]} [유닛, 정지시간] */ const stuns = [];
     /** @type {any[]} [유닛, 회복량, 회복한 유닛] */ const heals = [];
-    /** @type {any[]} 레이드 보스가 이번 틱에 부른 졸개 [명세, 진영, x, z] */ const spawns = [];
 
     for (const u of this.units) {
       if (u.dead) continue;
@@ -3085,12 +2745,8 @@ class DuelSim {
       if (u.atkT > 0) u.atkT -= DT;
       if (u.skT > 0) u.skT -= DT;
       // 조기공개냥에 묶이면 이번 차례를 통째로 건너뛴다 (걷지도 쏘지도 못한다)
-      if (u.missT > 0) u.missT -= DT;
-      if (u.woundT > 0) u.woundT -= DT;
-      if (u.stunImmT > 0) u.stunImmT -= DT;
       if (u.freezeT > 0) { u.freezeT -= DT; u.walking = false; continue; }
       const slow = u.slowT > 0 ? Math.max(0.2, 1 - u.slowPct) : 1;
-      if (u.rb) this.raidStep(u, hits, spawns);
 
       /* ── 합성 냥타워의 고유 스킬 ── 사격 재장전과 별개의 시계다.
        * 고정 진형에서 쿨이 차 있고 살아 있는 적이 있으면
@@ -3118,7 +2774,7 @@ class DuelSim {
               if (u.sk.sl) slows.push([f, u.sk.sl / 100, u.sk.slD]);
               if (u.sk.ex) {
                 // 무효 심결 — 특허괴물만은 지워지지 않고 최대 체력의 일부만 잃는다
-                if (f.rb || (f.mob && f.k === "boss")) hits.push([f, f.max * u.sk.bh, true, u.x, 0]);
+                if (f.mob && f.k === "boss") hits.push([f, f.max * u.sk.bh, true, u.x, 0]);
                 else hits.push([f, 0, true, u.x, u.sk.ex]);
               }
               if (amt > 0) hits.push([f, this.afterArmor(u, f, amt * this.ampSlow(u, f)), true, u.x, u.ex]);
@@ -3158,8 +2814,7 @@ class DuelSim {
         if (f.dead || f.side === u.side) continue;
         foes.push([this.dist(u, f), f]);
       }
-      // 잔상 벤치마커(back)는 뒷줄부터 노린다 — 회복·저격을 맡은 냥이 먼저 맞는다
-      foes.sort((p, q) => (u.back ? q[0] - p[0] : p[0] - q[0]) || (p[1].id - q[1].id));
+      foes.sort((p, q) => (p[0] - q[0]) || (p[1].id - q[1].id));
 
       if (!foes.length) continue;
 
@@ -3235,30 +2890,8 @@ class DuelSim {
                         side: u.side, heal: true, life: 0.22, max: 0.22 });
     }
     for (const [u, pct, dur] of slows) { u.slowT = dur || 1.6; u.slowPct = pct; }
-    for (const [u, d] of stuns) {
-      /* 레이드 보스는 정지에 버틴다 — 40% 만 묶이고, 풀린 뒤 2초는 다시 묶이지 않는다.
-       * 안 그러면 연타형 덱의 정지 주사위가 보스를 통째로 얼려 어떤 기믹도 뜻이 없어진다 */
-      if (u.rb) {
-        if (u.stunImmT > 0) continue;
-        u.freezeT = Math.max(u.freezeT, d * 0.4);
-        u.stunImmT = 2.0 + d * 0.4;
-        continue;
-      }
-      u.freezeT = Math.max(u.freezeT, d);
-    }
+    for (const [u, d] of stuns) u.freezeT = Math.max(u.freezeT, d);
     for (const [u, amt, crit, fx, ex] of hits) this.hurt(u, amt, crit, fx, ex);
-    // 레이드 — 보스가 쓰러지면 졸개도 함께 무너진다 · 새로 부른 졸개는 다음 틱부터 싸운다
-    if (this.raid) {
-      for (const b of this.units) {
-        if (!b.rb || !b.dead || b.cleared) continue;
-        b.cleared = true;
-        for (const f of this.units) if (f.minion && !f.dead && f.side === b.side) {
-          f.dead = true; f.hp = 0;
-          this.events.push({ t: "die", x: f.x, side: f.side, dep: this.depOf(f), k: f.k, own: f.own });
-        }
-      }
-      for (const [spec, side, x, z] of spawns) this.addUnit(spec, side, x, z, 0);
-    }
 
     for (const s of this.shots) s.life -= DT;
     this.shots = this.shots.filter((s) => s.life > 0);
@@ -3269,7 +2902,7 @@ class DuelSim {
   drainEvents() { const e = this.events; this.events = []; return e; }
 }
 
-return { DuelSim, SIDES, campX, campOf, dirOf, makeRoster, makeMeta, mobRoster, raidRoster, deckGroups, deckPower };
+return { DuelSim, SIDES, campX, campOf, dirOf, makeRoster, makeMeta, mobRoster, deckGroups, deckPower };
 })();
 __mods["core/game.js"] = (function(){
 // @ts-check
@@ -3995,9 +3628,6 @@ class Game {
   }
 
   // ── 웨이브 ──
-  /** 이 라운드의 침입자 구성 — 승천 모드(AscGame)가 끝없는 라운드용으로 갈아 끼운다 @param {number} w */
-  waveDef(w) { return WAVES[w - 1] || {}; }
-
   startWave() {
     if (this.phase !== "prep" || this.awaitingPassive || this.awaitingAugment) return false;
     this.recompute();
@@ -4023,7 +3653,7 @@ class Game {
     this.waveMods = { extra: 0 };
     this.waveFx = { hp: 1 };
 
-    const def = this.waveDef(this.wave);
+    const def = WAVES[this.wave - 1];
     const scale = this.bal.waveScale ?? 1;
     let list = [];
     for (const k in def) {
@@ -4223,7 +3853,7 @@ class Game {
       this.lineScore[def.line] = score;
       const was = this.lineTier[def.line] || 0;
       let now = 0;
-      for (const need of (this.tierAt || LINE_TIER_AT)) if (score >= need) now++;   // tierAt — 승천 모드의 7·10강
+      for (const need of LINE_TIER_AT) if (score >= need) now++;
       this.lineTier[def.line] = now;
       if (now > was) {
         this.lineNew = { line: def.line, tier: now };
@@ -4279,233 +3909,6 @@ class Game {
 }
 
 return { ATK_MS, ATK_ORDER, ATK_TOTAL, Game, IDLE_MS, IDLE_ORDER, frameOf };
-})();
-__mods["core/ascend.js"] = (function(){
-// @ts-check
-/**
- * 승천 모드(AscGame) — /ascend 에서만 쓰는 끝없는 판. 규칙은 data.js 의 ASC 주석에 모아 두었다.
- *
- * 메인 판(Game)을 **상속해서** 갈아 끼울 곳만 덮어쓴다 — 라운드 구성(waveDef) · 체력 곡선(hpScaleAt) ·
- * 침입자 방어(enemyDefAdd) · 방해효과(curses) · 라운드 마무리(closeRound) · 점수(rankScore).
- * 메인 판의 Game 은 이 파일을 모르고, 이 파일이 없어도 그대로 돈다.
- */
-const {Game} = __req("core/game.js");
-const {ASC, ASC_CURSES, ASC_STATUP_BY_KEY, RAID_BOSSES, CATS, DRAW_KEYS} = __req("core/data.js");
-const B = __req("core/board.js");
-
-class AscGame extends Game {
-  reset() {
-    super.reset();
-    this.asc = true;
-    /** 계열 단계가 열리는 점수 — 3 · 5 · 7 · 10강 (applyPassive 가 이걸 본다) */
-    this.tierAt = ASC.tierAt;
-    /** 종류별 스탯업 누적 {출원냥: {dmg, rate, ar, dr}} — stats.js 와 duel.js 의 makeRoster 가 본다 */
-    this.catUp = {};
-    this.statUps = [];
-    this.awaitingStatUp = false;
-    /** 지금 웨이브에 걸린 방해효과 · 다음 전투 라운드에 걸릴 방해효과 (준비 단계에서 미리 보인다) */
-    this.curses = [];
-    this.nextCurses = [];
-    /** 「심사 중지 명령」이 터질 웨이브 시각들 */
-    this.freezeAt = [];
-    /** 라운드 → 레이드 보스 키 (처음 물을 때 뽑아 붙잡아 둔다 — 미리 알려 준 보스가 바뀌면 안 된다) */
-    this.raidPlan = {};
-    this.raidLog = [];
-    this.raidWins = 0;
-    return this;
-  }
-
-  // ── 라운드 ──
-  /** 5라운드마다 레이드 @param {number} w */
-  isDuelWave(w) { return w > 0 && w % ASC.raidEvery === 0; }
-
-  /** 이 라운드의 침입자 구성 — 1~9 는 표, 그 뒤로는 라운드마다 늘어난다 (상한 ASC.maxMobs) */
-  waveDef(w) {
-    if (ASC.waves[w]) return ASC.waves[w];
-    if (w < 10) return {};
-    const k = w - 10;
-    const def = { copy: 50 + 3 * k, fast: 50 + 3 * k, tank: 36 + 3 * k };
-    const total = def.copy + def.fast + def.tank;
-    const room = ASC.maxMobs - 4;
-    if (total > room) for (const t in def) def[t] = Math.round(def[t] * room / total);
-    def.boss = Math.min(14, 4 + Math.floor(k / 2));
-    return def;
-  }
-
-  /** 침입자 체력 배율 — combat.js 의 소환이 이걸 본다 @param {number} w */
-  hpScaleAt(w) {
-    if (w < 10) return ASC.hpEarly[w] || 1;
-    const soft = Math.min(w, ASC.hardFrom) - 10, hard = Math.max(0, w - ASC.hardFrom);
-    return ASC.hpAt10 * Math.pow(ASC.hpGrow, soft) * Math.pow(ASC.hpGrowHard, hard);
-  }
-  /** 10라운드를 넘긴 만큼 모든 침입자의 방어가 오른다 (「무효 항변」이 걸리면 +8 더) */
-  get enemyDefAdd() {
-    const w = this.wave;
-    const base = w <= 10 ? 0 : (Math.min(w, ASC.hardFrom) - 10) * ASC.defPerRound
-                              + Math.max(0, w - ASC.hardFrom) * ASC.defPerRoundHard;
-    return base + (this.hasCurse("shield") ? 8 : 0);
-  }
-  get enemySpeedMul() {
-    const w = this.wave;
-    const base = Math.min(ASC.spdCap, 1 + Math.max(0, w - 10) * ASC.spdPerRound);
-    return base * (this.hasCurse("haste") ? 1.3 : 1);
-  }
-  /** 지금 웨이브에 걸린 방해효과인가 (reset 도중 Game 이 먼저 부를 수 있어 비어 있어도 견딘다) */
-  hasCurse(k) { return !!this.curses && this.curses.includes(k); }
-  get catRangeMul() { return this.hasCurse("fog") ? 0.8 : 1; }
-  get enemyRegen() { return this.hasCurse("regen") ? 0.02 : 0; }
-  get leakMul() { return this.hasCurse("toll") ? 2 : 1; }
-
-  /** 이 라운드에 침입자가 던질 방해효과를 뽑는다 (레이드 라운드 · 10라운드까지는 없다) @param {number} w */
-  rollCurses(w) {
-    if (w < ASC.curseFrom || this.isDuelWave(w)) return [];
-    const pool = ASC_CURSES.slice(), out = [];
-    for (let n = ASC.curseCount(w); n > 0 && pool.length; n--) {
-      let roll = Math.random() * pool.reduce((a, c) => a + c.weight, 0), idx = 0;
-      for (let i = 0; i < pool.length; i++) { roll -= pool[i].weight; if (roll <= 0) { idx = i; break; } }
-      out.push(pool.splice(idx, 1)[0].key);
-    }
-    return out;
-  }
-
-  startWave() {
-    if (this.awaitingStatUp) return false;
-    if (this.phase !== "prep" || this.awaitingPassive || this.awaitingAugment) return false;
-    const curses = this.nextCurses.slice();
-    // 「이의신청 대량제출」 — 기본 구성의 25% 를 줄 사이에 끼워 넣는다
-    if (curses.includes("swarm")) {
-      const def = this.waveDef(this.wave + 1);
-      const n = Object.values(def).reduce((a, v) => a + v, 0);
-      this.waveMods.extra += Math.round(n * 0.25);
-    }
-    if (!super.startWave()) return false;
-    this.curses = curses;
-    this.nextCurses = [];
-    if (curses.includes("bulk")) this.waveFx.hp = 1.35;
-    this.freezeAt = curses.includes("freeze") ? [8, 22] : [];
-    let stolen = 0;
-    if (curses.includes("steal")) {
-      stolen = Math.max(60, Math.round(Math.max(0, this.gold) * 0.25));
-      this.gold -= stolen;
-    }
-    if (curses.length) this.events.push({ t: "curse", keys: curses, stolen, wave: this.wave });
-    return true;
-  }
-
-  startDuel() {
-    if (this.awaitingStatUp) return false;
-    return super.startDuel();
-  }
-
-  tick(dt, now) {
-    // 「심사 중지 명령」 — 정해 둔 시각에 냥타워가 멈춘다
-    if (this.phase === "wave" && this.freezeAt.length && this.waveTime >= this.freezeAt[0]) {
-      this.freezeAt.shift();
-      this.fx.freezeT = Math.max(this.fx.freezeT, 3.5);
-      this.events.push({ t: "curse_hit", key: "freeze" });
-    }
-    return super.tick(dt, now);
-  }
-
-  /** 라운드 마무리 — 끝이 없고, 10라운드 뒤로는 강화(짝수) · 스탯업(홀수)이 번갈아 온다 */
-  closeRound(isDuel) {
-    this.phase = "prep";
-    this.fx.freezeT = 0;
-    this.freezeAt = [];
-    this.curses = [];
-    this.sabDrawn = 0;
-    this.shots = [];
-    const income = Math.round(this.bal.incomeBase + this.wave * this.bal.incomePerWave);
-    this.gold += income;
-    this.goldenUid = 0; this.goldMul = 1; this.feeMul = 1; this.feeT = 0;
-    this.recompute();
-    this.events.push({ t: "wave_end", wave: this.wave, income, bonus: 0, duel: !!isDuel });
-    if (this.wave <= ASC.passiveUntil || this.wave % 2 === 0) this.awaitingPassive = true;
-    else this.awaitingStatUp = true;
-    this.nextCurses = this.rollCurses(this.wave + 1);
-  }
-
-  // ── 레이드 ──
-  /** 다음 레이드 라운드 번호 */
-  get nextRaidWave() { return Math.ceil((this.wave + 1) / ASC.raidEvery) * ASC.raidEvery; }
-  /** 그 라운드의 레이드 보스 키 — 처음 물을 때 뽑고, 바로 앞 레이드와 같은 보스는 피한다 @param {number} w */
-  raidBoss(w) {
-    if (!this.raidPlan[w]) {
-      const prev = this.raidPlan[w - ASC.raidEvery];
-      const keys = Object.keys(RAID_BOSSES).filter((k) => k !== prev);
-      this.raidPlan[w] = keys[Math.floor(Math.random() * keys.length)];
-    }
-    return this.raidPlan[w];
-  }
-  /** 그 레이드의 보스·약점을 지금 알려 줄 수 있는가 — 10라운드를 넘긴 뒤의 레이드만 @param {number} w */
-  raidRevealed(w) { return w > ASC.revealFrom && this.wave >= ASC.revealFrom; }
-
-  endDuel(outcome, foeAlive) {
-    if (this.phase !== "duel") return false;
-    const w = this.wave, boss = this.raidBoss(w);
-    let gold = 0;
-    if (outcome === "win") {
-      gold = ASC.raidWinGold(w);
-      this.gold += gold;
-      this.maxHp += ASC.raidWinMaxHp;
-      this.hp = Math.min(this.maxHp, this.hp + ASC.raidWinHeal);
-      this.raidWins++;
-    }
-    this.raidLog.push({ wave: w, boss, outcome });
-    this.events.push({ t: "raid_end", wave: w, boss, outcome, gold,
-                       heal: outcome === "win" ? ASC.raidWinHeal : 0, maxHp: outcome === "win" ? ASC.raidWinMaxHp : 0 });
-    return super.endDuel(outcome, foeAlive);
-  }
-
-  // ── 스탯업 ──
-  /** 스탯업을 줄 수 있는 종류 — 지금 가진 냥타워 종류(판 + 대기열), 값나가는 순. 하나도 없으면 전부 */
-  statUpKinds() {
-    const val = {};
-    for (const p of this.pieces.concat(this.tray)) {
-      if (p.kind !== "cat") continue;
-      val[p.key] = (val[p.key] || 0) + this.catValue(p);
-    }
-    const keys = Object.keys(val).sort((a, b) => val[b] - val[a]);
-    return keys.length ? keys : DRAW_KEYS.slice();
-  }
-  /** @param {string} key 냥타워 종류 @param {string} stat dmg|rate|ar|dr */
-  applyStatUp(key, stat) {
-    const d = ASC_STATUP_BY_KEY[stat];
-    if (!d || !CATS[key] || !this.awaitingStatUp) return false;
-    const up = this.catUp[key] || (this.catUp[key] = { dmg: 0, rate: 0, ar: 0, dr: 0 });
-    up[stat] = Math.min(d.cap, +(up[stat] + d.amount).toFixed(4));
-    this.statUps.push({ key, stat });
-    this.awaitingStatUp = false;
-    this.recompute();
-    this.events.push({ t: "statup", key, stat, val: up[stat] });
-    return true;
-  }
-
-  // ── 점수 ──
-  /**
-   * 승천 점수 — 🔺 오른 높이(클리어한 라운드가 높을수록 한 라운드의 값이 크다) · ⚔️ 레이드 승리 ·
-   * ⏱️ 속도 · 🏗️ 덱 · 🏛️ 내구. 메인 판의 네 항목에 「높이」를 하나 더 얹었다.
-   */
-  rankScore(deckPower) {
-    const base = super.rankScore(deckPower);
-    const R = ASC.rank;
-    const rounds = this.waveLog.map((w) => w.wave).concat(this.duelLog.map((d) => d.wave));
-    const climb = rounds.reduce((a, w) => a + R.climbBase + R.climbPer * w, 0);
-    const duels = this.duelLog.map((d) => ({ wave: d.wave, outcome: d.outcome,
-      pts: d.outcome === "win" ? R.raidBase + R.raidPer * d.wave : 0 }));
-    const duel = duels.reduce((a, d) => a + d.pts, 0);
-    const waves = base.waves.map((w) => Object.assign({}, w,
-      { pts: Math.round(R.speedPerWave * Math.min(1, w.par / Math.max(w.par, w.secs))) }));
-    const speed = waves.reduce((a, w) => a + w.pts, 0);
-    const deckIdx = deckPower == null ? this.finalDeck : deckPower;
-    const deck = Math.round(R.deckLog * Math.log10(1 + Math.max(0, deckIdx) / 1000));
-    const total = climb + duel + speed + deck + base.hp;
-    const g = R.grades.find((x) => total >= x.at) || R.grades[R.grades.length - 1];
-    return Object.assign(base, { total, grade: g.g, gradeCol: g.col, say: g.say, climb, duel, duels, speed, waves, deck });
-  }
-}
-
-return { AscGame };
 })();
 __mods["web/sprite.js"] = (function(){
 // @ts-check
@@ -4736,17 +4139,8 @@ __mods["web/main.js"] = (function(){
 const {Game, frameOf} = __req("core/game.js");
 const {CATS, CAT_SKILLS, ENEMIES, BAL, LINES, LINE_TIER_AT, LV3_GUARD, LV3_GUARD_LABEL, MODES, PASSIVES, PASSIVE_BY_KEY,
        RANK, SABOTAGE, AUGMENTS, AUGMENT_WAVES,
-       DUEL, DUEL_WAVES, DRAW_KEYS, RECIPES, catDrawChance,
-       ASC, ASC_CURSES, ASC_CURSE_BY_KEY, ASC_STATUPS, ASC_STATUP_BY_KEY, RAID_BOSSES} = __req("core/data.js");
-const {DuelSim, SIDES, campOf, makeRoster, makeMeta, mobRoster, raidRoster, deckPower} = __req("core/duel.js");
-const {AscGame} = __req("core/ascend.js");
-/* 승천 모드 — ascend.html 이 game.js 앞에서 window.ASCEND 를 세운다. 메인 화면(index.html)에서는 늘 false 라
- * 아래의 ASC_ON 분기는 전부 건너뛴다 */
-const ASC_ON = typeof window !== "undefined" && !!window.ASCEND;
-/** 계열 단계가 열리는 점수 — 메인 판은 3·5강, 승천 모드는 3·5·7·10강 */
-const tierAt = () => (game && game.tierAt) || LINE_TIER_AT;
-/** 계열의 i 번째(0부터) 단계 정의 — t1 · t2 (승천 모드는 t3 · t4 까지) */
-const tierDef = (L, i) => L["t" + (i + 1)] || L.t2;
+       DUEL, DUEL_WAVES, DRAW_KEYS, RECIPES, catDrawChance} = __req("core/data.js");
+const {DuelSim, SIDES, campOf, makeRoster, makeMeta, mobRoster, deckPower} = __req("core/duel.js");
 const {MAPS} = __req("core/maps.js");
 const B = __req("core/board.js");
 const {auraCells, softCap, teamGuard} = __req("core/stats.js");
@@ -5176,7 +4570,7 @@ function renderHud() {
   // 빚(마이너스)은 색으로 바로 알아보게 — 갚기 전까지는 아무것도 살 수 없다
   { const col = game.gold < 0 ? "#e0574d" : ""; if (goldEl.style.color !== col) goldEl.style.color = col; }
   setText(goldEl.parentElement.querySelector("span"), game.gold < 0 ? "특허료 (빚)" : "특허료");
-  setText($("#sWave"), ASC_ON ? `${game.wave}/∞` : `${game.wave}/${BAL.waveCount}`);
+  setText($("#sWave"), `${game.wave}/${BAL.waveCount}`);
   // 등록번호 칸(머릿글)은 걷어냈다 — 남아 있는 판에만 찍는다.
   // 없는 칸에 그대로 쓰면 renderHud 가 통째로 터져서 그 아래(전장 원화·개시 단추·합성 묶음)가
   // 전부 멈춘다. 실제로 웨이브를 눌러도 침입자가 나오지 않던 원인이었다.
@@ -5217,8 +4611,7 @@ function renderScore() {
   const legs = $("#sScoreLegs");
   if (legs) legs.innerHTML =
     // 항목마다 냥타워 「합성효과 ?」와 같은 말풍선(.prhint)을 단다 — 마우스를 올리면 뜬다
-    (ASC_ON ? legHtml("🔺", r.climb, "<b>높이 점수</b><br>클리어한 라운드마다 쌓입니다 — 높은 라운드일수록 한 라운드의 값이 큽니다.") : "") +
-    legHtml("⚔️", r.duel, ASC_ON ? "<b>레이드 점수</b><br>보스 레이드를 이기면 쌓입니다." : "<b>대전 점수</b><br>1:1 대전의 승·무·패로 쌓입니다.") +
+    legHtml("⚔️", r.duel, "<b>대전 점수</b><br>1:1 대전의 승·무·패로 쌓입니다.") +
     legHtml("🏗️", r.deck, "<b>덱 점수</b><br>냥타워 수·합성 레벨·강화로 계산한 지금 덱의 힘입니다.") +
     legHtml("⏱️", r.speed, "<b>속도 점수</b><br>라운드를 기준 시간 안에 끝낼수록 높습니다.") +
     legHtml("🏛️", r.hp, "<b>내구 점수</b><br>남아 있는 원부 내구에 비례합니다.");
@@ -5231,7 +4624,7 @@ const btn = (s) => /** @type {HTMLButtonElement} */ ($(s));
 
 /* ═══════ 웨이브 동시 개시 ═══════ */
 /** 지금 준비 버튼을 누를 수 있는 상태인가 (준비 단계 + 고를 것이 남아 있지 않음) */
-const canPrep = () => !!game && game.phase === "prep" && !game.awaitingPassive && !game.awaitingAugment && !game.awaitingStatUp;
+const canPrep = () => !!game && game.phase === "prep" && !game.awaitingPassive && !game.awaitingAugment;
 const online = () => !soloMode && !!ws && ws.readyState === 1;
 /**
  * 이 라운드를 상대와 맞춰서 시작해야 하는가 — **1v1 에서는 언제나 그렇다.**
@@ -5288,14 +4681,12 @@ function renderReadyBar() {
     if (b.disabled !== true) b.disabled = true; setText(b, "증강 선택 중");
   } else if (game.awaitingPassive) {
     if (b.disabled !== true) b.disabled = true; setText(b, "효과 선택 중");
-  } else if (game.awaitingStatUp) {
-    if (b.disabled !== true) b.disabled = true; setText(b, "스탯업 선택 중");
   } else if (game.phase === "prep") {
     if (b.disabled !== false) b.disabled = false;
     // 솔로에서는 "준비"가 아니라 곧바로 개시다 — 기다릴 상대가 없다.
     // 다음이 대전 라운드면 무엇이 시작되는지 버튼에 그대로 적는다.
     setText(b, duelNext
-      ? (!sync ? (ASC_ON ? `${game.raidRevealed(next) ? RAID_BOSSES[game.raidBoss(next)].icon : "❓"} 라운드 ${next} ${duelWord}` : `⚔ 라운드 ${next} ${duelWord} 시작`) : iReady ? "준비 취소" : `⚔ 라운드 ${next} ${duelWord} 준비`)
+      ? (!sync ? `⚔ 라운드 ${next} ${duelWord} 시작` : iReady ? "준비 취소" : `⚔ 라운드 ${next} ${duelWord} 준비`)
       : (!sync ? `라운드 ${next} 시작` : iReady ? "준비 취소" : `라운드 ${next} 준비 완료`));
   } else {
     if (b.disabled !== true) b.disabled = true;
@@ -5625,8 +5016,6 @@ const STAMP = {
   swarm:  { col: "#e0574d", icon: "📨", head: "이의신청 대량제출" },
   freeze: { col: "#9fd8ff", icon: "⛔", head: "심사 중지 명령" },
 };
-// 승천 모드 — 침입자의 방해효과도 같은 도장으로 찍는다 (키 앞에 c_)
-for (const c of ASC_CURSES) STAMP["c_" + c.key] = { col: c.col, icon: c.icon, head: c.name };
 /** 도장이 떨어지는 시간(초) — 이 뒤에 「쾅」 하고 찍힌다 */
 const STAMP_DROP = 0.16;
 /** @type {{kind:string,col:string,icon:string,head:string,sub:string,x:number,y:number,ang:number,
@@ -5711,8 +5100,7 @@ function stampRect(g, x, y, w, h, r) {
 function drawSabStamps(g) {
   if (!sabStamps.length) return;
   const { w } = fxCanvasSize();
-  // 승천 모드에는 상대가 없다 — 내 판에 찍히는 도장은 전부 침입자의 방해효과다
-  drawStampList(g, sabStamps.filter((s) => s.opp == null), w, ASC_ON ? "— 침 입 자 방 해 —" : "— 상 대 공 작 —");
+  drawStampList(g, sabStamps.filter((s) => s.opp == null), w, "— 상 대 공 작 —");
 }
 
 /**
@@ -6936,11 +6324,9 @@ function consumeEvents() {
         clearSabotageFlash();
         // 대전 라운드라면 결과 화면을 읽는 동안은 모달을 띄우지 않는다 —
         // 대전장을 접을 때(closeDuelRound) 이어서 연다.
-        if (ASC_ON) ascRoundNotice();
         if (duel) break;
         if (game.awaitingAugment) openAugmentModal();
         else if (game.awaitingPassive) openPassiveModal();
-        else if (game.awaitingStatUp) openStatUpModal();
         break;
       case "merge": {
         sfx(ev.promoted ? "promote" : "merge");
@@ -7040,35 +6426,6 @@ function consumeEvents() {
       case "golden":
         log(`<b style="color:#cda43a">직권보정</b> ${ev.name} — 이번 웨이브 동안 공격력 3배`);
         break;
-      /* ── 승천 모드 ── 침입자의 방해효과 · 스탯업 · 레이드 결과 */
-      case "curse": {
-        sfx("sabotage");
-        for (const k of ev.keys) {
-          const c = ASC_CURSE_BY_KEY[k];
-          if (!c) continue;
-          log(`<b class="warn">침입자 방해효과</b> ${c.icon} <b>${c.name}</b> — ${c.desc}`);
-          slamSabStamp("c_" + k, k === "steal" ? `특허료 −${ev.stolen}` : c.short);
-        }
-        renderHud();
-        break;
-      }
-      case "curse_hit":
-        sfx("sabotage");
-        slamSabStamp("freeze", "냥타워 3.5초 정지!", 3.5);
-        break;
-      case "statup": {
-        sfx("pick");
-        const s = ASC_STATUP_BY_KEY[ev.stat];
-        log(`<b style="color:#ffd782">스탯업</b> ${CATS[ev.key].icon} ${CATS[ev.key].name} ${s.icon} ${s.name} — 누적 <b>${s.fmt(ev.val)}</b>`);
-        break;
-      }
-      case "raid_end": {
-        const R = RAID_BOSSES[ev.boss];
-        log(ev.outcome === "win"
-          ? `<b style="color:#cda43a">레이드 성공</b> ${R.icon} ${R.name} 토벌 — 특허료 <b>+${ev.gold}</b> · 내구 +${ev.heal} · 최대 내구 +${ev.maxHp}`
-          : `<b class="warn">레이드 실패</b> ${R.icon} ${R.name} — 등록원부 내구 <b>−${DUEL.leakBase}</b>`);
-        break;
-      }
       /* 판이 끝났다. 다만 **마지막 10라운드가 곧 대전**이라, 대전장이 열려 있는 채로
        * 여기에 닿는다 — 그대로 종료 화면을 띄우면 방금 붙은 결과 도장을 읽을 틈도 없이
        * 화면이 덮인다. 대전 중이면 붙잡아 두었다가 대전장을 접을 때(closeDuelRound) 띄운다. */
@@ -7117,7 +6474,7 @@ const mySide = () => (soloMode ? "a" : sideOfSlot(mySlot));
 /** 내가 승패를 정하는 쪽인가 (가장 앞 슬롯 또는 솔로) */
 const duelAuthority = () => soloMode || authoritySlot() === mySlot;
 /** 이 판의 대전을 무엇이라 부르는가 */
-const duelLabel = () => (ASC_ON ? "보스 레이드" : "1:1 대전");
+const duelLabel = () => "1:1 대전";
 
 /**
  * 진영 색 — [진한 색, 본색, 탄환색]. **내 진영은 늘 청사색(파랑)**이고 상대는 붉은색이다.
@@ -7133,7 +6490,6 @@ function sideCol(side) {
 /** 진영에 선 사람 — 표시용 이름. 쥐 침입단이 대신 선 자리는 그렇게 적는다 */
 function sideLabel(side) {
   if (!duel) return side;
-  if (ASC_ON && side !== "a") { const R = RAID_BOSSES[game.raidBoss(duel.wave)]; return R ? `${R.icon} ${R.name}` : "레이드 보스"; }
   if (soloMode) return side === "a" ? "내 병력" : "쥐 침입단";
   if (side === mySide()) return "내 병력";
   const s = SIDES.indexOf(side);
@@ -7204,7 +6560,6 @@ function receiveDuelRoster(slot, wave, roster, meta) {
  * 마지막 대전 스테이지에는 특허괴물을 반드시 한 마리 끼워 넣는다.
  */
 function makeMobSquad() {
-  if (ASC_ON) return raidRoster(duel.mine, duel.wave, game.raidBoss(duel.wave));
   const last = DUEL_WAVES[DUEL_WAVES.length - 1];
   return mobRoster(duel.mine, duel.wave, (Math.random() * 0xffffffff) >>> 0, duel.wave >= last);
 }
@@ -7239,11 +6594,7 @@ function beginDuelSim() {
   const me = mySide();
   const mineN = duel.sim.startN[me];
   const foes = duel.sim.sides.filter((s) => s !== me);
-  if (ASC_ON) {
-    const R = RAID_BOSSES[game.raidBoss(duel.wave)];
-    log(`<b class="warn">레이드 보스</b> ${R.icon} <b>${R.name}</b> — ${R.gimmick}`);
-    log(`<b style="color:#ffd782">약점</b> ${R.weak} · 제한시간 <b>${ASC.raidTime}초</b> 안에 쓰러뜨려야 합니다.`);
-  } else if (soloMode || duel.mobs.size) {
+  if (soloMode || duel.mobs.size) {
     // 어떤 조합이 나왔는지 로그에 남긴다 — 조합이 매번 다른 것이 이 라운드의 재미다
     for (const side of foes) {
       const tally = {};
@@ -7261,8 +6612,7 @@ function beginDuelSim() {
       foes.map((s) => `${sideLabel(s)} <b style="color:var(--seal-soft)">${duel.sim.power[s]}</b>`).join(" · ") + " — " +
       (mp > best ? "내 덱이 우세합니다." : mp < best ? "내 덱이 열세입니다." : "팽팽합니다.") +
       ` <i style="font-style:normal;color:var(--muted)">체력과 화력을 함께 잰 값입니다.</i>`);
-  log(ASC_ON ? `전군이 저절로 싸웁니다 — <b>누를 것은 없습니다.</b> <b>시간 안에 보스를 쓰러뜨리면 이깁니다.</b>`
-              : `전군이 저절로 진군합니다 — <b>누를 것은 없습니다.</b> <b>상대 냥타워를 먼저 전멸시키는 쪽이 이깁니다.</b>`);
+  log(`전군이 저절로 진군합니다 — <b>누를 것은 없습니다.</b> <b>상대 냥타워를 먼저 전멸시키는 쪽이 이깁니다.</b>`);
 }
 
 /** 매 프레임. 대전장을 진행하고 그린다. */
@@ -7327,14 +6677,6 @@ function consumeDuelEvent(ev) {
   else if (ev.t === "exec") duelFloat(ev.x, y, "무효!", "#e0574d", true);
   // 내 냥이 쓰러지면 화면이 살짝 흔들린다 — 전멸이 곧 패배라 한 명 한 명이 무겁다
   else if (ev.t === "die" && ev.side === mySide()) addShake(3, .12);
-  // 승천 모드 레이드 — 보스 기믹이 눈에 보이게
-  else if (ev.t === "miss") duelFloat(ev.x, y - 30, "회피!", "#c9b26a", false);
-  else if (ev.t === "wound") duelFloat(ev.x, y - 46, "상처 — 재생 멈춤", "#e0574d", true);
-  else if (ev.t === "raid") {
-    if (ev.what === "summon") duelFloat(ev.x, y - 60, `졸개 ${ev.n} 소환!`, "#ff9a5c", true);
-    else if (ev.what === "slam") { duelFloat(ev.x, y - 60, "집단 소송!", "#ff7a3d", true); addShake(7, .25); sfx("leak"); }
-    else if (ev.what === "enrage") duelFloat(ev.x, y - 80, "광폭화 — 공격력 상승", "#e0574d", true);
-  }
   // elim(진영 전멸)은 1:1 에서는 곧 승패라 결과 화면이 알린다 — 따로 띄우지 않는다
   else if (ev.t === "skill") {
     const sk = CAT_SKILLS[ev.key];
@@ -7427,8 +6769,7 @@ function lineSummaryHtml() {
 function finishOver(ev) {
   pendingOver = null;
   sendWS({ t: ev.win ? "won" : "lost" });
-  endMatch(ev.win, ASC_ON ? `등록원부가 무너졌습니다 — 라운드 ${game.wave}에서 승천이 멈췄습니다.`
-    : ev.win
+  endMatch(ev.win, ev.win
     ? "10라운드를 모두 마쳤습니다. 성적을 냅니다."
     : "등록원부가 무너졌습니다.");
 }
@@ -7448,7 +6789,6 @@ function closeDuelRound() {
   // (결과 도장을 읽는 동안 모달이 덮치면 무엇을 보고 있었는지 알 수 없어진다)
   if (game.awaitingAugment) openAugmentModal();
   else if (game.awaitingPassive) openPassiveModal();
-  else if (game.awaitingStatUp) openStatUpModal();
 }
 
 /* ══ 대전장 그리기 — 영역 2분할 + 원근감 지면 ══
@@ -7686,18 +7026,7 @@ function drawDuelUnit(g, u, ms) {
     const d = ENEMIES[u.k];
     // 걸음걸이는 시뮬레이션 시각에서 뽑는다 — 프레임 시간과 무관해야 모두 같이 움직인다
     const art = mobFrame(u.k, "run", u.walking ? Math.floor(duel.sim.t * 7 + u.id) : 0);
-    const r = (d ? d.r : 18) * 1.05 * (u.sz || 1);
-    // 승천 모드 레이드 보스 — 발밑에 기운이 일렁인다 (잔상 보스는 둔화·정지가 풀려 있으면 흐릿하다)
-    const RB = u.rb && RAID_BOSSES[u.rb];
-    if (RB) {
-      g.save();
-      g.globalAlpha = fade * (0.35 + 0.15 * Math.sin(ms / 180));
-      g.fillStyle = RB.tint;
-      g.beginPath(); g.ellipse(0, 2, r * 1.25, r * 0.36, 0, 0, 7); g.fill();
-      g.restore();
-      if (RB.evade && !(u.slowT > 0 || u.freezeT > 0)) g.globalAlpha = fade * 0.62;
-      if (u.woundT > 0) { g.shadowColor = "#e0574d"; g.shadowBlur = 14; }
-    }
+    const r = (d ? d.r : 18) * 1.05;
     g.save();
     g.scale(facing, 1);
     g.translate(0, -r);   // drawMobArt 는 발끝을 y=r 에 맞춘다 — 발이 지면선에 닿게 올린다
@@ -7761,18 +7090,8 @@ function drawDuelHealth(g, u) {
   if (u.dead) return;
   const dep = u.z / DUEL.depthPx, sc = duelScale(dep) * 2;
   const x = duelX(u.x), y = duelYAt(x, dep);
-  const top = y - (u.mob ? (ENEMIES[u.k] ? ENEMIES[u.k].r : 18) * 2.2 * (u.sz || 1) : 66) * sc;
-  const hp = Math.max(0, Math.min(1, u.hp / u.max)), bw = u.rb ? 220 : Math.max(62, 36 * sc), bh = u.rb ? 13 : 9;
-  // 레이드 보스 — 체력줄 위에 이름을 적는다
-  if (u.rb && RAID_BOSSES[u.rb]) {
-    const RB = RAID_BOSSES[u.rb];
-    g.save();
-    g.font = "bold 17px 'Jua',sans-serif"; g.textAlign = "center"; g.textBaseline = "alphabetic";
-    g.lineWidth = 4; g.strokeStyle = "#14243b"; g.lineJoin = "round";
-    const nm = `${RB.icon} ${RB.name}${u.woundT > 0 ? " · 상처" : ""}`;
-    g.strokeText(nm, x, top - 6); g.fillStyle = RB.tint; g.fillText(nm, x, top - 6);
-    g.restore();
-  }
+  const top = y - (u.mob ? (ENEMIES[u.k] ? ENEMIES[u.k].r : 18) * 2.2 : 66) * sc;
+  const hp = Math.max(0, Math.min(1, u.hp / u.max)), bw = Math.max(62, 36 * sc), bh = 9;
   g.save();
   g.globalAlpha = 1;
   g.fillStyle = "#101b2b"; g.fillRect(x - bw / 2 - 2, top - 1, bw + 4, bh + 2);
@@ -7897,9 +7216,8 @@ function deckChips(groups) {
   if (!groups.length) return `<span class="dempty">비어 있음</span>`;
   return groups.map((c) => {
     const d = c.mob ? ENEMIES[c.k] : CATS[c.k];
-    const R = c.rb && RAID_BOSSES[c.rb];   // 승천 모드 레이드 보스는 제 이름으로
-    const nm = R ? R.name : d ? (c.mob ? d.nm : d.name) : c.k;
-    const ic = R ? R.icon : d ? d.icon : "🐭";
+    const nm = d ? (c.mob ? d.nm : d.name) : c.k;
+    const ic = d ? d.icon : "🐭";
     return `<span class="dchip${c.lv > 1 ? " lv" : ""}">
       <b>${ic}</b><i>${nm}${c.lv > 1 ? ` Lv${c.lv}` : ""}</i><em>×${c.n}</em></span>`;
   }).join("");
@@ -7951,10 +7269,9 @@ function renderDuelBar() {
       el.classList.toggle("out", !sim.alive(s).length);
     });
   }
-  const lim = (sim && sim.limit) || DUEL.timeLimit;
-  const left = sim ? Math.max(0, lim - sim.t) : lim;
+  const left = sim ? Math.max(0, DUEL.timeLimit - sim.t) : DUEL.timeLimit;
   $("#duelTimer").textContent = `${left.toFixed(1)}초`;
-  /** @type {HTMLElement} */ ($("#duelFill")).style.width = `${(left / lim) * 100}%`;
+  /** @type {HTMLElement} */ ($("#duelFill")).style.width = `${(left / DUEL.timeLimit) * 100}%`;
 }
 
 function renderDuelResult() {
@@ -7964,17 +7281,14 @@ function renderDuelResult() {
   box.className = won ? "win" : drew ? "draw" : "lose";
   /* 보상은 **특허료가 아니라 점수**다 — 이긴 쪽이 자원까지 가져가면 눈덩이가 굴러
    * 첫 대전 한 판으로 판이 끝난다. 진 쪽의 내구 손실만 판 안에 남는다. */
-  const pts = ASC_ON ? (won ? ASC.rank.raidBase + ASC.rank.raidPer * duel.wave : 0)
-    : won ? RANK.duelWin : drew ? RANK.duelDraw : RANK.duelLose;
+  const pts = won ? RANK.duelWin : drew ? RANK.duelDraw : RANK.duelLose;
   const dmg = won || drew ? 0 : DUEL.leakBase + (r.foeAlive || 0) * DUEL.leakPer;
-  const title = ASC_ON ? (won ? "레이드 성공" : drew ? "무승부" : "레이드 실패")
-    : won ? `${duelLabel()} 승리` : drew ? "무승부" : `${duelLabel()} 패배`;
+  const title = won ? `${duelLabel()} 승리` : drew ? "무승부" : `${duelLabel()} 패배`;
   // 「전멸」은 승패 자체가 말해 주므로 적지 않는다 — 시간 초과 같은 다른 사유만 남긴다
   const reason = r.reason === "전멸" ? "" : r.reason;
   box.innerHTML = `<b>${title}</b>
     ${reason ? `<i>${reason}</i>` : ""}
-    <span>랭킹 점수 <b>+${pts.toLocaleString()}</b>${dmg ? ` · 등록원부 내구 −${dmg}` : ""}${ASC_ON && won
-      ? ` · 특허료 +${ASC.raidWinGold(duel.wave)} · 내구 +${ASC.raidWinHeal}` : ""}</span>`;
+    <span>랭킹 점수 <b>+${pts.toLocaleString()}</b>${dmg ? ` · 등록원부 내구 −${dmg}` : ""}</span>`;
   box.classList.remove("hidden");
 }
 
@@ -8166,8 +7480,6 @@ function showTip(e, p) {
     ${LV3_GUARD[p.key] ? `<i style="color:#9fe0b4">🛡 ${lv >= BAL.promoteLv ? "승진 효과" : "Lv3 승진 시"} — 대전장에서 아군 전체 ${guardDesc(p.key)}</i>` : ""}
     ${d.special ? `<i style="color:#6fe0d0">이종 합성 전용 — ${(RECIPES.find((r) => r.key === p.key) || { need: [] }).need.map((k) => CATS[k].name).join(" + ") || "지금은 잠겨 있습니다"}</i>` : ""}
     ${s && s.golden ? `<i style="color:#cda43a">직권보정 — 이번 웨이브 공격력 3배</i>` : ""}
-    ${game && game.catUp && game.catUp[p.key] ? `<i style="color:#ffd782">스탯업 — ${ASC_STATUPS.filter((u) => game.catUp[p.key][u.key])
-      .map((u) => `${u.icon} ${u.name} ${u.fmt(game.catUp[p.key][u.key])}`).join(" · ")}</i>` : ""}
     ${p.uid ? `<i style="color:#b9a98a">우클릭 — 판매 <b>₩${game.sellPrice(p)}</b> (구매금액의 ${Math.round(BAL.sellRate * 100)}%${game.phase !== "prep" ? " · 준비 단계에만" : ""})</i>` : ""}`;
   t.style.display = "block";
   // 말풍선 크기는 테마·내용에 따라 다르므로 그린 뒤 실제 크기로 화면 안에 넣는다
@@ -8244,13 +7556,12 @@ function endMatch(iWon, reasonText) {
       <span class="rktrack"><i style="width:${Math.min(100, pts / max * 100).toFixed(1)}%;background:${col}"></i></span>
       <span class="rkpts">${pts.toLocaleString()}</span>
     </div>`;
-  const maxSpeed = Math.max(1, rank.waves.length * (ASC_ON ? ASC.rank.speedPerWave : RANK.speedPerWave));
-  const maxDuel = ASC_ON ? Math.max(1, rank.duels.reduce((a, d) => a + ASC.rank.raidBase + ASC.rank.raidPer * d.wave, 0))
-                         : Math.max(1, DUEL_WAVES.length * RANK.duelWin);
+  const maxSpeed = Math.max(1, rank.waves.length * RANK.speedPerWave);
+  const maxDuel = Math.max(1, DUEL_WAVES.length * RANK.duelWin);
   const duelRec = `${s.duelRecord[0]}승 ${s.duelRecord[1]}무 ${s.duelRecord[2]}패`;
 
   $("#sheet").innerHTML = `<div class="end">
-    <h3 style="color:${iWon ? "#cda43a" : "#e0574d"}">${ASC_ON ? `승천 종료 — 라운드 ${game.wave}` : iWon ? "심사 종료 — 성적표" : "거절결정 — 판 중단"}</h3>
+    <h3 style="color:${iWon ? "#cda43a" : "#e0574d"}">${iWon ? "심사 종료 — 성적표" : "거절결정 — 판 중단"}</h3>
     <p style="color:var(--muted);font-size:12.5px;margin:0 0 12px">${reasonText}</p>
 
     <div class="rankbox" style="--rc:${rank.gradeCol}">
@@ -8259,9 +7570,8 @@ function endMatch(iWon, reasonText) {
       <div class="rksay">${rank.say}</div>
     </div>
     <div class="rankbars">
-      ${ASC_ON ? bar(`🔺 오른 높이 <em>라운드 ${game.wave}</em>`, rank.climb, Math.max(1, rank.climb, 30000), "#c3a8f5") : ""}
       ${bar(`⚔️ ${duelLabel()} <em>${duelRec}</em>`, rank.duel, maxDuel, "#e0574d")}
-      ${bar(`🏗️ 덱 파워 <em>지수 ${Math.round(game.finalDeck || 0).toLocaleString()}</em>`, rank.deck, ASC_ON ? 6000 : 4000, "#6fe0d0")}
+      ${bar(`🏗️ 덱 파워 <em>지수 ${Math.round(game.finalDeck || 0).toLocaleString()}</em>`, rank.deck, 4000, "#6fe0d0")}
       ${bar(`⏱️ 클리어 속도 <em>${rank.waves.length}개 라운드</em>`, rank.speed, maxSpeed, "#cda43a")}
       ${bar(`🏛️ 등록원부 <em>${Math.max(0, Math.round(game.hp))}/${game.maxHp}</em>`, rank.hp, Math.max(1, game.maxHp * RANK.hpMul), "#7fbf6a")}
     </div>
@@ -8282,7 +7592,7 @@ function endMatch(iWon, reasonText) {
 const LB_NAME_KEY = "patent-siege.rankName";
 const LB_NAME_MAX = 12;
 /** 랭킹 탭 순서 — MODES 의 두 모드 */
-const LB_TABS = ASC_ON ? ["ascend"] : ["solo", "duel"];
+const LB_TABS = ["solo", "duel"];
 
 function savedRankName() { try { return localStorage.getItem(LB_NAME_KEY) || ""; } catch (_) { return ""; } }
 function rememberRankName(n) { try { localStorage.setItem(LB_NAME_KEY, n); } catch (_) {} }
@@ -8377,7 +7687,7 @@ function renderLeaderboard(list, mine, top = 20) {
       return `<tr class="${isMe ? "me" : ""}${r.rank <= 3 ? ` top${r.rank}` : ""}">
         <td>${r.rank}</td><td class="l">${escapeHtml(r.name)}</td>
         <td><b style="color:${gradeCol(r.grade)}">${r.grade}</b></td>
-        <td>${ASC_ON ? `R${r.wave}` : `${r.wave}/${BAL.waveCount}${r.cleared ? "" : " ✕"}`}</td>
+        <td>${r.wave}/${BAL.waveCount}${r.cleared ? "" : " ✕"}</td>
         <td class="r">${Number(r.score).toLocaleString()}</td></tr>`;
     }).join("")}</tbody></table>`;
   const me = el.querySelector("tr.me");
@@ -8699,7 +8009,6 @@ function renderFxTags() {
       ? `<span>⛔ 냥타워 정지 · ${fx.freezeT.toFixed(1)}초 남음</span>`
       : `<span>⛔ 다음 웨이브 첫 ${fx.freezeT.toFixed(1)}초 냥타워 정지</span>`);
   if (mods.extra) tags.push(`<span>📨 다음 웨이브 침입자 ${mods.extra}마리 추가</span>`);
-  if (ASC_ON) tags.push(...ascFxTags());
   setHtml(el, tags.join(""));
   el.classList.toggle("hidden", !tags.length);
 }
@@ -8950,13 +8259,13 @@ function lineTileHtml(key, compact) {
   const L = LINES[key];
   const score = (game.lineScore && game.lineScore[key]) || 0;
   const tier = (game.lineTier && game.lineTier[key]) || 0;
-  const max = tierAt()[tierAt().length - 1];
+  const max = LINE_TIER_AT[LINE_TIER_AT.length - 1];
   let dots = "";
   for (let i = 1; i <= max; i++) dots += `<i class="${i <= score ? "on" : ""}"></i>`;
   // 아래 두 줄 — 「3강 : 효과 설명」「5강 : 효과 설명」. 이미 연 단계는 계열 색으로 밝힌다
   // compact(헤더의 「스테이지 강화」 칸)에서는 효과 설명 줄을 뺀다 — 거기서는 지금 상태만 보이면 된다
-  const steps = compact ? "" : tierAt().map((need, i) => {
-    const t = tierDef(L, i);
+  const steps = compact ? "" : LINE_TIER_AT.map((need, i) => {
+    const t = i === 0 ? L.t1 : L.t2;
     return `<em class="lstep ${tier > i ? "on" : ""}"><b>${need}강</b>${t.short || t.desc}</em>`;
   }).join("");
   return `<div class="ltile ${tier ? "lit" : ""}${compact ? " compact" : ""}" style="--lc:${L.col}">
@@ -9049,90 +8358,6 @@ function openPassiveModal() {
   startChoiceTimer(() => choose(offer[0].key));
 }
 
-
-/* ═══════ 승천 모드 화면 ═══════
- * 스탯업 선택 모달 · 판 아래 예고 딱지(방해효과 · 다음 레이드 보스) · 시작 안내.
- * 메인 화면에서는 아무도 부르지 않는다 (ASC_ON 분기 뒤에서만 불린다). */
-
-/** 다음 레이드 한 줄 — 10라운드를 넘기면 보스 이름과 약점이, 그 전에는 정체 불명 */
-function ascRaidPreview() {
-  const w = game.nextRaidWave;
-  if (game.raidRevealed(w)) {
-    const R = RAID_BOSSES[game.raidBoss(w)];
-    return { w, R, html: `${R.icon} 라운드 ${w} 레이드 — <b>${R.name}</b> · 약점: ${R.weakTag}` };
-  }
-  return { w, R: null, html: `❓ 라운드 ${w} 레이드 — 정체 불명 (보스와 약점은 10라운드를 넘기면 미리 알려 줍니다)` };
-}
-
-/** 판 아래 딱지 — 다음(또는 지금) 라운드의 방해효과와 다음 레이드 */
-function ascFxTags() {
-  const out = [];
-  const live = game.phase === "wave";
-  const keys = live ? game.curses : game.phase === "prep" ? game.nextCurses : [];
-  for (const k of keys) {
-    const c = ASC_CURSE_BY_KEY[k];
-    if (c) out.push(`<span class="curse" style="--cc:${c.col}" title="${c.desc}">${c.icon} ${live ? "" : "다음 라운드 "}${c.name} · ${c.short}</span>`);
-  }
-  if (game.phase === "prep" || game.phase === "wave") {
-    const pv = ascRaidPreview();
-    out.push(`<span class="raidnext${pv.R ? " known" : ""}"${pv.R ? ` style="--cc:${pv.R.tint}" title="${pv.R.gimmick}"` : ""}>${pv.html}</span>`);
-  }
-  return out;
-}
-
-/** 라운드가 끝날 때 — 다음 레이드 예고를 로그에 남긴다 (예고가 처음 열린 순간과 레이드 직전) */
-function ascRoundNotice() {
-  const w = game.nextRaidWave;
-  if (!game.raidRevealed(w)) return;
-  if (game.wave + 1 !== w && game.wave % ASC.raidEvery !== 0) return;
-  const R = RAID_BOSSES[game.raidBoss(w)];
-  log(`<b style="color:${R.tint}">레이드 예고</b> 라운드 ${w} — ${R.icon} <b>${R.name}</b>. ${R.gimmick} ` +
-      `<b style="color:#ffd782">약점</b> ${R.weak}`);
-}
-
-function ascIntroLog() {
-  log(`<b style="color:#c3a8f5">승천 모드</b> — 라운드에 끝이 없습니다. 등록원부가 무너질 때까지 오릅니다.`);
-  log(`<b>${ASC.raidEvery}라운드마다 보스 레이드</b> — 쥐 군단 대신 기믹을 가진 보스 하나가 나옵니다. ` +
-      `${ASC.raidTime}초 안에 쓰러뜨리면 특허료·내구를 받고, 못 잡으면 내구 ${DUEL.leakBase}을 잃습니다. ` +
-      `10라운드를 넘기면 다음 보스와 <b>약점</b>을 미리 알려 줍니다.`);
-  log(`<b>11라운드부터</b> 침입자가 가파르게 세지고(체력·방어·속도) 매 라운드 <b>방해효과</b>를 던집니다 — ` +
-      `20라운드부터는 둘, 30라운드부터는 셋. 다음 라운드의 방해효과는 판 아래에 미리 보입니다.`);
-  log(`강화는 10라운드까지 매 라운드, 그 뒤로는 <b>짝수 라운드</b>에만 고릅니다. 홀수 라운드에는 냥타워 한 종류의 ` +
-      `<b>공격력 · 공격속도 · 방어력 · 피해감소</b>를 올리는 <b>스탯업</b>을 고릅니다. 빌드 계열은 <b>7강 · 10강</b>까지 열립니다.`);
-}
-
-/**
- * 스탯업 모달 — 냥타워 종류 하나 × 능력치 하나를 고른다.
- * 가진 종류만 줄로 늘어놓고(값나가는 순), 줄마다 네 능력치 단추를 단다. 방어력·피해감소는 레이드에서만 산다.
- */
-function openStatUpModal() {
-  if (!game.awaitingStatUp) return;
-  const kinds = game.statUpKinds();
-  const rows = kinds.map((k) => {
-    const d = CATS[k], up = (game.catUp && game.catUp[k]) || {};
-    const n = B.cats(game).concat(game.tray).filter((c) => c.key === k).length;
-    const btns = ASC_STATUPS.map((s) => {
-      const cur = up[s.key] || 0, nxt = Math.min(s.cap, cur + s.amount), full = cur >= s.cap - 1e-9;
-      const useless = (s.key === "dmg" || s.key === "rate") && d.kind === "buff" && !game.canFight(k);
-      return `<button type="button" class="supbtn${full || useless ? " off" : ""}" data-k="${k}" data-s="${s.key}"
-        ${full || useless ? "disabled" : ""} title="${s.desc}">
-        <i>${s.icon}</i><b>${s.name}</b><em>${full ? "최대" : `${cur ? s.fmt(cur) + " → " : ""}${s.fmt(nxt)}`}</em></button>`;
-    }).join("");
-    return `<div class="suprow"><span class="supcat"><i>${d.icon}</i><b>${d.name}</b><em>${n ? `${n}명` : "없음"}</em></span>
-      <span class="supbtns">${btns}</span></div>`;
-  }).join("");
-  $("#sheet").innerHTML = `<h3>라운드 ${game.wave} 클리어 — 스탯업</h3>
-    <div class="supnote">냥타워 <b>한 종류</b>를 골라 능력치 하나를 올립니다. 합성해도 종류에 붙어 있어 사라지지 않습니다 —
-      <b>방어력 · 피해감소</b>는 레이드(대전장)에서만 적용됩니다. 강화 선택은 다음 라운드에 돌아옵니다.</div>
-    <div class="supgrid">${rows}</div>`;
-  $("#modal").classList.add("on");
-  $("#sheet").querySelectorAll(".supbtn:not(.off)").forEach((el) => el.addEventListener("click", () => {
-    const e = /** @type {HTMLElement} */ (el);
-    if (!game.applyStatUp(e.dataset.k, e.dataset.s)) return;
-    closeChoiceModal();
-  }));
-}
-
 /**
  * 계열 단계가 열린 순간의 축포 — 화면 한가운데에 크게 한 번 터졌다 사라진다.
  *
@@ -9143,12 +8368,12 @@ function openStatUpModal() {
 function lineTierBanner(info) {
   const L = LINES[info.line];
   if (!L) return;
-  const t = tierDef(L, info.tier - 1);
+  const t = info.tier === 1 ? L.t1 : L.t2;
   const el = document.createElement("div");
   el.className = "tierpop";
   el.style.setProperty("--lc", L.col);
   el.innerHTML = `<i>${L.icon}</i>
-    <b>${L.name} 계열 ${tierAt()[info.tier - 1]}점 — ${info.tier}단계 개방</b>
+    <b>${L.name} 계열 ${LINE_TIER_AT[info.tier - 1]}점 — ${info.tier}단계 개방</b>
     <strong>${t.name}</strong><em>${t.desc}</em>`;
   document.body.appendChild(el);
   setTimeout(() => el.classList.add("out"), 2400);
@@ -9226,15 +8451,15 @@ function renderPassiveTags() {
    * 훨씬 중요한 정보이고, 다음에 무엇을 고를지도 이 줄을 보고 정하기 때문이다.
    * 아직 한 점도 없는 계열은 접어 둔다 (다섯 줄이 늘 떠 있으면 진행도가 오히려 안 보인다). */
   // 지금 점수가 있는(= 실제로 적용 중인) 계열만 — 아이콘 · 이름 · 채워지는 동그라미 한 줄씩. 테두리 없이 간략하게.
-  const max = tierAt()[tierAt().length - 1];
+  const max = LINE_TIER_AT[LINE_TIER_AT.length - 1];
   const lines = Object.keys(LINES).filter((k) => (game.lineScore && game.lineScore[k]) > 0).map((k) => {
     const L = LINES[k], score = game.lineScore[k], tier = (game.lineTier && game.lineTier[k]) || 0;
     let dots = "";
     for (let i = 1; i <= max; i++) dots += `<i class="${i <= score ? "on" : ""}"></i>`;
     // 마우스를 올리면 뜨는 말풍선 — 계열 축 · 3강/5강 효과. 이미 연 단계는 계열색으로 밝힌다
     const hint = `<span class="prhint"><b>${L.icon} ${L.name} 계열</b> · ${L.axis}<br>` +
-      tierAt().map((need, i) => {
-        const t = tierDef(L, i);
+      LINE_TIER_AT.map((need, i) => {
+        const t = i === 0 ? L.t1 : L.t2;
         return `<em class="${tier > i ? "on" : ""}">${need}강 ${t.name}</em> — ${t.short || t.desc}`;
       }).join("<br>") + `</span>`;
     return `<div class="lline ${tier ? "lit" : ""}" style="--lc:${L.col}">
@@ -9307,11 +8532,6 @@ function effectSummary() {
   if (tg) out.push({ icon: "🌐", name: "동시조준", val: `+${tg}` });
   if (B("aura")) out.push({ icon: "💼", name: "보좌 화력·공속",
                             val: `${pct(BAL.auraDmgUp * B("aura"), true)} · ${pct(BAL.auraRateUp * B("aura"), true)}` });
-  // 승천 모드 스탯업 — 종류마다 쌓은 값
-  if (game.catUp) for (const k in game.catUp) for (const s of ASC_STATUPS) {
-    const v = game.catUp[k][s.key];
-    if (v) out.push({ icon: s.icon, name: `${CATS[k].name} ${s.name}`, val: s.fmt(v) });
-  }
   // 승진(Lv3) 냥타워가 덱 전체에 주는 방어 — 대전장에서 걸린다
   const g = teamGuard(game);
   for (const k of ["hp", "armor", "dr", "splashDr", "critDr"]) {
@@ -9624,7 +8844,7 @@ const STAGE_THEMES = [
 const themeForStage = (n) => STAGE_THEMES.find((t) => n <= t.to) || STAGE_THEMES[STAGE_THEMES.length - 1];
 /** 지금 보여줄 스테이지 번호 — 준비 단계에서는 곧 치를 다음 웨이브의 전장을 미리 보여준다 */
 const stageNo = () => !game ? 1
-  : Math.min(ASC_ON ? Infinity : BAL.waveCount, Math.max(1, game.phase === "prep" ? game.wave + 1 : game.wave));
+  : Math.min(BAL.waveCount, Math.max(1, game.phase === "prep" ? game.wave + 1 : game.wave));
 
 let stageTheme = null;
 /** 스테이지가 다음 구간으로 넘어갔으면 전장 원화를 갈아 끼운다. 매 프레임 불려도 값이 같으면 바로 빠진다. */
@@ -9656,7 +8876,7 @@ function beginBattle() {
 
   // 시드는 서버가 정해 양쪽에게 같이 내려준다 — 웨이브 구성도 증강 후보도 완전히 같아진다
   // (솔로는 맞출 상대가 없으니 시드를 비워 매번 다른 판이 나오게 둔다)
-  game = ASC_ON ? new AscGame({ map: "complex" }) : new Game({ map: "complex", seed: matchSeed || undefined });
+  game = new Game({ map: "complex", seed: matchSeed || undefined });
   floaters.length = 0;
   critShownAt.clear();
   errShown.clear();     // 새 판에서는 오류 보고도 새로 시작한다
@@ -9676,8 +8896,7 @@ function beginBattle() {
   buildOppPanel();
   document.body.dataset.mode = mode;
   const M = MODE();
-  if (ASC_ON) ascIntroLog();
-  else log(soloMode
+  log(soloMode
     ? `<b>솔로 플레이</b> — 상대 없이 ${BAL.waveCount}라운드를 치르고 랭킹 점수를 받습니다.`
     : `<b>${M.name}</b> — ${M.desc} 당신은 <b>${slotName(mySlot)}</b>입니다.`);
   log(`<b>${game.map.name}</b> 방위 개시 · ${game.map.desc}`);
@@ -9688,7 +8907,7 @@ function beginBattle() {
   // 이종 합성(다른 종류끼리의 처방)은 잠가 두었다 — RECIPES 를 되살리면 이 안내도 함께 되돌린다
   // log(`<b style="color:#6fe0d0">다른 종류끼리도 합성</b>됩니다 — 처방 ${RECIPES.length}가지로 ` +
   //     `연쇄·정지·즉사·징수 같은 <b>특수 냥타워</b>를 만들 수 있습니다 (뽑기로는 나오지 않습니다).`);
-  if (!ASC_ON) log(`스테이지 <b>${DUEL_WAVES.join(" · ")}</b>는 침입자 대신 <b>${duelLabel()}</b>입니다 — ` +
+  log(`스테이지 <b>${DUEL_WAVES.join(" · ")}</b>는 침입자 대신 <b>${duelLabel()}</b>입니다 — ` +
       `별도의 대전장에서 <b>내 냥타워 전부</b>가 다른 덱과 저절로 붙습니다 (누를 것 없음). ` +
       `지는 쪽은 등록원부 내구 <b>${DUEL.leakBase}</b>을 잃습니다.`);
   if (!soloMode) log(`<b>방해 공작</b> 셋 — 💸 <b>돈뺏기</b>(특허료 ${SABOTAGE.steal.amount} 강탈) · ` +
@@ -9849,13 +9068,12 @@ addEventListener("keydown", (e) => {
 });
 
 /* ═══════ 로비 ═══════ */
-// 승천 모드는 혼자 하는 판이라 대전 서버에 붙지 않는다
-if (!ASC_ON) connectWS();
+connectWS();
 /** 솔로 플레이 — 대전용 연결을 아예 끊고 혼자 시작한다 (방/코드/준비 대기가 전부 필요 없다) */
 $("#btnSolo").addEventListener("click", () => {
   if (game) return;
   soloMode = true;
-  mode = ASC_ON ? "ascend" : "solo"; mySlot = 0; roomSize = 1; players = [{ slot: 0, snap: null, gone: false, name: "나" }];
+  mode = "solo"; mySlot = 0; roomSize = 1; players = [{ slot: 0, snap: null, gone: false, name: "나" }];
   youAre = null; matchSeed = 0;
   if (ws) { try { ws.close(); } catch (_) {} ws = null; }
   beginBattle();
@@ -9873,7 +9091,7 @@ $("#btnExit").addEventListener("click", () => {
   if (!confirm(exitMsg())) return;
   location.reload();
 });
-const exitMsg = () => ASC_ON ? "승천 모드를 종료합니다." : soloMode ? "솔로 플레이를 종료합니다." : "대전을 중단하고 나갑니다.";
+const exitMsg = () => soloMode ? "솔로 플레이를 종료합니다." : "대전을 중단하고 나갑니다.";
 
 /* ── 뒤로가기로 판이 날아가는 것 막기 ──
  * 이 페이지는 히스토리의 첫 기록이라, 판 안에서 뒤로가기를 누르면 돌아갈 곳이 없어

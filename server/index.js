@@ -21,22 +21,11 @@ const MIME = {
   '.woff2': 'font/woff2',
 };
 
-/* ═══════ 랭킹 ═══════
- * 판이 끝나면 클라이언트가 성적표의 총점을 이름과 함께 올리고, 상위 20위를 받아 간다.
- * DB 없이 JSON 파일 하나(data/rankings.json)에 쌓는다 — 이 서버는 외부 의존성이 하나도 없고,
- * 랭킹 하나 때문에 그 원칙을 깰 만큼 데이터가 크지 않다. 파일에는 넉넉히 100건까지만 남기고
- * 내려 줄 때 20위까지 자른다. 점수는 클라이언트가 계산해 보내므로 조작이 가능하다는 점은
- * 감수한다 — 서버가 판을 굴리지 않는 구조라 검증할 원장이 없다.
- * 파일 경로는 RANK_FILE 로 바꿀 수 있다 (영구 디스크를 붙일 때).
- *
- * **표는 모드마다 따로다** (솔로 · 1v1). 솔로는 쥐 침입단을, 1v1 은 사람을 상대하므로 같은 점수라도
- * 뜻이 다르다 — 한 표에 섞으면 어느 쪽이 잘한 것인지 읽히지 않았다. 파일은 그대로 한 배열이고
- * (mode 칸으로 갈린다), 자르는 것(100건 · 20위)과 등수 매기기를 모드 안에서 한다. */
-const RANK_FILE = process.env.RANK_FILE || path.join(__dirname, '..', 'data', 'rankings.json');
-const RANK_TOP = 20;          // 내려 주는 순위 (모드마다)
-const RANK_KEEP = 100;        // 파일에 남기는 순위 (모드마다)
+/* 최근 30일 랭킹: Render는 Redis, 로컬은 JSON 파일을 사용한다. */
+const { createRankingStore } = require('./ranking-store');
+const rankingStore = createRankingStore();
 const RANK_NAME_MAX = 12;
-const RANK_MODES = ['solo', 'duel', 'ascend'];   // ascend — /ascend 의 승천 모드 (끝없는 라운드)
+const RANK_MODES = ['solo', 'duel'];
 const RANK_GRADES = new Set(['S', 'A', 'B', 'C', 'D']);
 function rankStorageError(res, error) {
   console.error('[patent-siege] Ranking storage unavailable:', error.message);
@@ -71,8 +60,7 @@ async function handleRankPost(req, res) {
     name, score,
     grade: RANK_GRADES.has(body.grade) ? body.grade : 'D',
     mode: RANK_MODES.includes(body.mode) ? body.mode : 'solo',
-    // 승천 모드는 라운드에 끝이 없다 — 나머지 모드는 10라운드에서 자른다
-    wave: Math.max(0, Math.min(body.mode === 'ascend' ? 999 : 10, Math.round(Number(body.wave)) || 0)),
+    wave: Math.max(0, Math.min(10, Math.round(Number(body.wave)) || 0)),
     cleared: !!body.cleared,
     at: new Date().toISOString(),
   };
@@ -101,8 +89,6 @@ const httpServer = http.createServer((req, res) => {
   }
 
   if (p === '/') p = '/index.html';
-  // 승천 모드 — 메인 화면과 따로 여는 주소
-  if (p === '/ascend' || p === '/ascend/') p = '/ascend.html';
   const full = path.join(PUBLIC_DIR, p);
   if (!full.startsWith(PUBLIC_DIR)) { res.writeHead(403); res.end('forbidden'); return; }
   fs.stat(full, (statErr, st) => {
