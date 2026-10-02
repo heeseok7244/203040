@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>묘한특허 — 승천 모드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Gowun+Dodum&family=Do+Hyeon&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="game-theme.css">
+<!-- 승천 모드 전용 — 메인 화면(index.html)은 이 파일을 읽지 않는다 -->
+<link rel="stylesheet" href="ascend.css">
+</head>
+<body class="ascend">
+<div id="lobby">
+  <!-- 청사 앞마당에 두 마리 — 현관 오른쪽 갈색 냥이, 왼쪽 흰 냥이.
+       서는 자리는 style.css 의 --cat-x 로 정한다 -->
+  <div class="hero">
+    <div class="glow"></div>
+    <div class="catsprite" id="catSprite"></div>
+    <div class="glow white"></div>
+    <div class="catsprite white" id="catSprite2"></div>
+  </div>
+
+  <!-- data-text 는 3D 돌출·테두리 레이어(::before/::after)가 같은 글자를 겹쳐 그리는 데 쓴다 -->
+  <h1 class="bigtitle" data-text="묘한특허">묘한특허</h1>
+  <div class="ascbadge">승 천 모 드</div>
+  <p class="tagline">끝까지 오르는 쪽이 이깁니다.</p>
+  <p class="subline">끝없는 라운드 · 5라운드마다 보스 레이드 · 20라운드부터는 각오하세요.</p>
+
+  <!-- 로비에서도 소리를 끌 수 있게 오른쪽 위에 하나 더 둔다 (게임 화면 것과 상태를 같이 쓴다) -->
+  <button class="bgmToggle lobbyBgm" type="button" title="소리 켜기/끄기" aria-label="소리">🔊</button>
+
+  <!-- 승천 모드는 혼자 하는 판 하나뿐이다. 1v1 방 만들기·입장은 메인 화면(/)에서 한다.
+       아래 숨긴 칸(btnCreate · joinCode …)은 game.js 가 붙잡는 요소라 지우지 않고 감춰 둔다 -->
+  <div class="entry">
+    <button id="btnSolo" class="go">승천 시작</button>
+    <div class="codehint">라운드에 끝이 없습니다 — 등록원부가 무너질 때까지 오르고, 승천 랭킹에 오릅니다</div>
+    <a class="ascback" href="/">← 메인 화면으로</a>
+    <div class="ascHidden" hidden>
+      <button id="btnCreate" class="go alt" type="button"></button>
+      <div id="createdBox" class="hidden"><div id="codeDisplay">----</div><div class="codehint" id="roomState"></div></div>
+      <div class="joinrow"><input id="joinCode" maxlength="4"><button id="btnJoin" type="button"></button></div>
+      <div id="joinError" class="hidden"></div>
+    </div>
+  </div>
+</div>
+
+<div id="gameRoot" class="wrap hidden">
+
+<!-- 머릿글 패널(제목·등록번호)은 걷어냈다. 판이 세로로 큰 화면이라 그 한 줄이 통째로
+     스크롤을 만들었고, 정작 게임 중에는 볼 일이 없는 칸이었다. 거기 있던 나가기 단추는
+     「웨이브 진행」 칸 머리로, 내 덱(스테이지 강화·증강)은 「내 청사」 칸으로 옮겼다. -->
+<div class="cols">
+  <div>
+    <!-- 내 청사 — 냥타워 위. 뽑기 전에 특허료·내구가 먼저 보이게 한다 -->
+    <div class="panel" id="mePanel">
+      <h2>내 청사 <em>YOUR OFFICE</em></h2>
+      <div class="pad">
+        <div class="meStats">
+          <div class="stat dmg"><b id="sHp">22</b><span>원부 내구</span></div>
+          <div class="stat gold"><b id="sGold">₩ 85</b><span>특허료</span></div>
+          <div class="stat"><b id="sWave">0/10</b><span>라운드</span></div>
+        </div>
+        <!-- 이 판의 성적. 10라운드가 끝나면 이 숫자가 곧 결과다 (rankScore) -->
+        <!-- 랭킹 점수와 스테이지 강화를 옆으로 나란히 -->
+        <div class="meRow">
+          <div class="stat score" id="scoreBox">
+            <span>현재 랭킹 점수</span>
+            <div class="scoreline"><i id="sGrade">D</i><b id="sScore">0</b></div>
+            <div class="scorelegs" id="sScoreLegs"></div>
+          </div>
+          <!-- 스테이지 강화가 곧 내 덱이다. 1:1 대전장까지 그대로 실린다.
+               상대에게 거는 효과는 없으므로(방해 공작이 맡는다) 「상대효과」 칸도 없다.
+               (증강 선택은 걷어냈다 — 내증강 · 상대 증강 칸도 함께 뺐다) -->
+          <div class="stat effects">
+            <!-- 칸에는 계열 진행도(동그라미)만 남긴다. 지금까지 쌓인 강화 합계는 라운드마다 줄줄이 늘어나
+                 아래 그림을 밀어내므로, 「강화효과 ?」 제목에 마우스를 올렸을 때만 말풍선으로 보인다 -->
+            <div class="efcol"><i class="efhead">강화효과 <u>?</u><span class="prhint efpop" id="myEffPop"></span></i>
+              <div class="passiveTags" id="myPassiveTags"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel recruitment-panel">
+      <h2><span class="panel-title"><img src="img/game/cat_tower_icon.png" alt="">냥타워</span>
+        <!-- 「강화효과 ?」 — 보유 현황 제목 옆에서 냥타워 머리로 옮겼다. 판 머리의 「침입자 정보 ?」와 같은 크기다 -->
+        <span class="h2right">
+        <span class="prhelp">합성효과 <u>?</u>
+          <span class="prhint"><b>같은 종류·같은 레벨</b>의 고양이 <b>3마리</b>를 모으면 <b>다음 레벨 고양이 1마리</b>로 합성할 수 있습니다.<br>
+            <b>Lv2</b> 공격력(×1.85) 증가<br>
+            <b>Lv3</b> 공격력(×3.42), 치명타(×1.25) 증가<br>
+            <b>Lv3 승진 효과</b> — 대전장에서 <b>아군 전체</b>가 단단해집니다 (종류마다 다름 · 냥타워에 마우스를 올리면 표시)<br>
+            📄 방어력 +10%p · 📐 체력 +15% · ⚡ 받는 피해 −10% · 🌐 받는 광역 피해 −35% · 💼 체력 +10% 방어력 +8%p · ⏳ 받는 치명타 피해 −35%</span>
+        </span>
+        </span></h2>
+      <!-- 종류를 고르지 않는다. 정액을 내고 무작위로 한 명을 받는다 (확률표는 JS가 채운다) -->
+      <div class="pad" id="catRoster"></div>
+      <!-- 승진은 따로 사는 것이 아니라 합성의 마지막 단계다. 여기에는 지금 무엇이
+           몇 명·몇 레벨로 서 있는지(합성의 판단 재료)만 놓는다 -->
+    </div>
+      <div class="panel pad promoteBox">
+        <!-- 합성은 「같은 타워 강화」 한 갈래뿐이다. 다른 종류끼리의 이종 합성(처방)은
+             배우는 비용이 재미보다 커서 잠가 두었다 — core/data.js 의 RECIPES 주석 참고.
+             설명은 목록 아래 늘어놓지 않고 냥타워 머리의 「강화효과 ?」에 마우스를 올리면 뜬다 -->
+        <i>내 타워 현황</i>
+        <div id="promoteList" aria-label="보유 냥타워"></div>
+      </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <!-- 머리에 전장 이름(아이디어 캠퍼스 등)을 쓰지 않는다 — 원화가 이미 말해 주는 것이라
+           글자로 되풀이할 필요가 없었다. 왼쪽 맨 앞에 소리 토글, 오른쪽에 「침입자 정보 ?」를 둔다 -->
+      <h2>
+        <!-- 소리 켜기/끄기 — 「침입자 정보」와 같은 줄 맨 앞. 배경음악과 효과음이 함께 꺼진다 -->
+        <button class="bgmToggle" type="button" title="소리 켜기/끄기" aria-label="소리">🔊</button>
+        <span class="h2right">
+          <em id="phaseLbl">침입자 정보</em>
+          <!-- 침입자 도감은 늘 펼쳐 둘 만큼 자주 보는 것이 아니라, 물음표로 접어 두고
+               필요할 때만 꺼낸다. 「침입자 정보」 바로 옆이라 판을 보다가 손이 닿는 자리다.
+               제목표시줄(title)은 마우스를 얹으면 뜨는 도감과 겹쳐 버려서 쓰지 않는다. -->
+          <button id="btnBestiary" class="qmark" type="button"
+                  aria-expanded="false" aria-controls="beastPop" aria-label="침입자 도감">?</button>
+        </span></h2>
+      <!-- 물음표에 마우스를 얹으면 그 오른쪽 아래로 펼쳐진다 (모달이 아니라 말풍선이라 판이 가려지지 않는다) -->
+      <div class="beastpop hidden" id="beastPop">
+        <div class="beastpop-h">침입자 <em>THREATS</em></div>
+        <div class="pad" id="bestiary"></div>
+      </div>
+      <div class="floor">
+        <!-- 스테이지 원화(map/*.png)를 깔고 그 위에 판을 얹는다. 여백은 원화마다 액자 두께가
+             달라서 JS(STAGE_THEMES)가 테마별로 정해 넣는다 -->
+        <!-- 남는 높이에 판을 맞춰 넣는 칸. 판은 9×9 × 84px 고정이라 화면이 낮으면 그대로는
+             넘치므로, JS(fitArena)가 이 칸에 맞는 배율을 재서 아래 .arena 를 축소한다. -->
+        <div id="arenaFit">
+          <div class="arena" id="arena">
+            <!-- 합성 가능한 묶음 — 판 우측 상단. 원화 액자의 윗여백에 얹혀서 판을 가리지 않는다.
+                 같은 종류·같은 레벨이 3명 모이면 저절로 뜨고, 누르면 그 자리에서 합쳐진다 -->
+            <div id="mergeDock" class="hidden"></div>
+            <div class="stage">
+              <div id="board"></div>
+              <canvas id="fx"></canvas>
+            </div>
+          </div>
+        </div>
+        <div id="tray"></div>
+        <!-- 상대가 나에게 걸어 둔 방해 공작 (실시간 남은 시간 · 다음 웨이브 예약분) -->
+        <div id="fxTags" class="hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 오른쪽 칸은 위에서부터 「개시 → 내 상태 → 상대 상태」 순이다.
+       판 아래에 있던 개시·배속과 머릿글에 있던 내 상태 숫자를 여기로 모아,
+       누를 것과 볼 것이 눈길 한 줄기 안에 들어오게 했다. -->
+  <div>
+    <div class="panel" id="ctlPanel">
+      <h2>라운드 진행
+        <span class="h2right">
+          <em>ROUND</em>
+          <!-- 판을 접고 첫 화면으로 — 브라우저 뒤로가기는 탭 자체를 닫아버려서 나갈 길이 없었다.
+               1v1 은 나가면 상대가 빈 판을 붙들고 있게 되므로 솔로에서만 보인다 (style.css) -->
+          <button id="btnExit" type="button">나가기</button>
+        </span></h2>
+      <div class="pad">
+        <div class="boardctl">
+          <button id="btnGo" class="go">라운드 1 시작</button>
+          <button id="btnSpeed">속도 ×1</button>
+        </div>
+        <!-- 모든 라운드는 방의 모두가 준비해야(또는 준비시간 30초가 끝나야) 동시에 시작된다.
+             그래야 라운드 번호가 어긋나지 않고, 4·7·10 의 대전이 제때 맞물린다.
+             넷이 붙는 판에서는 오른쪽 칸이 「준비 2/3」처럼 인원으로 적힌다 -->
+        <div id="readyBar">
+          <div class="rdy off" id="rdyMe"><i>나</i><b>준비 중</b></div>
+          <div class="rdymid">
+            <span id="rdyTimer">상대를 기다리는 중</span>
+            <span class="rdytrack"><i id="rdyFill"></i></span>
+          </div>
+          <div class="rdy away" id="rdyOpp"><i>상대</i><b>라운드 진행 중</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="oppPanel">
+      <h2>상대 청사 <em id="oppLabel">OPPONENT</em></h2>
+      <div class="pad">
+        <!-- 상대의 카드 하나(내구·라운드·미니맵). JS(buildOppPanel)가 채운다 -->
+        <div id="oppGrid" class="oppgrid"></div>
+      </div>
+    </div>
+
+    <!-- 방해 공작 — 상대 청사 아래. 냥타워는 내가 고르고, 상대를 흔드는 쪽만 운에 맡긴다 — 무엇이 나갈지는 뽑아 봐야 안다 -->
+    <div class="panel hidden" id="sabPanel">
+      <h2><span class="panel-title"><img src="img/game/mob-copy-info.png" alt="">방해 공작</span></h2>
+      <div class="pad">
+        <div id="sabBar"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ── 대전장 (라운드 4·7·10) — 오토배틀러 ──
+     청사 판을 접어 두고 옆에서 본 한 줄짜리 전장으로 옮겨 온다. 왼쪽이 늘 내 진영이다.
+     지금까지 만든 냥타워가 전부 진형을 짜고 저절로 진군하며, 아래 줄에는 조작 대신
+     **모두의 덱**과 **덱 이력**(고른 강화)이 나란히 놓인다 — 누를 것이 하나도 없다.
+     성채 같은 건물은 없다. 두들길 것은 서로의 냥타워뿐이고 먼저 전멸하는 쪽이 진다.
+     여기에는 배속이 없다 — 모두가 같은 속도로 봐야 같은 판이 된다. -->
+<div id="duelStage" class="hidden">
+  <div class="duelbox">
+    <div class="duelhead">
+      <!-- 성채가 없다 — 지켜볼 숫자는 남은 병력 하나다. 막대는 시작 병력 대비 체력 비율이고,
+           시간이 다 됐을 때 승패를 가르는 잣대가 바로 그 비율이다. -->
+      <span class="dside me"><i>내 병력</i><b id="duelMine">-</b>
+        <span class="dhp"><i id="duelMineFill"></i></span></span>
+      <span class="duelmid">
+        <em id="duelTitle">⚔ 1:1 대전</em>
+        <span class="dtime" id="duelTimer">110.0초</span>
+        <span class="dtrack"><i id="duelFill"></i></span>
+      </span>
+      <!-- 상대 진영 칸 — JS(renderDuelHead)가 채운다. 솔로에서는 쥐 침입단 -->
+      <span class="dfoes" id="duelFoes"></span>
+    </div>
+    <div class="duelfield">
+      <canvas id="duelCv" width="1000" height="420"></canvas>
+      <div id="duelResult" class="hidden"></div>
+    </div>
+    <!-- 내 덱과 상대 덱 구성만 표시한다 (JS가 채운다). -->
+    <div class="duelbottom">
+      <div id="duelDecks"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 스킬 컷인 — 합성 냥타워의 고유 스킬이 터지면 화면 아래에서 캐릭터 창이 튀어 오른다.
+     청사 판과 1:1 대전장 어느 쪽이든 같은 자리에 뜬다 (JS 의 cutIn 이 내용을 채운다) -->
+<div id="cutin"></div>
+
+<div id="modal"><div class="sheet" id="sheet"></div></div>
+<div id="tip"></div>
+<!-- 판매 확인 — 우클릭 한 번에 냥이 사라지면 사고가 된다. 커서 옆에 예/아니오를 띄운다 (JS 의 askSell 이 채운다) -->
+<div id="sellAsk" hidden></div>
+
+<!-- 배경음악은 버전 2(햇살과 고양이)로 정했다. bgm.js(버전 1)는 파일만 남겨 두고 bgm-demo.html 에서만 쓴다. -->
+<script src="bgm2.js"></script>
+<script src="duel-cat-art.js"></script>
+<!-- 승천 모드 깃발 — game.js 의 web/main.js 가 이걸 보고 AscGame 으로 판을 연다 -->
+<script>window.ASCEND = true;</script>
+<script src="game.js"></script>
+</body>
+</html>
