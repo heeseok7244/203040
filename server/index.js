@@ -29,7 +29,7 @@ const MIME = {
  * 감수한다 — 서버가 판을 굴리지 않는 구조라 검증할 원장이 없다.
  * 파일 경로는 RANK_FILE 로 바꿀 수 있다 (영구 디스크를 붙일 때).
  *
- * **표는 모드마다 따로다** (솔로 · 1v1 · 승천). 솔로는 쥐 침입단을, 1v1 은 사람을 상대하므로 같은 점수라도
+ * **표는 모드마다 따로다** (솔로 · 1v1). 솔로는 쥐 침입단을, 1v1 은 사람을 상대하므로 같은 점수라도
  * 뜻이 다르다 — 한 표에 섞으면 어느 쪽이 잘한 것인지 읽히지 않았다. 파일은 그대로 한 배열이고
  * (mode 칸으로 갈린다), 자르는 것(100건 · 20위)과 등수 매기기를 모드 안에서 한다. */
 const RANK_FILE = process.env.RANK_FILE || path.join(__dirname, '..', 'data', 'rankings.json');
@@ -38,41 +38,10 @@ const RANK_KEEP = 100;        // 파일에 남기는 순위 (모드마다)
 const RANK_NAME_MAX = 12;
 const RANK_MODES = ['solo', 'duel', 'ascend'];   // ascend — /ascend 의 승천 모드 (끝없는 라운드)
 const RANK_GRADES = new Set(['S', 'A', 'B', 'C', 'D']);
-
-/** @type {{name:string,score:number,grade:string,mode:string,wave:number,cleared:boolean,at:string}[]} */
-let rankings = [];
-try {
-  const raw = JSON.parse(fs.readFileSync(RANK_FILE, 'utf8'));
-  if (Array.isArray(raw)) rankings = raw.filter((r) => r && typeof r.score === 'number');
-} catch (_) { /* 처음이거나 파일이 깨졌다 — 빈 표에서 시작한다 */ }
-sortRankings();
-
-/** 점수 높은 순, 같으면 먼저 올린 순. 모드마다 RANK_KEEP 건까지만 남긴다 (예전 파일의 모드 없는 줄은 솔로로 친다) */
-function sortRankings() {
-  for (const r of rankings) if (!RANK_MODES.includes(r.mode)) r.mode = 'solo';
-  rankings.sort((a, b) => b.score - a.score || String(a.at).localeCompare(String(b.at)));
-  const seen = {};
-  rankings = rankings.filter((r) => (seen[r.mode] = (seen[r.mode] || 0) + 1) <= RANK_KEEP);
+function rankStorageError(res, error) {
+  console.error('[patent-siege] Ranking storage unavailable:', error.message);
+  sendJson(res, 503, { error: '랭킹 저장소에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.' });
 }
-
-/* 저장은 파일 통째로 다시 쓴다. 두 판이 동시에 끝나도 쓰기가 겹치지 않도록 한 줄로 세운다.
- * 임시 파일에 쓰고 이름을 바꾸므로 쓰다 죽어도 반쪽짜리 파일은 남지 않는다. */
-let rankSaving = Promise.resolve();
-function saveRankings() {
-  const body = JSON.stringify(rankings, null, 1);
-  rankSaving = rankSaving.then(async () => {
-    await fs.promises.mkdir(path.dirname(RANK_FILE), { recursive: true });
-    await fs.promises.writeFile(RANK_FILE + '.tmp', body);
-    await fs.promises.rename(RANK_FILE + '.tmp', RANK_FILE);
-  }).catch((e) => console.error('[patent-siege] 랭킹 저장 실패:', e.message));
-  return rankSaving;
-}
-
-/** 한 모드의 상위 표 — 등수는 그 모드 안에서 매긴다 */
-const topRankings = (mode) => rankings.filter((r) => r.mode === mode).slice(0, RANK_TOP)
-  .map((r, i) => Object.assign({ rank: i + 1 }, r));
-/** 모드별 상위 표 전부 — {solo:[…], duel:[…]} */
-const allTops = () => Object.fromEntries(RANK_MODES.map((m) => [m, topRankings(m)]));
 
 /** 요청 본문(JSON)을 읽는다. 랭킹 한 건은 몇백 바이트라 그 이상은 받지 않는다 */
 function readJson(req, limit = 4096) {
@@ -107,12 +76,8 @@ async function handleRankPost(req, res) {
     cleared: !!body.cleared,
     at: new Date().toISOString(),
   };
-  rankings.push(entry);
-  sortRankings();
-  // 등수는 같은 모드 안에서. 0 이면 100위 밖으로 밀려나 남지 않았다
-  const rank = rankings.filter((r) => r.mode === entry.mode).indexOf(entry) + 1;
-  await saveRankings();
-  sendJson(res, 200, { rank, top: RANK_TOP, mode: entry.mode, lists: allTops() });
+  try { sendJson(res, 200, await rankingStore.add(entry)); }
+  catch (error) { rankStorageError(res, error); }
 }
 
 const httpServer = http.createServer((req, res) => {
@@ -126,7 +91,11 @@ const httpServer = http.createServer((req, res) => {
   }
 
   if (p === '/api/rankings') {
-    if (req.method === 'GET') { sendJson(res, 200, { top: RANK_TOP, lists: allTops() }); return; }
+    if (req.method === 'GET') {
+      rankingStore.list().then((result) => sendJson(res, 200, result))
+        .catch((error) => rankStorageError(res, error));
+      return;
+    }
     if (req.method === 'POST') { handleRankPost(req, res); return; }
     res.writeHead(405); res.end('method not allowed'); return;
   }

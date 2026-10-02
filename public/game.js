@@ -8296,7 +8296,7 @@ function mountLeaderboard(rank, cleared) {
   if (!box) return;
   const myMode = LB_TABS.includes(mode) ? mode : "solo";
   box.innerHTML = `
-    <div class="lbhead"><b>🏆 랭킹</b><i>TOP 20</i>
+    <div class="lbhead"><b>🏆 랭킹</b><i>최근 30일 · TOP 20</i>
       <span class="lbtabs" id="lbTabs">${LB_TABS.map((k) =>
         `<button type="button" class="lbtab${k === myMode ? " on" : ""}" data-k="${k}">${MODES[k].name}</button>`).join("")}</span>
     </div>
@@ -9903,9 +9903,8 @@ onSpriteReady(() => { if (game) render(); });
  * 브라우저는 사용자가 한 번 누르기 전엔 소리를 못 내므로, 로비곡은 첫 클릭·키 입력에 붙여 시작한다.
  * 대전곡은 beginBattle, 승리·패배곡은 endMatch 에서 튼다. 끄기 상태는 이 브라우저에 기억해 둔다.
  * 곡은 버전 2(햇살과 고양이)로 정했다 — 버전 1(bgm.js)은 파일만 남기고 화면에서는 고르지 않는다. */
-const BGM_MUTE_KEY = "patent-siege.bgmMuted";
+// 끄기 상태는 저장하지 않는다 — 새로고침하면 늘 소리가 나는 상태로 시작한다
 let bgmIsMuted = false;
-try { bgmIsMuted = localStorage.getItem(BGM_MUTE_KEY) === "1"; } catch (_) {}
 function bgmMuted() { return bgmIsMuted; }
 function bgmPlayer() { return window.BGM2; }
 function bgmScene() { return !game ? "lobby" : game.phase === "won" ? "victory" : game.phase === "lost" ? "defeat" : duel ? "duel" : "battle"; }
@@ -9935,13 +9934,25 @@ bgmToggles.forEach(b => b.addEventListener("click", (e) => {
   const next = !bgmMuted();
   bgmIsMuted = next;
   syncSfxMute();
-  try { localStorage.setItem(BGM_MUTE_KEY, next ? "1" : "0"); } catch (_) {}
   renderBgmToggle();
   if (next) bgmStopAll();
   else bgmPlay(bgmScene());
 }));
-const startLobbyBgm = () => { if (!game && !bgmPlayer()?.current) bgmPlay("lobby"); };
-["pointerdown", "keydown"].forEach((ev) => document.addEventListener(ev, startLobbyBgm, { once: true }));
+// 첫 입력 한 번으로 끝내지 않는다 — 브라우저가 그 입력을 「사용자 동작」으로 안 쳐 주면(터치의 pointerdown 등)
+// 컨텍스트가 멈춘 채 남아 로비가 조용해진다. 소리가 실제로 돌기 시작할 때까지 입력마다 다시 깨운다.
+const startLobbyBgm = () => {
+  const p = bgmPlayer();
+  if (!p) return;
+  p.unlock?.();
+  if (!game && !p.current) bgmPlay("lobby");
+  if (p.running) LOBBY_BGM_EVENTS.forEach((ev) => document.removeEventListener(ev, startLobbyBgm, true));
+};
+const LOBBY_BGM_EVENTS = ["pointerdown", "pointerup", "touchend", "click", "keydown", "visibilitychange", "focus"];
+LOBBY_BGM_EVENTS.forEach((ev) => document.addEventListener(ev, startLobbyBgm, true));
+// 켜자마자 한 번 시도한다 — 이 사이트를 전에 눌러 본 브라우저는 새로고침 직후에도 소리를 허락해 준다.
+// 허락이 안 나면 입력이 올 때까지 0.25초마다 다시 두드린다 (돌기 시작하면 startLobbyBgm 이 스스로 그만둔다).
+startLobbyBgm();
+const lobbyBgmPoll = setInterval(() => { if (bgmPlayer()?.running) clearInterval(lobbyBgmPoll); else startLobbyBgm(); }, 250);
 
 return {};
 })();
